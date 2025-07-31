@@ -456,12 +456,18 @@ class AITextEditor {
         const content = this.editor.getValue();
         if (content.length < 10) return;
 
+        // Show loading indicator
+        this.showRecommendationsLoading(true);
+
         try {
             const recommendations = await this.getAIRecommendations(content);
             this.displayRecommendations(recommendations);
         } catch (error) {
             console.error('Error generating AI recommendations:', error);
             this.showRecommendationError('Unable to generate recommendations. Please check your connection.');
+        } finally {
+            // Hide loading indicator
+            this.showRecommendationsLoading(false);
         }
     }
 
@@ -502,6 +508,16 @@ class AITextEditor {
                 word_count: content.split(/\s+/).length,
                 character_count: content.length
             };
+        }
+    }
+
+    showRecommendationsLoading(show) {
+        const loadingElement = document.getElementById('recommendationsLoading');
+        
+        if (show) {
+            loadingElement.style.display = 'block';
+        } else {
+            loadingElement.style.display = 'none';
         }
     }
 

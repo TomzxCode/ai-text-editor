@@ -52,7 +52,11 @@
                     <h3>AI Recommendations</h3>
                     <button class="close-panel" id="closeSidebar">×</button>
                 </div>
-                <div class="recommendations-container">
+                <div class="recommendations-loading" id="recommendationsLoading" style="display: none;">
+                    <div class="loading-spinner-small"></div>
+                    <span>Analyzing text with AI...</span>
+                </div>
+                <div class="recommendations-container" id="recommendationsContainer">
                     <div class="recommendation-item">
                         <h4>Writing Style</h4>
                         <p>Start typing to get AI-powered suggestions...</p>
