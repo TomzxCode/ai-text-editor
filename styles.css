@@ -1,0 +1,560 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    overflow-x: hidden;
+}
+
+/* App Container */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Header */
+.header {
+    background-color: #2d2d2d;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: none;
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* File Explorer */
+.file-explorer {
+    width: 250px;
+    background-color: #252525;
+    border-right: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+}
+
+.explorer-header {
+    padding: 1rem;
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.explorer-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.close-panel {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: none;
+}
+
+.directory-selector {
+    padding: 1rem;
+}
+
+.btn-primary {
+    background-color: #007acc;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #005a9e;
+}
+
+.file-tree {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.file-item {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.file-item:hover {
+    background-color: #333;
+}
+
+.file-item.active {
+    background-color: #007acc;
+}
+
+.file-icon {
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.no-files {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+/* Editor Section */
+.editor-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.editor-header {
+    background-color: #2d2d2d;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.current-file {
+    font-weight: 500;
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background-color: #444;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #555;
+}
+
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.editor-container {
+    flex: 1;
+    position: relative;
+    height: 100%;
+}
+
+#textEditor {
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border: none;
+    padding: 1rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+}
+
+.CodeMirror {
+    height: 100% !important;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* AI Sidebar */
+.ai-sidebar {
+    width: 300px;
+    background-color: #252525;
+    border-left: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.recommendations-container {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.recommendation-item {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.recommendation-item h4 {
+    font-size: 0.9rem;
+    color: #007acc;
+    margin-bottom: 0.5rem;
+}
+
+.recommendation-item p {
+    font-size: 0.8rem;
+    color: #ccc;
+    line-height: 1.4;
+}
+
+.ai-actions {
+    padding: 1rem;
+    border-top: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn-ai {
+    background-color: #8b5cf6;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.btn-ai:hover {
+    background-color: #7c3aed;
+}
+
+/* Bottom Navigation (Mobile) */
+.bottom-nav {
+    display: none;
+    background-color: #2d2d2d;
+    border-top: 1px solid #444;
+    padding: 0.5rem;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: #888;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+    transition: color 0.2s;
+}
+
+.nav-btn.active {
+    color: #007acc;
+}
+
+.nav-icon {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+}
+
+.nav-label {
+    font-size: 0.7rem;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #444;
+    border-top: 4px solid #007acc;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive Design */
+@media (max-width: 768px) {
+    .header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .header h1 {
+        font-size: 1.1rem;
+    }
+    
+    .menu-toggle {
+        display: block;
+    }
+    
+    .main-content {
+        position: relative;
+    }
+    
+    .file-explorer,
+    .ai-sidebar {
+        position: fixed;
+        top: 60px;
+        bottom: 70px;
+        z-index: 200;
+        transform: translateX(-100%);
+    }
+    
+    .file-explorer.active {
+        transform: translateX(0);
+    }
+    
+    .ai-sidebar {
+        right: 0;
+        transform: translateX(100%);
+    }
+    
+    .ai-sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .close-panel {
+        display: block;
+    }
+    
+    .editor-section {
+        width: 100%;
+    }
+    
+    .bottom-nav {
+        display: flex;
+    }
+    
+    #textEditor {
+        font-size: 16px;
+    }
+    
+    .CodeMirror {
+        font-size: 16px;
+    }
+}
+
+/* Portrait Phone Specific */
+@media (max-width: 480px) and (orientation: portrait) {
+    .header {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .header h1 {
+        font-size: 1rem;
+    }
+    
+    .file-explorer,
+    .ai-sidebar {
+        width: 100vw;
+        top: 55px;
+    }
+    
+    .editor-header {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .current-file {
+        font-size: 0.8rem;
+        max-width: 60%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .btn-secondary {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    
+    .recommendation-item {
+        padding: 0.75rem;
+    }
+    
+    .recommendation-item h4 {
+        font-size: 0.85rem;
+    }
+    
+    .recommendation-item p {
+        font-size: 0.75rem;
+    }
+    
+    .ai-actions {
+        padding: 0.75rem;
+    }
+    
+    .btn-ai {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .nav-icon {
+        font-size: 1.1rem;
+    }
+    
+    .nav-label {
+        font-size: 0.65rem;
+    }
+}
+
+/* Landscape Phone */
+@media (max-width: 768px) and (orientation: landscape) {
+    .file-explorer,
+    .ai-sidebar {
+        width: 70vw;
+        max-width: 300px;
+    }
+    
+    .bottom-nav {
+        padding: 0.25rem;
+    }
+    
+    .nav-btn {
+        padding: 0.25rem;
+    }
+    
+    .nav-icon {
+        font-size: 1rem;
+        margin-bottom: 0.1rem;
+    }
+    
+    .nav-label {
+        font-size: 0.6rem;
+    }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .file-explorer {
+        width: 220px;
+    }
+    
+    .ai-sidebar {
+        width: 280px;
+    }
+    
+    .header h1 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.blur-background {
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus styles for keyboard navigation */
+button:focus,
+input:focus,
+textarea:focus {
+    outline: 2px solid #007acc;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .file-explorer,
+    .ai-sidebar {
+        border-width: 2px;
+    }
+    
+    .recommendation-item {
+        border: 1px solid #666;
+    }
+}

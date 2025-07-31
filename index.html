@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>AI Text Editor</h1>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- File Explorer -->
+            <aside class="file-explorer" id="fileExplorer">
+                <div class="explorer-header">
+                    <h3>Files</h3>
+                    <button class="close-panel" id="closeExplorer">×</button>
+                </div>
+                <div class="directory-selector">
+                    <button class="btn-primary" id="selectDirectoryBtn">Select Directory</button>
+                </div>
+                <div class="file-tree" id="fileTree">
+                    <p class="no-files">No directory selected</p>
+                </div>
+            </aside>
+
+            <!-- Editor Section -->
+            <section class="editor-section">
+                <div class="editor-header">
+                    <span class="current-file" id="currentFile">No file selected</span>
+                    <div class="editor-actions">
+                        <button class="btn-secondary" id="newFileBtn">New</button>
+                        <button class="btn-secondary" id="saveFileBtn" disabled>Save</button>
+                    </div>
+                </div>
+                <div class="editor-container">
+                    <textarea id="textEditor" placeholder="Select a file to start editing or create a new file..."></textarea>
+                </div>
+            </section>
+
+            <!-- AI Recommendations Sidebar -->
+            <aside class="ai-sidebar" id="aiSidebar">
+                <div class="sidebar-header">
+                    <h3>AI Recommendations</h3>
+                    <button class="close-panel" id="closeSidebar">×</button>
+                </div>
+                <div class="recommendations-container">
+                    <div class="recommendation-item">
+                        <h4>Writing Style</h4>
+                        <p>Start typing to get AI-powered suggestions...</p>
+                    </div>
+                    <div class="recommendation-item">
+                        <h4>Grammar</h4>
+                        <p>Grammar suggestions will appear here</p>
+                    </div>
+                    <div class="recommendation-item">
+                        <h4>Structure</h4>
+                        <p>Document structure recommendations</p>
+                    </div>
+                </div>
+                <div class="ai-actions">
+                    <button class="btn-ai" id="improveTextBtn">Improve Text</button>
+                    <button class="btn-ai" id="summarizeBtn">Summarize</button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn" id="filesNavBtn">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">Files</span>
+            </button>
+            <button class="nav-btn" id="editorNavBtn">
+                <span class="nav-icon">✏️</span>
+                <span class="nav-label">Editor</span>
+            </button>
+            <button class="nav-btn" id="aiNavBtn">
+                <span class="nav-icon">🤖</span>
+                <span class="nav-label">AI</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
