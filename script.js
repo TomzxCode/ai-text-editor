@@ -163,6 +163,10 @@ class AITextEditor {
 
     async scanDirectory(directoryHandle, path = '') {
         for await (const [name, handle] of directoryHandle.entries()) {
+            if (name.startsWith('.')) {
+                continue;
+            }
+            
             const fullPath = path ? `${path}/${name}` : name;
             
             if (handle.kind === 'file') {
