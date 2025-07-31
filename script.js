@@ -26,7 +26,6 @@ class AITextEditor {
 
     initializeElements() {
         this.elements = {
-            directoryInput: document.getElementById('directoryInput'),
             selectDirectoryBtn: document.getElementById('selectDirectoryBtn'),
             fileTree: document.getElementById('fileTree'),
             textEditor: document.getElementById('textEditor'),
@@ -58,7 +57,6 @@ class AITextEditor {
             }
         });
 
-        this.elements.directoryInput.style.display = 'none';
 
         this.elements.newFileBtn.addEventListener('click', () => {
             this.createNewFile();
