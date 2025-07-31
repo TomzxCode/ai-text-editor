@@ -264,6 +264,65 @@ body {
     font-size: 0.8rem;
     color: #ccc;
     line-height: 1.4;
+    position: relative;
+}
+
+.recommendation-item.error {
+    background-color: #441111;
+    border: 1px solid #cc4444;
+}
+
+.recommendation-item.error h4 {
+    color: #ff6666;
+}
+
+.recommendation-item.stats {
+    background-color: #1a2332;
+    border: 1px solid #007acc;
+}
+
+.recommendation-item.stats h4 {
+    color: #4db8ff;
+}
+
+.priority-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.priority-badge.high {
+    background-color: #cc4444;
+    color: white;
+}
+
+.priority-badge.medium {
+    background-color: #cc8844;
+    color: white;
+}
+
+.priority-badge.low {
+    background-color: #44cc44;
+    color: white;
+}
+
+.recommendation-high {
+    border-left: 3px solid #cc4444;
+    padding-left: 0.5rem;
+}
+
+.recommendation-medium {
+    border-left: 3px solid #cc8844;
+    padding-left: 0.5rem;
+}
+
+.recommendation-low {
+    border-left: 3px solid #44cc44;
+    padding-left: 0.5rem;
 }
 
 .ai-actions {

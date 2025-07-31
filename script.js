@@ -461,94 +461,124 @@ class AITextEditor {
             this.displayRecommendations(recommendations);
         } catch (error) {
             console.error('Error generating AI recommendations:', error);
+            this.showRecommendationError('Unable to generate recommendations. Please check your connection.');
         }
     }
 
     async getAIRecommendations(content) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const wordCount = content.split(/\s+/).length;
-        const sentences = content.split('.').length - 1;
-        const avgWordsPerSentence = sentences > 0 ? Math.round(wordCount / sentences) : 0;
-        
-        return {
-            style: this.getStyleRecommendations(content, avgWordsPerSentence),
-            grammar: this.getGrammarRecommendations(content),
-            structure: this.getStructureRecommendations(content, wordCount, sentences)
-        };
+        try {
+            const response = await fetch('/analyze-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: content,
+                    max_recommendations: 5
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                recommendations: data.recommendations || [],
+                word_count: data.word_count || 0,
+                character_count: data.character_count || 0
+            };
+        } catch (error) {
+            console.error('Error calling AI API:', error);
+            // Fallback to basic analysis if API is unavailable
+            return {
+                recommendations: [
+                    {
+                        category: "Connection Error",
+                        suggestion: "Unable to connect to AI service. Please check your internet connection.",
+                        priority: "high"
+                    }
+                ],
+                word_count: content.split(/\s+/).length,
+                character_count: content.length
+            };
+        }
     }
 
-    getStyleRecommendations(content, avgWordsPerSentence) {
-        const recommendations = [];
-        
-        if (avgWordsPerSentence > 25) {
-            recommendations.push("Consider breaking up long sentences for better readability");
-        }
-        
-        if (content.includes('very') || content.includes('really')) {
-            recommendations.push("Try using more specific adjectives instead of 'very' or 'really'");
-        }
-        
-        if (!recommendations.length) {
-            recommendations.push("Writing style looks good! Keep up the clear, concise writing.");
-        }
-        
-        return recommendations;
-    }
-
-    getGrammarRecommendations(content) {
-        const recommendations = [];
-        
-        if (content.match(/\bi\s/gi)) {
-            recommendations.push("Remember to capitalize 'I' when used as a pronoun");
-        }
-        
-        if (content.match(/\s{2,}/g)) {
-            recommendations.push("Remove extra spaces between words");
-        }
-        
-        if (!recommendations.length) {
-            recommendations.push("No obvious grammar issues detected.");
-        }
-        
-        return recommendations;
-    }
-
-    getStructureRecommendations(content, wordCount, sentences) {
-        const recommendations = [];
-        
-        if (wordCount > 500 && !content.includes('\n\n')) {
-            recommendations.push("Consider adding paragraph breaks to improve readability");
-        }
-        
-        if (sentences < 3 && wordCount > 100) {
-            recommendations.push("Your text might benefit from more varied sentence structure");
-        }
-        
-        if (!recommendations.length) {
-            recommendations.push("Document structure looks well-organized.");
-        }
-        
-        return recommendations;
-    }
-
-    displayRecommendations(recommendations) {
+    showRecommendationError(message) {
         const container = this.elements.recommendationsContainer;
-        
         container.innerHTML = `
-            <div class="recommendation-item">
-                <h4>Writing Style</h4>
-                ${recommendations.style.map(rec => `<p>• ${rec}</p>`).join('')}
-            </div>
-            <div class="recommendation-item">
-                <h4>Grammar</h4>
-                ${recommendations.grammar.map(rec => `<p>• ${rec}</p>`).join('')}
-            </div>
-            <div class="recommendation-item">
-                <h4>Structure</h4>
-                ${recommendations.structure.map(rec => `<p>• ${rec}</p>`).join('')}
+            <div class="recommendation-item error">
+                <h4>⚠️ Connection Issue</h4>
+                <p>${message}</p>
+                <p><small>Please check your internet connection and try again.</small></p>
             </div>
         `;
+    }
+
+    displayRecommendations(data) {
+        const container = this.elements.recommendationsContainer;
+        
+        if (!data.recommendations || data.recommendations.length === 0) {
+            container.innerHTML = `
+                <div class="recommendation-item">
+                    <h4>✨ AI Analysis</h4>
+                    <p>No specific recommendations at this time. Your text looks good!</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Group recommendations by category
+        const groupedRecs = {};
+        data.recommendations.forEach(rec => {
+            if (!groupedRecs[rec.category]) {
+                groupedRecs[rec.category] = [];
+            }
+            groupedRecs[rec.category].push(rec);
+        });
+
+        let html = '';
+        for (const [category, recs] of Object.entries(groupedRecs)) {
+            const categoryIcon = this.getCategoryIcon(category);
+            html += `
+                <div class="recommendation-item">
+                    <h4>${categoryIcon} ${category}</h4>
+                    ${recs.map(rec => `
+                        <p class="recommendation-${rec.priority}">
+                            • ${rec.suggestion}
+                            <span class="priority-badge ${rec.priority}">${rec.priority}</span>
+                        </p>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Add text statistics
+        if (data.word_count !== undefined) {
+            html += `
+                <div class="recommendation-item stats">
+                    <h4>📊 Text Statistics</h4>
+                    <p>Words: ${data.word_count} | Characters: ${data.character_count}</p>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+    }
+
+    getCategoryIcon(category) {
+        const icons = {
+            'Style': '✨',
+            'Grammar': '📝', 
+            'Vocabulary': '📚',
+            'Structure': '🏗️',
+            'Clarity': '💡',
+            'Syntax': '⚙️',
+            'Connection Error': '⚠️',
+            'AI Analysis': '🤖'
+        };
+        return icons[category] || '📋';
     }
 
     async improveText() {
@@ -573,7 +603,7 @@ class AITextEditor {
             this.showNotification('Text improved successfully', 'success');
         } catch (error) {
             console.error('Error improving text:', error);
-            this.showNotification('Error improving text', 'error');
+            this.showNotification('Error improving text. Check your connection.', 'error');
         } finally {
             this.showLoading(false);
         }
@@ -618,59 +648,53 @@ class AITextEditor {
     }
 
     async callAIImprovement(text) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        return text.replace(/\b(very|really)\s+(\w+)/gi, (match, adverb, word) => {
-            const improvements = {
-                'good': 'excellent',
-                'bad': 'terrible',
-                'big': 'enormous',
-                'small': 'tiny',
-                'fast': 'rapid',
-                'slow': 'sluggish'
-            };
-            return improvements[word.toLowerCase()] || match;
-        }).replace(/\s+/g, ' ').trim();
-    }
+        try {
+            const response = await fetch('/improve-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text
+                })
+            });
 
-    async callAISummarization(text) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        
-        const sentences = text.split('.').filter(s => s.trim().length > 0);
-        const wordCount = text.split(/\s+/).length;
-        
-        return `
-            <p><strong>Document Statistics:</strong></p>
-            <ul>
-                <li>Word count: ${wordCount}</li>
-                <li>Sentences: ${sentences.length}</li>
-                <li>Average words per sentence: ${Math.round(wordCount / sentences.length)}</li>
-            </ul>
-            <p><strong>Key Points:</strong></p>
-            <ul>
-                <li>This document contains ${wordCount} words across ${sentences.length} sentences</li>
-                <li>The content appears to be ${this.getContentType(text)}</li>
-                <li>Readability level: ${this.getReadabilityLevel(wordCount, sentences.length)}</li>
-            </ul>
-        `;
-    }
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
 
-    getContentType(text) {
-        if (text.includes('function') || text.includes('class') || text.includes('var ')) {
-            return 'code or technical documentation';
-        } else if (text.includes('# ') || text.includes('## ')) {
-            return 'markdown documentation';
-        } else {
-            return 'general text content';
+            const data = await response.json();
+            return data.improved_text || text;
+        } catch (error) {
+            console.error('Error calling improve text API:', error);
+            throw new Error('Unable to improve text. Please check your internet connection.');
         }
     }
 
-    getReadabilityLevel(wordCount, sentenceCount) {
-        const avgWordsPerSentence = wordCount / sentenceCount;
-        if (avgWordsPerSentence < 15) return 'Easy to read';
-        if (avgWordsPerSentence < 25) return 'Moderately complex';
-        return 'Complex - consider simplifying';
+    async callAISummarization(text) {
+        try {
+            const response = await fetch('/summarize-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.summary || 'Unable to generate summary.';
+        } catch (error) {
+            console.error('Error calling summarization API:', error);
+            throw new Error('Unable to generate summary. Please check your internet connection.');
+        }
     }
+
 
     showMobilePanel(panel) {
         this.elements.fileExplorer.classList.remove('active');
