@@ -1,12 +1,18 @@
+import json
+import logging
+import os
+import subprocess
+from typing import List, Dict, Any
+from pathlib import Path
+import shutil
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import subprocess
-import json
-import os
-from typing import List, Dict, Any
-from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Text Editor API", version="1.0.0")
 
@@ -16,17 +22,20 @@ BASE_DIR = Path(__file__).parent
 # Mount static files (CSS, JS, etc.)
 app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
 
+# Get the path to the Claude CLI
+claude_path = shutil.which("claude")
+
 # Helper function to call Claude CLI
 async def call_claude_cli(prompt: str) -> str:
     """Call the Claude CLI with the given prompt and return the response."""
     try:
         result = subprocess.run(
-            ["claude", prompt, "--print"],
+            [claude_path, "--print"],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=60,  # 60 second timeout
             check=True,
-            shell=True
         )
         return result.stdout.strip()
     except subprocess.TimeoutExpired:
@@ -197,4 +206,6 @@ async def summarize_text(request: TextRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    logging.basicConfig(level=logging.INFO)
+    logger.info(f"Using Claude CLI at: {claude_path}")
     uvicorn.run(app, host="0.0.0.0", port=8000)
