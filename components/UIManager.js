@@ -435,12 +435,19 @@ class UIManager {
             }
         }
         
-        if (!data.recommendations || data.recommendations.length === 0) {
+        // Handle both old format (recommendations) and new format (groupedRecommendations)
+        const recommendationGroups = data.groupedRecommendations || 
+            (data.recommendations ? [{ 
+                promptName: data.prompt_name || 'General', 
+                recommendations: data.recommendations 
+            }] : []);
+
+        if (recommendationGroups.length === 0) {
             // Only show this if analysis is complete
             if (data.isComplete !== false) {
                 container.innerHTML = `
                     <div class="recommendation-item">
-                        <h4>✨ AI Analysis</h4>
+                        <h4>✨ General</h4>
                         <p>No specific recommendations at this time. Your text looks good!</p>
                     </div>
                 `;
@@ -448,29 +455,38 @@ class UIManager {
             return;
         }
 
-        const groupedRecs = {};
-        data.recommendations.forEach(rec => {
-            if (!groupedRecs[rec.category]) {
-                groupedRecs[rec.category] = [];
-            }
-            groupedRecs[rec.category].push(rec);
-        });
-
         let html = '';
-        for (const [category, recs] of Object.entries(groupedRecs)) {
-            const categoryIcon = this.getCategoryIcon(category);
-            html += `
-                <div class="recommendation-item">
-                    <h4>${categoryIcon} ${category}</h4>
-                    ${recs.map(rec => `
-                        <p class="recommendation-${rec.priority}">
-                            • ${rec.suggestion}
-                            <span class="priority-badge ${rec.priority}">${rec.priority}</span>
-                        </p>
-                    `).join('')}
-                </div>
-            `;
-        }
+        
+        // Create separate sections for each prompt
+        recommendationGroups.forEach(group => {
+            if (group.recommendations && group.recommendations.length > 0) {
+                const groupedRecs = {};
+                group.recommendations.forEach(rec => {
+                    if (!groupedRecs[rec.category]) {
+                        groupedRecs[rec.category] = [];
+                    }
+                    groupedRecs[rec.category].push(rec);
+                });
+
+                html += `<div class="recommendation-item">
+                    <h4>✨ ${group.promptName}</h4>`;
+                
+                for (const [category, recs] of Object.entries(groupedRecs)) {
+                    html += `
+                        <div class="category-section">
+                            <h5>${category}</h5>
+                            ${recs.map(rec => `
+                                <p class="recommendation-${rec.priority}">
+                                    • ${rec.suggestion}
+                                    <span class="priority-badge ${rec.priority}">${rec.priority}</span>
+                                </p>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+        });
 
         if (data.word_count !== undefined) {
             html += `

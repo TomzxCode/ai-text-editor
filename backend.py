@@ -69,6 +69,7 @@ class RecommendationsResponse(BaseModel):
     recommendations: List[Recommendation]
     word_count: int
     character_count: int
+    prompt_name: str = "General"
 
 @app.get("/")
 async def serve_frontend():
@@ -139,7 +140,7 @@ async def analyze_text(request: TextRequest):
         for rec in recommendations:
             if isinstance(rec, dict) and "category" in rec and "suggestion" in rec:
                 validated_recommendations.append(Recommendation(
-                    category=f"General - {rec.get('category', 'Analysis')}",
+                    category=rec.get('category', 'Analysis'),
                     suggestion=rec.get("suggestion", ""),
                     priority=rec.get("priority", "medium")
                 ))
@@ -151,7 +152,8 @@ async def analyze_text(request: TextRequest):
         return RecommendationsResponse(
             recommendations=validated_recommendations,
             word_count=word_count,
-            character_count=character_count
+            character_count=character_count,
+            prompt_name="General"
         )
 
     except json.JSONDecodeError:
@@ -165,7 +167,8 @@ async def analyze_text(request: TextRequest):
                 )
             ],
             word_count=len(request.text.split()),
-            character_count=len(request.text)
+            character_count=len(request.text),
+            prompt_name="General"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing text: {str(e)}")
@@ -272,7 +275,7 @@ Please respond in JSON format with an array of recommendations:
         for rec in recommendations:
             if isinstance(rec, dict) and "suggestion" in rec:
                 validated_recommendations.append(Recommendation(
-                    category=f"{request.prompt_name} - {rec.get('category', 'Analysis')}",
+                    category=rec.get('category', 'Analysis'),
                     suggestion=rec.get("suggestion", ""),
                     priority=rec.get("priority", "medium")
                 ))
@@ -284,7 +287,8 @@ Please respond in JSON format with an array of recommendations:
         return RecommendationsResponse(
             recommendations=validated_recommendations,
             word_count=word_count,
-            character_count=character_count
+            character_count=character_count,
+            prompt_name=request.prompt_name
         )
 
     except json.JSONDecodeError:
@@ -292,13 +296,14 @@ Please respond in JSON format with an array of recommendations:
         return RecommendationsResponse(
             recommendations=[
                 Recommendation(
-                    category=f"{request.prompt_name} - Analysis",
+                    category="Analysis",
                     suggestion="Unable to parse detailed recommendations. Consider reviewing text for clarity and structure.",
                     priority="medium"
                 )
             ],
             word_count=len(request.text.split()),
-            character_count=len(request.text)
+            character_count=len(request.text),
+            prompt_name=request.prompt_name
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing with custom prompt: {str(e)}")

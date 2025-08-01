@@ -179,7 +179,7 @@ class AIService {
 
             // Process results as they complete
             let completedCount = 0;
-            const allRecommendations = [];
+            const groupedRecommendations = [];
             let combinedWordCount = 0;
             let combinedCharCount = 0;
 
@@ -194,13 +194,17 @@ class AIService {
                         combinedCharCount = result.character_count;
                     }
 
-                    // Add recommendations
-                    allRecommendations.push(...result.recommendations);
+                    // Add recommendations grouped by prompt
+                    const promptName = result.promptName || 'General';
+                    groupedRecommendations.push({
+                        promptName: promptName,
+                        recommendations: result.recommendations
+                    });
                     completedCount++;
 
                     // Send progressive update
                     onProgressiveComplete({
-                        recommendations: [...allRecommendations],
+                        groupedRecommendations: [...groupedRecommendations],
                         word_count: combinedWordCount,
                         character_count: combinedCharCount,
                         isComplete: completedCount === allPromises.length,
@@ -212,16 +216,19 @@ class AIService {
                     console.error('Error with individual prompt:', error);
                     completedCount++;
 
-                    // Add error recommendation
-                    allRecommendations.push({
-                        category: "Error",
-                        suggestion: "One of the analysis requests failed. Please try again.",
-                        priority: "low"
+                    // Add error recommendation group
+                    groupedRecommendations.push({
+                        promptName: 'Error',
+                        recommendations: [{
+                            category: "Error",
+                            suggestion: "One of the analysis requests failed. Please try again.",
+                            priority: "low"
+                        }]
                     });
 
                     // Send update even for errors
                     onProgressiveComplete({
-                        recommendations: [...allRecommendations],
+                        groupedRecommendations: [...groupedRecommendations],
                         word_count: combinedWordCount,
                         character_count: combinedCharCount,
                         isComplete: completedCount === allPromises.length,
