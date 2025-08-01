@@ -31,6 +31,9 @@ class AITextEditor {
         this.elements = {
             selectDirectoryBtn: document.getElementById('selectDirectoryBtn'),
             fileTree: document.getElementById('fileTree'),
+            fileSearch: document.getElementById('fileSearch'),
+            fileSearchInput: document.getElementById('fileSearchInput'),
+            searchClear: document.getElementById('searchClear'),
             textEditor: document.getElementById('textEditor'),
             currentFileSpan: document.getElementById('currentFile'),
             newFileBtn: document.getElementById('newFileBtn'),
@@ -123,6 +126,15 @@ class AITextEditor {
             if (change.origin === '+input') {
                 this.scheduleAIRecommendations();
             }
+        });
+
+        // File search event listeners
+        this.elements.fileSearchInput.addEventListener('input', (e) => {
+            this.handleFileSearch(e.target.value);
+        });
+
+        this.elements.searchClear.addEventListener('click', () => {
+            this.clearFileSearch();
         });
     }
 
@@ -233,14 +245,24 @@ class AITextEditor {
 
         if (this.fileHandles.size === 0) {
             fileTree.innerHTML = '<p class="no-files">No directory selected</p>';
+            this.elements.fileSearch.style.display = 'none';
             return;
         }
+
+        // Show search bar when files are loaded
+        this.elements.fileSearch.style.display = 'block';
 
         const fileStructure = this.buildFileStructure();
         const treeHTML = this.renderFileStructure(fileStructure);
         fileTree.innerHTML = treeHTML;
 
         this.attachFileTreeListeners();
+        
+        // Apply current search filter if any
+        const searchTerm = this.elements.fileSearchInput.value;
+        if (searchTerm) {
+            this.handleFileSearch(searchTerm);
+        }
     }
 
     buildFileStructure() {
@@ -268,17 +290,22 @@ class AITextEditor {
         for (const [name, content] of Object.entries(structure)) {
             if (content._isFile) {
                 const icon = this.getFileIcon(name);
+                const path = content._path;
+                const fileName = name;
+                const filePath = level > 0 ? path.substring(0, path.lastIndexOf('/')) : '';
+                
                 html += `
-                    <div class="file-item" data-path="${content._path}" style="margin-left: ${level * 20}px;">
+                    <div class="file-item" data-path="${path}" data-name="${fileName.toLowerCase()}" data-fullpath="${path.toLowerCase()}" style="margin-left: ${level * 20}px;">
                         <span class="file-icon">${icon}</span>
-                        ${name}
+                        <span class="file-name">${fileName}</span>
+                        ${filePath ? `<span class="file-path">${filePath}</span>` : ''}
                     </div>
                 `;
             } else {
                 html += `
-                    <div class="folder-item" style="margin-left: ${level * 20}px;">
+                    <div class="file-item directory" data-name="${name.toLowerCase()}" data-fullpath="${name.toLowerCase()}" style="margin-left: ${level * 20}px;">
                         <span class="file-icon">📁</span>
-                        ${name}
+                        <span class="file-name">${name}</span>
                     </div>
                 `;
                 html += this.renderFileStructure(content, level + 1);
@@ -316,6 +343,115 @@ class AITextEditor {
                 this.openFile(item.dataset.path);
             });
         });
+    }
+
+    handleFileSearch(searchTerm) {
+        const fileItems = this.elements.fileTree.querySelectorAll('.file-item');
+        const clearBtn = this.elements.searchClear;
+        
+        // Show/hide clear button
+        if (searchTerm.trim()) {
+            clearBtn.classList.add('visible');
+        } else {
+            clearBtn.classList.remove('visible');
+            // Show all items when search is cleared
+            fileItems.forEach(item => {
+                item.classList.remove('filtered');
+                this.removeHighlights(item);
+            });
+            return;
+        }
+
+        const searchLower = searchTerm.toLowerCase();
+        
+        fileItems.forEach(item => {
+            const fileName = item.dataset.name || '';
+            const fullPath = item.dataset.fullpath || '';
+            
+            // Check if search term matches filename OR full path
+            const fileNameMatch = fileName.includes(searchLower);
+            const pathMatch = fullPath.includes(searchLower);
+            const isMatch = fileNameMatch || pathMatch;
+            
+            if (isMatch) {
+                item.classList.remove('filtered');
+                // Highlight in filename if it matches, otherwise highlight in path
+                if (fileNameMatch) {
+                    this.highlightSearchTerm(item, searchTerm, 'filename');
+                } else {
+                    this.highlightSearchTerm(item, searchTerm, 'path');
+                }
+            } else {
+                item.classList.add('filtered');
+                this.removeHighlights(item);
+            }
+        });
+    }
+
+    highlightSearchTerm(item, searchTerm, highlightType = 'filename') {
+        const searchLower = searchTerm.toLowerCase();
+        
+        if (highlightType === 'filename') {
+            const fileNameSpan = item.querySelector('.file-name');
+            if (!fileNameSpan) return;
+            
+            const originalText = fileNameSpan.textContent;
+            const originalLower = originalText.toLowerCase();
+            
+            if (originalLower.includes(searchLower)) {
+                const startIndex = originalLower.indexOf(searchLower);
+                const endIndex = startIndex + searchTerm.length;
+                
+                const before = originalText.substring(0, startIndex);
+                const match = originalText.substring(startIndex, endIndex);
+                const after = originalText.substring(endIndex);
+                
+                fileNameSpan.innerHTML = `${before}<span class="search-highlight">${match}</span>${after}`;
+            }
+        } else if (highlightType === 'path') {
+            const filePathSpan = item.querySelector('.file-path');
+            if (!filePathSpan) return;
+            
+            const originalText = filePathSpan.textContent;
+            const originalLower = originalText.toLowerCase();
+            
+            if (originalLower.includes(searchLower)) {
+                const startIndex = originalLower.indexOf(searchLower);
+                const endIndex = startIndex + searchTerm.length;
+                
+                const before = originalText.substring(0, startIndex);
+                const match = originalText.substring(startIndex, endIndex);
+                const after = originalText.substring(endIndex);
+                
+                filePathSpan.innerHTML = `${before}<span class="search-highlight">${match}</span>${after}`;
+            }
+        }
+    }
+
+    removeHighlights(item) {
+        // Remove highlights from file name
+        const fileNameSpan = item.querySelector('.file-name');
+        if (fileNameSpan) {
+            const highlightSpan = fileNameSpan.querySelector('.search-highlight');
+            if (highlightSpan) {
+                fileNameSpan.textContent = fileNameSpan.textContent; // This removes HTML and keeps just text
+            }
+        }
+        
+        // Remove highlights from file path
+        const filePathSpan = item.querySelector('.file-path');
+        if (filePathSpan) {
+            const highlightSpan = filePathSpan.querySelector('.search-highlight');
+            if (highlightSpan) {
+                filePathSpan.textContent = filePathSpan.textContent; // This removes HTML and keeps just text
+            }
+        }
+    }
+
+    clearFileSearch() {
+        this.elements.fileSearchInput.value = '';
+        this.handleFileSearch('');
+        this.elements.fileSearchInput.focus();
     }
 
     async openFile(filePath) {

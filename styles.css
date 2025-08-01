@@ -84,6 +84,56 @@ body {
     padding: 1rem;
 }
 
+.file-search {
+    padding: 0 1rem 1rem 1rem;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    color: #fff;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #007acc;
+}
+
+.search-input::placeholder {
+    color: #888;
+}
+
+.search-clear {
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.25rem;
+    border-radius: 2px;
+    transition: color 0.2s;
+    display: none;
+}
+
+.search-clear:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.search-clear.visible {
+    display: block;
+}
+
 .btn-primary {
     background-color: #007acc;
     color: white;
@@ -114,6 +164,7 @@ body {
     display: flex;
     align-items: center;
     font-size: 0.9rem;
+    transition: background-color 0.2s;
 }
 
 .file-item:hover {
@@ -124,9 +175,41 @@ body {
     background-color: #007acc;
 }
 
+.file-item.directory {
+    font-weight: 500;
+}
+
+.file-item.directory .file-icon {
+    color: #4db8ff;
+}
+
+.file-item.filtered {
+    display: none;
+}
+
+.file-item .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-item .file-path {
+    font-size: 0.75rem;
+    color: #888;
+    margin-left: 0.5rem;
+}
+
 .file-icon {
     margin-right: 0.5rem;
     font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.search-highlight {
+    background-color: rgba(77, 184, 255, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
 }
 
 .no-files {
