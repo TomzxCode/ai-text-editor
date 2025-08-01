@@ -82,6 +82,18 @@
                         <p>Document structure recommendations</p>
                     </div>
                 </div>
+                
+                <!-- Custom Prompts Section -->
+                <div class="custom-prompts-section">
+                    <div class="section-header">
+                        <h4>Custom Prompts</h4>
+                        <button class="btn-small" id="addPromptBtn">+</button>
+                    </div>
+                    <div class="custom-prompts-list" id="customPromptsList">
+                        <p class="no-prompts">No custom prompts yet. Click + to add one.</p>
+                    </div>
+                </div>
+                
                 <div class="ai-actions">
                     <button class="btn-ai" id="improveTextBtn">Improve Text</button>
                     <button class="btn-ai" id="summarizeBtn">Summarize</button>
@@ -106,6 +118,36 @@
         </nav>
     </div>
 
+    <!-- Custom Prompt Modal -->
+    <div class="modal-overlay" id="promptModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="promptModalTitle">Add Custom Prompt</h3>
+                <button class="modal-close" id="closePromptModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="promptName">Name:</label>
+                    <input type="text" id="promptName" placeholder="e.g., Technical Writing Review" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="promptText">Prompt:</label>
+                    <textarea id="promptText" placeholder="Enter your custom prompt here. Use {text} where you want the analyzed text to be inserted." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="promptEnabled" checked>
+                        Enabled
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelPromptBtn">Cancel</button>
+                <button class="btn-primary" id="savePromptBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
@@ -124,6 +166,7 @@
     <script src="/static/components/EditorManager.js"></script>
     <script src="/static/components/AIService.js"></script>
     <script src="/static/components/UIManager.js"></script>
+    <script src="/static/components/CustomPromptsManager.js"></script>
     <!-- Main application script -->
     <script src="/static/script.js"></script>
 </body>

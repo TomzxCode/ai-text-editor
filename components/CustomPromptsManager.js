@@ -1,0 +1,144 @@
+class CustomPromptsManager {
+    constructor() {
+        this.storageKey = 'ai_editor_custom_prompts';
+        this.prompts = this.loadPrompts();
+    }
+
+    loadPrompts() {
+        try {
+            const stored = localStorage.getItem(this.storageKey);
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            console.error('Error loading custom prompts:', error);
+            return [];
+        }
+    }
+
+    savePrompts() {
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.prompts));
+            return true;
+        } catch (error) {
+            console.error('Error saving custom prompts:', error);
+            return false;
+        }
+    }
+
+    addPrompt(name, prompt, enabled = true) {
+        if (!name || !prompt) {
+            throw new Error('Name and prompt are required');
+        }
+
+        if (this.prompts.find(p => p.name === name)) {
+            throw new Error('A prompt with this name already exists');
+        }
+
+        const newPrompt = {
+            id: Date.now().toString(),
+            name: name.trim(),
+            prompt: prompt.trim(),
+            enabled,
+            createdAt: new Date().toISOString()
+        };
+
+        this.prompts.push(newPrompt);
+        this.savePrompts();
+        return newPrompt;
+    }
+
+    updatePrompt(id, updates) {
+        const index = this.prompts.findIndex(p => p.id === id);
+        if (index === -1) {
+            throw new Error('Prompt not found');
+        }
+
+        if (updates.name && updates.name !== this.prompts[index].name) {
+            if (this.prompts.find(p => p.name === updates.name && p.id !== id)) {
+                throw new Error('A prompt with this name already exists');
+            }
+        }
+
+        this.prompts[index] = {
+            ...this.prompts[index],
+            ...updates,
+            id,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.savePrompts();
+        return this.prompts[index];
+    }
+
+    deletePrompt(id) {
+        const index = this.prompts.findIndex(p => p.id === id);
+        if (index === -1) {
+            throw new Error('Prompt not found');
+        }
+
+        const deleted = this.prompts.splice(index, 1)[0];
+        this.savePrompts();
+        return deleted;
+    }
+
+    getPrompt(id) {
+        return this.prompts.find(p => p.id === id);
+    }
+
+    getAllPrompts() {
+        return [...this.prompts];
+    }
+
+    getEnabledPrompts() {
+        return this.prompts.filter(p => p.enabled);
+    }
+
+    togglePrompt(id) {
+        const prompt = this.getPrompt(id);
+        if (!prompt) {
+            throw new Error('Prompt not found');
+        }
+
+        return this.updatePrompt(id, { enabled: !prompt.enabled });
+    }
+
+    exportPrompts() {
+        return JSON.stringify(this.prompts, null, 2);
+    }
+
+    importPrompts(jsonData, replace = false) {
+        try {
+            const imported = JSON.parse(jsonData);
+            if (!Array.isArray(imported)) {
+                throw new Error('Invalid format: expected array of prompts');
+            }
+
+            const validPrompts = imported.filter(p => p.name && p.prompt);
+            
+            if (replace) {
+                this.prompts = validPrompts.map(p => ({
+                    ...p,
+                    id: p.id || Date.now().toString() + Math.random(),
+                    createdAt: p.createdAt || new Date().toISOString(),
+                    enabled: p.enabled !== false
+                }));
+            } else {
+                const existingNames = new Set(this.prompts.map(p => p.name));
+                const newPrompts = validPrompts
+                    .filter(p => !existingNames.has(p.name))
+                    .map(p => ({
+                        ...p,
+                        id: Date.now().toString() + Math.random(),
+                        createdAt: new Date().toISOString(),
+                        enabled: p.enabled !== false
+                    }));
+                
+                this.prompts.push(...newPrompts);
+            }
+
+            this.savePrompts();
+            return this.prompts.length;
+        } catch (error) {
+            throw new Error('Failed to import prompts: ' + error.message);
+        }
+    }
+}

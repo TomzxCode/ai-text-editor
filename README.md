@@ -19,10 +19,10 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
    ```bash
    # macOS and Linux
    curl -LsSf https://astral.sh/uv/install.sh | sh
-   
+
    # Windows
    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-   
+
    # Or with pip
    pip install uv
    ```
@@ -31,7 +31,7 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
    ```bash
    # Install dependencies with uv
    uv sync
-   
+
    # Or install in current environment
    uv pip install -e .
    ```
@@ -40,7 +40,7 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
    ```bash
    # Install Claude CLI
    pip install claude-cli
-   
+
    # Or follow instructions at: https://claude.ai/cli
    ```
 
@@ -48,12 +48,12 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
    ```bash
    # Using uv to run
    uv run python backend.py
-   
+
    # Or activate the environment and run
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    python backend.py
    ```
-   
+
    The application will be available at `http://localhost:8000`
 
 ### Usage
@@ -70,7 +70,6 @@ Analyzes text and provides improvement recommendations.
 ```json
 {
   "text": "Your text here",
-  "max_recommendations": 5
 }
 ```
 
@@ -158,7 +157,7 @@ ai-text-editor/
 # Install development dependencies
 uv sync --dev
 
-# Run with auto-reload for development  
+# Run with auto-reload for development
 uv run uvicorn backend:app --reload --host 0.0.0.0 --port 8000
 
 # Format code

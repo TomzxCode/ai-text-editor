@@ -404,13 +404,47 @@ class UIManager {
     displayRecommendations(data) {
         const container = this.elements.recommendationsContainer;
         
+        // Show progress if available
+        if (data.completedCount !== undefined && data.totalCount !== undefined) {
+            const progressText = data.isComplete ? 
+                'Analysis complete' : 
+                `Analyzing... ${data.completedCount}/${data.totalCount} complete`;
+            
+            // Update or create progress indicator
+            let progressIndicator = container.querySelector('.analysis-progress');
+            if (!progressIndicator) {
+                progressIndicator = document.createElement('div');
+                progressIndicator.className = 'analysis-progress';
+                container.insertBefore(progressIndicator, container.firstChild);
+            }
+            
+            if (!data.isComplete) {
+                progressIndicator.innerHTML = `
+                    <div class="progress-text">🔄 ${progressText}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${(data.completedCount / data.totalCount) * 100}%"></div>
+                    </div>
+                `;
+            } else {
+                // Remove progress indicator when complete
+                setTimeout(() => {
+                    if (progressIndicator && progressIndicator.parentNode) {
+                        progressIndicator.remove();
+                    }
+                }, 1000);
+            }
+        }
+        
         if (!data.recommendations || data.recommendations.length === 0) {
-            container.innerHTML = `
-                <div class="recommendation-item">
-                    <h4>✨ AI Analysis</h4>
-                    <p>No specific recommendations at this time. Your text looks good!</p>
-                </div>
-            `;
+            // Only show this if analysis is complete
+            if (data.isComplete !== false) {
+                container.innerHTML = `
+                    <div class="recommendation-item">
+                        <h4>✨ AI Analysis</h4>
+                        <p>No specific recommendations at this time. Your text looks good!</p>
+                    </div>
+                `;
+            }
             return;
         }
 

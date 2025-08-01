@@ -45,9 +45,20 @@ async def call_claude_cli(prompt: str) -> str:
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Claude CLI not found. Please install Claude CLI first.")
 
+class CustomPrompt(BaseModel):
+    id: str
+    name: str
+    prompt: str
+    enabled: bool = True
+
 class TextRequest(BaseModel):
     text: str
-    max_recommendations: int = 5
+    custom_prompts: List[CustomPrompt] = []
+
+class CustomPromptRequest(BaseModel):
+    text: str
+    prompt_name: str
+    prompt_text: str
 
 class Recommendation(BaseModel):
     category: str
@@ -77,7 +88,7 @@ async def analyze_text(request: TextRequest):
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
     try:
-        # Create prompt for Claude
+        # Default analysis prompt
         prompt = f"""Please analyze the following text and provide 3-5 specific recommendations for improvement.
         Focus on areas like style, grammar, syntax, vocabulary, clarity, and structure.
 
@@ -103,7 +114,7 @@ async def analyze_text(request: TextRequest):
         # Call Claude CLI
         response_text = await call_claude_cli(prompt)
 
-        # Try to extract JSON from response
+        # Process default recommendations
         import json
         import re
 
@@ -125,10 +136,10 @@ async def analyze_text(request: TextRequest):
 
         # Ensure we have valid recommendation objects
         validated_recommendations = []
-        for rec in recommendations[:request.max_recommendations]:
+        for rec in recommendations:
             if isinstance(rec, dict) and "category" in rec and "suggestion" in rec:
                 validated_recommendations.append(Recommendation(
-                    category=rec.get("category", "General"),
+                    category=f"General - {rec.get('category', 'Analysis')}",
                     suggestion=rec.get("suggestion", ""),
                     priority=rec.get("priority", "medium")
                 ))
@@ -203,6 +214,94 @@ async def summarize_text(request: TextRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error summarizing text: {str(e)}")
+
+@app.post("/analyze-custom-prompt", response_model=RecommendationsResponse)
+async def analyze_custom_prompt(request: CustomPromptRequest):
+    """
+    Analyze text using a custom prompt and return recommendations.
+    """
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+    if not request.prompt_text.strip():
+        raise HTTPException(status_code=400, detail="Prompt text cannot be empty")
+
+    try:
+        # Replace {text} placeholder in custom prompt
+        custom_prompt_text = request.prompt_text.replace("{text}", request.text)
+
+        # Add instructions for JSON response format
+        full_custom_prompt = f"""{custom_prompt_text}
+
+Please respond in JSON format with an array of recommendations:
+{{
+    "recommendations": [
+        {{
+            "category": "Analysis",
+            "suggestion": "Your specific suggestion here",
+            "priority": "medium"
+        }}
+    ]
+}}"""
+
+        # Call Claude CLI
+        response_text = await call_claude_cli(full_custom_prompt)
+
+        # Try to extract JSON from response
+        import json
+        import re
+
+        # Look for JSON in the response
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group()
+            claude_response = json.loads(json_str)
+            recommendations = claude_response.get("recommendations", [])
+        else:
+            # Fallback: treat entire response as suggestion
+            recommendations = [
+                {
+                    "category": "Analysis",
+                    "suggestion": response_text[:200] + "..." if len(response_text) > 200 else response_text,
+                    "priority": "medium"
+                }
+            ]
+
+        # Ensure we have valid recommendation objects
+        validated_recommendations = []
+        for rec in recommendations:
+            if isinstance(rec, dict) and "suggestion" in rec:
+                validated_recommendations.append(Recommendation(
+                    category=f"{request.prompt_name} - {rec.get('category', 'Analysis')}",
+                    suggestion=rec.get("suggestion", ""),
+                    priority=rec.get("priority", "medium")
+                ))
+
+        # Calculate text statistics
+        word_count = len(request.text.split())
+        character_count = len(request.text)
+
+        return RecommendationsResponse(
+            recommendations=validated_recommendations,
+            word_count=word_count,
+            character_count=character_count
+        )
+
+    except json.JSONDecodeError:
+        # If JSON parsing fails, create a general recommendation
+        return RecommendationsResponse(
+            recommendations=[
+                Recommendation(
+                    category=f"{request.prompt_name} - Analysis",
+                    suggestion="Unable to parse detailed recommendations. Consider reviewing text for clarity and structure.",
+                    priority="medium"
+                )
+            ],
+            word_count=len(request.text.split()),
+            character_count=len(request.text)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing with custom prompt: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

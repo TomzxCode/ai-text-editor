@@ -7,7 +7,7 @@ class AIService {
         this.loadingTimerInterval = null;
     }
 
-    async getRecommendations(content) {
+    async getDefaultRecommendations(content) {
         try {
             const response = await fetch('/analyze-text', {
                 method: 'POST',
@@ -16,7 +16,6 @@ class AIService {
                 },
                 body: JSON.stringify({
                     text: content,
-                    max_recommendations: 5
                 })
             });
 
@@ -31,7 +30,7 @@ class AIService {
                 character_count: data.character_count || 0
             };
         } catch (error) {
-            console.error('Error calling AI API:', error);
+            console.error('Error calling default analysis API:', error);
             return {
                 recommendations: [
                     {
@@ -42,6 +41,48 @@ class AIService {
                 ],
                 word_count: content.split(/\s+/).length,
                 character_count: content.length
+            };
+        }
+    }
+
+    async getCustomPromptRecommendations(content, promptName, promptText) {
+        try {
+            const response = await fetch('/analyze-custom-prompt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: content,
+                    prompt_name: promptName,
+                    prompt_text: promptText
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                recommendations: data.recommendations || [],
+                word_count: data.word_count || 0,
+                character_count: data.character_count || 0,
+                promptName: promptName
+            };
+        } catch (error) {
+            console.error(`Error calling custom prompt API for '${promptName}':`, error);
+            return {
+                recommendations: [
+                    {
+                        category: `${promptName} - Connection Error`,
+                        suggestion: "Unable to connect to AI service. Please check your internet connection.",
+                        priority: "high"
+                    }
+                ],
+                word_count: content.split(/\s+/).length,
+                character_count: content.length,
+                promptName: promptName
             };
         }
     }
@@ -96,18 +137,18 @@ class AIService {
 
     scheduleRecommendations(callback, delay = 1000) {
         clearTimeout(this.recommendationTimer);
-        
+
         if (this.isGeneratingRecommendations) {
             this.hasPendingRecommendationRequest = true;
             return;
         }
-        
+
         this.recommendationTimer = setTimeout(() => {
             callback();
         }, delay);
     }
 
-    async generateRecommendations(content, onLoading, onComplete, onError) {
+    async generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts = []) {
         if (content.length < 10) return;
 
         if (this.isGeneratingRecommendations) {
@@ -122,8 +163,74 @@ class AIService {
         this.startLoadingTimer();
 
         try {
-            const recommendations = await this.getRecommendations(content);
-            onComplete(recommendations);
+            // Start with default recommendations
+            const defaultPromise = this.getDefaultRecommendations(content);
+
+            // Create promises for all custom prompts
+            const customPromises = customPrompts
+                .filter(prompt => prompt.enabled)
+                .map(prompt =>
+                    this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
+                        .then(result => ({ ...result, promptId: prompt.id }))
+                );
+
+            // Combine all promises
+            const allPromises = [defaultPromise, ...customPromises];
+
+            // Process results as they complete
+            let completedCount = 0;
+            const allRecommendations = [];
+            let combinedWordCount = 0;
+            let combinedCharCount = 0;
+
+            // Wait for each promise and update UI progressively
+            for (const promise of allPromises) {
+                try {
+                    const result = await promise;
+
+                    // Update counters from first result only
+                    if (completedCount === 0) {
+                        combinedWordCount = result.word_count;
+                        combinedCharCount = result.character_count;
+                    }
+
+                    // Add recommendations
+                    allRecommendations.push(...result.recommendations);
+                    completedCount++;
+
+                    // Send progressive update
+                    onProgressiveComplete({
+                        recommendations: [...allRecommendations],
+                        word_count: combinedWordCount,
+                        character_count: combinedCharCount,
+                        isComplete: completedCount === allPromises.length,
+                        completedCount,
+                        totalCount: allPromises.length
+                    });
+
+                } catch (error) {
+                    console.error('Error with individual prompt:', error);
+                    completedCount++;
+
+                    // Add error recommendation
+                    allRecommendations.push({
+                        category: "Error",
+                        suggestion: "One of the analysis requests failed. Please try again.",
+                        priority: "low"
+                    });
+
+                    // Send update even for errors
+                    onProgressiveComplete({
+                        recommendations: [...allRecommendations],
+                        word_count: combinedWordCount,
+                        character_count: combinedCharCount,
+                        isComplete: completedCount === allPromises.length,
+                        completedCount,
+                        totalCount: allPromises.length
+                    });
+                }
+            }
+
         } catch (error) {
             console.error('Error generating AI recommendations:', error);
             onError('Unable to generate recommendations. Please check your connection.');
@@ -131,11 +238,11 @@ class AIService {
             onLoading(false);
             this.stopLoadingTimer();
             this.isGeneratingRecommendations = false;
-            
+
             if (this.hasPendingRecommendationRequest) {
                 this.hasPendingRecommendationRequest = false;
                 setTimeout(() => {
-                    this.generateRecommendations(content, onLoading, onComplete, onError);
+                    this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts);
                 }, 100);
             }
         }
@@ -166,7 +273,7 @@ class AIService {
     getCategoryIcon(category) {
         const icons = {
             'Style': '✨',
-            'Grammar': '📝', 
+            'Grammar': '📝',
             'Vocabulary': '📚',
             'Structure': '🏗️',
             'Clarity': '💡',

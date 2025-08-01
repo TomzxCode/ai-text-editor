@@ -43,7 +43,17 @@ class AITextEditor {
             rightResize: document.getElementById('rightResize'),
             summarizeBtn: document.getElementById('summarizeBtn'),
             loadingOverlay: document.getElementById('loadingOverlay'),
-            recommendationsContainer: document.querySelector('.recommendations-container')
+            recommendationsContainer: document.querySelector('.recommendations-container'),
+            addPromptBtn: document.getElementById('addPromptBtn'),
+            customPromptsList: document.getElementById('customPromptsList'),
+            promptModal: document.getElementById('promptModal'),
+            promptModalTitle: document.getElementById('promptModalTitle'),
+            promptName: document.getElementById('promptName'),
+            promptText: document.getElementById('promptText'),
+            promptEnabled: document.getElementById('promptEnabled'),
+            savePromptBtn: document.getElementById('savePromptBtn'),
+            cancelPromptBtn: document.getElementById('cancelPromptBtn'),
+            closePromptModal: document.getElementById('closePromptModal')
         };
     }
 
@@ -54,6 +64,10 @@ class AITextEditor {
         
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
+        this.customPromptsManager = new CustomPromptsManager();
+        
+        this.currentEditingPromptId = null;
+        this.renderCustomPrompts();
     }
 
     setupEventListeners() {
@@ -75,6 +89,28 @@ class AITextEditor {
 
         this.elements.summarizeBtn.addEventListener('click', () => {
             this.summarizeText();
+        });
+
+        this.elements.addPromptBtn.addEventListener('click', () => {
+            this.showPromptModal();
+        });
+
+        this.elements.savePromptBtn.addEventListener('click', () => {
+            this.savePrompt();
+        });
+
+        this.elements.cancelPromptBtn.addEventListener('click', () => {
+            this.hidePromptModal();
+        });
+
+        this.elements.closePromptModal.addEventListener('click', () => {
+            this.hidePromptModal();
+        });
+
+        this.elements.promptModal.addEventListener('click', (e) => {
+            if (e.target === this.elements.promptModal) {
+                this.hidePromptModal();
+            }
         });
 
         window.addEventListener('beforeunload', (e) => {
@@ -230,11 +266,14 @@ class AITextEditor {
     generateAIRecommendations(content) {
         if (!this.editorManager.hasCurrentFile()) return;
         
+        const enabledPrompts = this.customPromptsManager.getEnabledPrompts();
+        
         this.aiService.generateRecommendations(
             content,
             (show) => this.uiManager.showRecommendationsLoading(show),
             (recommendations) => this.uiManager.displayRecommendations(recommendations),
-            (error) => this.uiManager.showRecommendationError(error)
+            (error) => this.uiManager.showRecommendationError(error),
+            enabledPrompts
         );
     }
 
@@ -312,6 +351,131 @@ class AITextEditor {
         }
     }
 
+    renderCustomPrompts() {
+        const prompts = this.customPromptsManager.getAllPrompts();
+        const container = this.elements.customPromptsList;
+        
+        if (prompts.length === 0) {
+            container.innerHTML = '<p class="no-prompts">No custom prompts yet. Click + to add one.</p>';
+            return;
+        }
+        
+        container.innerHTML = prompts.map(prompt => `
+            <div class="custom-prompt-item ${!prompt.enabled ? 'disabled' : ''}" data-id="${prompt.id}">
+                <div class="custom-prompt-header">
+                    <span class="custom-prompt-name">${this.escapeHtml(prompt.name)}</span>
+                    <div class="custom-prompt-actions">
+                        <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${prompt.enabled ? 'Disable' : 'Enable'}">
+                            ${prompt.enabled ? '●' : '○'}
+                        </button>
+                        <button class="btn-icon" onclick="app.editPrompt('${prompt.id}')" title="Edit">✏️</button>
+                        <button class="btn-icon danger" onclick="app.deletePrompt('${prompt.id}')" title="Delete">🗑️</button>
+                    </div>
+                </div>
+                <div class="custom-prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
+            </div>
+        `).join('');
+    }
+
+    showPromptModal(promptId = null) {
+        this.currentEditingPromptId = promptId;
+        
+        if (promptId) {
+            const prompt = this.customPromptsManager.getPrompt(promptId);
+            if (prompt) {
+                this.elements.promptModalTitle.textContent = 'Edit Custom Prompt';
+                this.elements.promptName.value = prompt.name;
+                this.elements.promptText.value = prompt.prompt;
+                this.elements.promptEnabled.checked = prompt.enabled;
+            }
+        } else {
+            this.elements.promptModalTitle.textContent = 'Add Custom Prompt';
+            this.elements.promptName.value = '';
+            this.elements.promptText.value = '';
+            this.elements.promptEnabled.checked = true;
+        }
+        
+        this.elements.promptModal.style.display = 'flex';
+        this.elements.promptName.focus();
+    }
+
+    hidePromptModal() {
+        this.elements.promptModal.style.display = 'none';
+        this.currentEditingPromptId = null;
+    }
+
+    savePrompt() {
+        const name = this.elements.promptName.value.trim();
+        const prompt = this.elements.promptText.value.trim();
+        const enabled = this.elements.promptEnabled.checked;
+        
+        if (!name) {
+            this.notificationManager.error('Please enter a name for the prompt');
+            this.elements.promptName.focus();
+            return;
+        }
+        
+        if (!prompt) {
+            this.notificationManager.error('Please enter the prompt text');
+            this.elements.promptText.focus();
+            return;
+        }
+        
+        try {
+            if (this.currentEditingPromptId) {
+                this.customPromptsManager.updatePrompt(this.currentEditingPromptId, {
+                    name,
+                    prompt,
+                    enabled
+                });
+                this.notificationManager.success('Prompt updated successfully');
+            } else {
+                this.customPromptsManager.addPrompt(name, prompt, enabled);
+                this.notificationManager.success('Prompt added successfully');
+            }
+            
+            this.renderCustomPrompts();
+            this.hidePromptModal();
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    editPrompt(promptId) {
+        this.showPromptModal(promptId);
+    }
+
+    togglePrompt(promptId) {
+        try {
+            this.customPromptsManager.togglePrompt(promptId);
+            this.renderCustomPrompts();
+            this.notificationManager.success('Prompt toggled successfully');
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    deletePrompt(promptId) {
+        const prompt = this.customPromptsManager.getPrompt(promptId);
+        if (!prompt) return;
+        
+        if (confirm(`Are you sure you want to delete the prompt "${prompt.name}"?`)) {
+            try {
+                this.customPromptsManager.deletePrompt(promptId);
+                this.renderCustomPrompts();
+                this.notificationManager.success('Prompt deleted successfully');
+            } catch (error) {
+                this.notificationManager.error(error.message);
+            }
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
 
 
 
@@ -322,6 +486,7 @@ class AITextEditor {
 
 }
 
+let app;
 document.addEventListener('DOMContentLoaded', () => {
-    new AITextEditor();
+    app = new AITextEditor();
 });
