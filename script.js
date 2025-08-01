@@ -10,6 +10,7 @@ class AITextEditor {
         this.recommendationTimer = null;
         this.isGeneratingRecommendations = false;
         this.hasPendingRecommendationRequest = false;
+        this.currentMobilePanel = 'editor';
         this.supportsFileSystemAccess = 'showDirectoryPicker' in window;
         
         if (!this.supportsFileSystemAccess) {
@@ -162,11 +163,23 @@ class AITextEditor {
                 deltaTime < maxSwipeTime) {
                 
                 if (deltaX > 0) {
-                    // Swipe right - show file explorer
-                    this.showMobilePanel('files');
+                    // Swipe right
+                    if (this.currentMobilePanel === 'ai') {
+                        // From AI sidebar, go back to editor
+                        this.showMobilePanel('editor');
+                    } else {
+                        // From editor, show file explorer
+                        this.showMobilePanel('files');
+                    }
                 } else {
-                    // Swipe left - show AI sidebar
-                    this.showMobilePanel('ai');
+                    // Swipe left
+                    if (this.currentMobilePanel === 'files') {
+                        // From file explorer, go back to editor
+                        this.showMobilePanel('editor');
+                    } else {
+                        // From editor, show AI sidebar
+                        this.showMobilePanel('ai');
+                    }
                 }
             }
         };
@@ -807,6 +820,7 @@ class AITextEditor {
             this.elements.aiSidebar.classList.add('active');
         }
         
+        this.currentMobilePanel = panel;
         this.updateMobileNavigation(panel);
     }
 
@@ -827,6 +841,7 @@ class AITextEditor {
     closePanel(panelId) {
         const panel = document.getElementById(panelId);
         panel.classList.remove('active');
+        this.currentMobilePanel = 'editor';
         this.updateMobileNavigation('editor');
     }
 
@@ -840,6 +855,7 @@ class AITextEditor {
         } else if (event.key === 'Escape') {
             this.elements.fileExplorer.classList.remove('active');
             this.elements.aiSidebar.classList.remove('active');
+            this.currentMobilePanel = 'editor';
             this.updateMobileNavigation('editor');
         }
     }
