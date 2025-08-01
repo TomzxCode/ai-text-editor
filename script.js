@@ -8,6 +8,8 @@ class AITextEditor {
         this.isModified = false;
         this.aiRecommendationsEnabled = true;
         this.recommendationTimer = null;
+        this.isGeneratingRecommendations = false;
+        this.hasPendingRecommendationRequest = false;
         this.supportsFileSystemAccess = 'showDirectoryPicker' in window;
         
         if (!this.supportsFileSystemAccess) {
@@ -445,6 +447,13 @@ class AITextEditor {
         if (!this.aiRecommendationsEnabled) return;
         
         clearTimeout(this.recommendationTimer);
+        
+        // If a request is already in progress, queue this one
+        if (this.isGeneratingRecommendations) {
+            this.hasPendingRecommendationRequest = true;
+            return;
+        }
+        
         this.recommendationTimer = setTimeout(() => {
             this.generateAIRecommendations();
         }, 1000);
@@ -455,6 +464,15 @@ class AITextEditor {
         
         const content = this.editor.getValue();
         if (content.length < 10) return;
+
+        // Check if already generating recommendations
+        if (this.isGeneratingRecommendations) {
+            this.hasPendingRecommendationRequest = true;
+            return;
+        }
+
+        this.isGeneratingRecommendations = true;
+        this.hasPendingRecommendationRequest = false;
 
         // Show loading indicator
         this.showRecommendationsLoading(true);
@@ -468,6 +486,13 @@ class AITextEditor {
         } finally {
             // Hide loading indicator
             this.showRecommendationsLoading(false);
+            this.isGeneratingRecommendations = false;
+            
+            // If there was a pending request, schedule it
+            if (this.hasPendingRecommendationRequest) {
+                this.hasPendingRecommendationRequest = false;
+                this.scheduleAIRecommendations();
+            }
         }
     }
 
