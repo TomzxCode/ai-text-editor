@@ -25,7 +25,7 @@ body {
     background-color: #2d2d2d;
     padding: 1rem;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     border-bottom: 1px solid #444;
     position: sticky;
@@ -33,46 +33,12 @@ body {
     z-index: 100;
 }
 
-.swipe-indicator {
-    display: none;
-    color: #666;
-    font-size: 1.2rem;
-    opacity: 0.6;
-    animation: pulse-swipe 2s ease-in-out infinite;
-}
-
-.swipe-indicator.left {
-    margin-right: auto;
-}
-
-.swipe-indicator.right {
-    margin-left: auto;
-}
-
-@keyframes pulse-swipe {
-    0%, 100% {
-        opacity: 0.3;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.1);
-    }
-}
 
 .header h1 {
     font-size: 1.2rem;
     font-weight: 600;
 }
 
-.menu-toggle {
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.5rem;
-    cursor: pointer;
-    display: none;
-}
 
 /* Main Content */
 .main-content {
@@ -494,61 +460,54 @@ body {
     .header {
         padding: 0.75rem 1rem;
     }
-    
+
     .header h1 {
         font-size: 1.1rem;
     }
-    
-    .menu-toggle {
-        display: block;
-    }
-    
-    .swipe-indicator {
-        display: block;
-    }
-    
+
+
     .main-content {
         position: relative;
     }
-    
+
     .file-explorer,
     .ai-sidebar {
         position: fixed;
-        top: 60px;
+        top: 47px;
         bottom: 0;
         z-index: 200;
         transform: translateX(-100%);
     }
-    
+
     .file-explorer.active {
         transform: translateX(0);
     }
-    
+
     .ai-sidebar {
         right: 0;
         transform: translateX(100%);
     }
-    
+
     .ai-sidebar.active {
         transform: translateX(0);
     }
-    
+
     .close-panel {
         display: block;
     }
-    
+
     .editor-section {
         width: 100%;
     }
-    
+
     .bottom-nav {
         display: none;
     }
-    
+
     #textEditor {
         font-size: 16px;
     }
-    
+
     .CodeMirror {
         font-size: 16px;
     }
@@ -559,21 +518,21 @@ body {
     .header {
         padding: 0.5rem 0.75rem;
     }
-    
+
     .header h1 {
         font-size: 1rem;
     }
-    
+
     .file-explorer,
     .ai-sidebar {
         width: 100vw;
-        top: 55px;
+        top: 37px;
     }
-    
+
     .editor-header {
         padding: 0.5rem 0.75rem;
     }
-    
+
     .current-file {
         font-size: 0.8rem;
         max-width: 60%;
@@ -581,37 +540,37 @@ body {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    
+
     .btn-secondary {
         padding: 0.3rem 0.6rem;
         font-size: 0.75rem;
     }
-    
+
     .recommendation-item {
         padding: 0.75rem;
     }
-    
+
     .recommendation-item h4 {
         font-size: 0.85rem;
     }
-    
+
     .recommendation-item p {
         font-size: 0.75rem;
     }
-    
+
     .ai-actions {
         padding: 0.75rem;
     }
-    
+
     .btn-ai {
         padding: 0.5rem 0.75rem;
         font-size: 0.85rem;
     }
-    
+
     .nav-icon {
         font-size: 1.1rem;
     }
-    
+
     .nav-label {
         font-size: 0.65rem;
     }
@@ -624,20 +583,20 @@ body {
         width: 70vw;
         max-width: 300px;
     }
-    
+
     .bottom-nav {
         padding: 0.25rem;
     }
-    
+
     .nav-btn {
         padding: 0.25rem;
     }
-    
+
     .nav-icon {
         font-size: 1rem;
         margin-bottom: 0.1rem;
     }
-    
+
     .nav-label {
         font-size: 0.6rem;
     }
@@ -648,11 +607,11 @@ body {
     .file-explorer {
         width: 220px;
     }
-    
+
     .ai-sidebar {
         width: 280px;
     }
-    
+
     .header h1 {
         font-size: 1.1rem;
     }
@@ -691,7 +650,7 @@ textarea:focus {
     .ai-sidebar {
         border-width: 2px;
     }
-    
+
     .recommendation-item {
         border: 1px solid #666;
     }
