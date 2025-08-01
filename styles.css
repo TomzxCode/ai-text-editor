@@ -50,6 +50,8 @@ body {
 /* File Explorer */
 .file-explorer {
     width: 250px;
+    min-width: 200px;
+    max-width: 500px;
     background-color: #252525;
     border-right: 1px solid #444;
     display: flex;
@@ -296,6 +298,8 @@ body {
 /* AI Sidebar */
 .ai-sidebar {
     width: 300px;
+    min-width: 250px;
+    max-width: 600px;
     background-color: #252525;
     border-left: 1px solid #444;
     display: flex;
@@ -422,6 +426,42 @@ body {
 
 .btn-ai:hover {
     background-color: #7c3aed;
+}
+
+/* Resize Handles */
+.resize-handle {
+    width: 4px;
+    background-color: transparent;
+    cursor: col-resize;
+    transition: background-color 0.2s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.resize-handle:hover {
+    background-color: #007acc;
+}
+
+.resize-handle:active {
+    background-color: #0066aa;
+}
+
+.resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -2px;
+    right: -2px;
+    bottom: 0;
+    cursor: col-resize;
+}
+
+.left-resize {
+    border-right: 1px solid #444;
+}
+
+.right-resize {
+    border-left: 1px solid #444;
 }
 
 /* Bottom Navigation (Mobile) */

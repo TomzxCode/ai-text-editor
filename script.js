@@ -12,6 +12,8 @@ class AITextEditor {
         this.hasPendingRecommendationRequest = false;
         this.currentMobilePanel = 'editor';
         this.supportsFileSystemAccess = 'showDirectoryPicker' in window;
+        this.isResizing = false;
+        this.currentResizer = null;
         
         if (!this.supportsFileSystemAccess) {
             this.showNotification('File System Access API not supported in this browser', 'error');
@@ -48,6 +50,8 @@ class AITextEditor {
             editorNavBtn: document.getElementById('editorNavBtn'),
             aiNavBtn: document.getElementById('aiNavBtn'),
             improveTextBtn: document.getElementById('improveTextBtn'),
+            leftResize: document.getElementById('leftResize'),
+            rightResize: document.getElementById('rightResize'),
             summarizeBtn: document.getElementById('summarizeBtn'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             recommendationsContainer: document.querySelector('.recommendations-container')
@@ -136,6 +140,9 @@ class AITextEditor {
         this.elements.searchClear.addEventListener('click', () => {
             this.clearFileSearch();
         });
+
+        // Setup resize functionality
+        this.setupResizeHandles();
     }
 
     setupMobileNavigation() {
@@ -452,6 +459,72 @@ class AITextEditor {
         this.elements.fileSearchInput.value = '';
         this.handleFileSearch('');
         this.elements.fileSearchInput.focus();
+    }
+
+    setupResizeHandles() {
+        // Load saved widths from localStorage
+        const savedLeftWidth = localStorage.getItem('fileExplorerWidth');
+        const savedRightWidth = localStorage.getItem('aiSidebarWidth');
+        
+        if (savedLeftWidth) {
+            this.elements.fileExplorer.style.width = savedLeftWidth + 'px';
+        }
+        if (savedRightWidth) {
+            this.elements.aiSidebar.style.width = savedRightWidth + 'px';
+        }
+
+        // Left resize handle events
+        this.elements.leftResize.addEventListener('mousedown', (e) => {
+            this.startResize(e, 'left');
+        });
+
+        // Right resize handle events  
+        this.elements.rightResize.addEventListener('mousedown', (e) => {
+            this.startResize(e, 'right');
+        });
+
+        // Global mouse events
+        document.addEventListener('mousemove', (e) => {
+            this.handleResize(e);
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.stopResize();
+        });
+    }
+
+    startResize(e, side) {
+        this.isResizing = true;
+        this.currentResizer = side;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    }
+
+    handleResize(e) {
+        if (!this.isResizing) return;
+
+        const mainContent = document.querySelector('.main-content');
+        const rect = mainContent.getBoundingClientRect();
+
+        if (this.currentResizer === 'left') {
+            const newWidth = Math.max(200, Math.min(500, e.clientX - rect.left));
+            this.elements.fileExplorer.style.width = newWidth + 'px';
+            localStorage.setItem('fileExplorerWidth', newWidth.toString());
+        } else if (this.currentResizer === 'right') {
+            const newWidth = Math.max(250, Math.min(600, rect.right - e.clientX));
+            this.elements.aiSidebar.style.width = newWidth + 'px';
+            localStorage.setItem('aiSidebarWidth', newWidth.toString());
+        }
+    }
+
+    stopResize() {
+        if (this.isResizing) {
+            this.isResizing = false;
+            this.currentResizer = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
     }
 
     async openFile(filePath) {
