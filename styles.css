@@ -409,15 +409,16 @@ body {
     margin-bottom: 1rem;
 }
 
-.loading-spinner-small {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid #4db8ff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0;
-    display: inline-block;
+.loading-timer {
+    font-weight: bold;
+    color: #4db8ff;
+    background-color: rgba(77, 184, 255, 0.2);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    min-width: 2.5rem;
+    text-align: center;
     flex-shrink: 0;
 }
 

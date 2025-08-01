@@ -515,9 +515,33 @@ class AITextEditor {
         const loadingElement = document.getElementById('recommendationsLoading');
         
         if (show) {
+            this.startLoadingTimer();
             loadingElement.style.display = 'block';
         } else {
+            this.stopLoadingTimer();
             loadingElement.style.display = 'none';
+        }
+    }
+
+    startLoadingTimer() {
+        this.loadingStartTime = Date.now();
+        this.loadingTimerInterval = setInterval(() => {
+            const elapsed = (Date.now() - this.loadingStartTime) / 1000;
+            const timerElement = document.getElementById('loadingTimer');
+            if (timerElement) {
+                timerElement.textContent = elapsed.toFixed(1) + 's';
+            }
+        }, 100);
+    }
+
+    stopLoadingTimer() {
+        if (this.loadingTimerInterval) {
+            clearInterval(this.loadingTimerInterval);
+            this.loadingTimerInterval = null;
+        }
+        const timerElement = document.getElementById('loadingTimer');
+        if (timerElement) {
+            timerElement.textContent = '0.0s';
         }
     }
 
