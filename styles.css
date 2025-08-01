@@ -33,6 +33,33 @@ body {
     z-index: 100;
 }
 
+.swipe-indicator {
+    display: none;
+    color: #666;
+    font-size: 1.2rem;
+    opacity: 0.6;
+    animation: pulse-swipe 2s ease-in-out infinite;
+}
+
+.swipe-indicator.left {
+    margin-right: auto;
+}
+
+.swipe-indicator.right {
+    margin-left: auto;
+}
+
+@keyframes pulse-swipe {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}
+
 .header h1 {
     font-size: 1.2rem;
     font-weight: 600;
@@ -476,6 +503,10 @@ body {
         display: block;
     }
     
+    .swipe-indicator {
+        display: block;
+    }
+    
     .main-content {
         position: relative;
     }
@@ -484,7 +515,7 @@ body {
     .ai-sidebar {
         position: fixed;
         top: 60px;
-        bottom: 70px;
+        bottom: 0;
         z-index: 200;
         transform: translateX(-100%);
     }
@@ -511,7 +542,7 @@ body {
     }
     
     .bottom-nav {
-        display: flex;
+        display: none;
     }
     
     #textEditor {

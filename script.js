@@ -126,19 +126,55 @@ class AITextEditor {
     }
 
     setupMobileNavigation() {
-        this.elements.filesNavBtn.addEventListener('click', () => {
-            this.showMobilePanel('files');
-        });
-
-        this.elements.editorNavBtn.addEventListener('click', () => {
-            this.showMobilePanel('editor');
-        });
-
-        this.elements.aiNavBtn.addEventListener('click', () => {
-            this.showMobilePanel('ai');
-        });
-
+        // Add swipe gesture detection for mobile
+        this.setupSwipeGestures();
         this.updateMobileNavigation('editor');
+    }
+
+    setupSwipeGestures() {
+        let startX = 0;
+        let startY = 0;
+        let startTime = 0;
+        const minSwipeDistance = 50;
+        const maxSwipeTime = 500;
+        const maxVerticalDistance = 100;
+
+        const handleTouchStart = (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startTime = Date.now();
+        };
+
+        const handleTouchEnd = (e) => {
+            if (!e.changedTouches || e.changedTouches.length === 0) return;
+
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const endTime = Date.now();
+
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+            const deltaTime = endTime - startTime;
+
+            // Check if it's a valid swipe
+            if (Math.abs(deltaX) > minSwipeDistance && 
+                Math.abs(deltaY) < maxVerticalDistance && 
+                deltaTime < maxSwipeTime) {
+                
+                if (deltaX > 0) {
+                    // Swipe right - show file explorer
+                    this.showMobilePanel('files');
+                } else {
+                    // Swipe left - show AI sidebar
+                    this.showMobilePanel('ai');
+                }
+            }
+        };
+
+        // Add touch event listeners to the main content area
+        const mainContent = document.querySelector('.main-content');
+        mainContent.addEventListener('touchstart', handleTouchStart, { passive: true });
+        mainContent.addEventListener('touchend', handleTouchEnd, { passive: true });
     }
 
     async selectDirectoryWithFileSystemAPI() {
