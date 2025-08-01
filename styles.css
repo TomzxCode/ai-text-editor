@@ -321,6 +321,51 @@ body {
     font-weight: 600;
 }
 
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #444;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border-right: 1px solid #444;
+}
+
+.tab-btn:last-child {
+    border-right: none;
+}
+
+.tab-btn:hover {
+    background-color: #3a3a3a;
+    color: #fff;
+}
+
+.tab-btn.active {
+    background-color: #007acc;
+    color: #fff;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
 .recommendations-container {
     flex: 1;
     padding: 1rem;

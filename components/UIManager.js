@@ -27,8 +27,33 @@ class UIManager {
             this.clearFileSearch();
         });
 
+        // Tab functionality
+        this.setupTabNavigation();
+
         document.addEventListener('keydown', (e) => {
             this.handleKeyboardShortcuts(e);
+        });
+    }
+
+    setupTabNavigation() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.dataset.tab;
+                
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                btn.classList.add('active');
+                const targetContent = document.getElementById(`${targetTab}TabContent`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
         });
     }
 
