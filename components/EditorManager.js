@@ -34,9 +34,21 @@ class EditorManager {
         });
 
         this.editor.on('inputRead', (cm, change) => {
-            if (change.origin === '+input') {
+            // Trigger AI recommendations for various input types
+            if (change.origin === '+input' || 
+                change.origin === 'paste' || 
+                change.origin === '+delete' ||
+                (change.origin && change.origin.indexOf('paste') !== -1)) {
                 this.onChangeCallback('input');
             }
+        });
+
+        // Add paste event listener to ensure paste operations trigger AI recommendations
+        this.editor.on('paste', () => {
+            // Use setTimeout to ensure the paste content is processed first
+            setTimeout(() => {
+                this.onChangeCallback('input');
+            }, 0);
         });
 
         // Apply initial font settings
