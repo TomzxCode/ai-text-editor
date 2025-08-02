@@ -24,9 +24,7 @@ class AIService {
 
             const data = await response.json();
             return {
-                recommendations: data.recommendations || [],
-                word_count: data.word_count || 0,
-                character_count: data.character_count || 0
+                recommendations: data.recommendations || []
             };
         } catch (error) {
             console.error('Error calling default analysis API:', error);
@@ -37,9 +35,7 @@ class AIService {
                         suggestion: "Unable to connect to AI service. Please check your internet connection.",
                         priority: "high"
                     }
-                ],
-                word_count: content.split(/\s+/).length,
-                character_count: content.length
+                ]
             };
         }
     }
@@ -65,8 +61,6 @@ class AIService {
             const data = await response.json();
             return {
                 recommendations: data.recommendations || [],
-                word_count: data.word_count || 0,
-                character_count: data.character_count || 0,
                 promptName: promptName
             };
         } catch (error) {
@@ -79,8 +73,6 @@ class AIService {
                         priority: "high"
                     }
                 ],
-                word_count: content.split(/\s+/).length,
-                character_count: content.length,
                 promptName: promptName
             };
         }
@@ -176,19 +168,12 @@ class AIService {
                             category: "AI Recommendations Disabled",
                             suggestion: "AI recommendations are currently disabled in settings. Enable them in the Settings tab to get AI-powered writing suggestions.",
                             priority: "low"
-                        },
-                        {
-                            category: "Text Statistics", 
-                            suggestion: `Word count: ${content.split(/\s+/).length}, Character count: ${content.length}`,
-                            priority: "low"
                         }
                     ]
                 }];
 
                 onProgressiveComplete({
                     groupedRecommendations: disabledRecommendations,
-                    word_count: content.split(/\s+/).length,
-                    character_count: content.length,
                     isComplete: true,
                     completedCount: 1,
                     totalCount: 1
@@ -240,8 +225,6 @@ class AIService {
             // Process results as they complete
             let completedCount = 0;
             const groupedRecommendations = [];
-            let combinedWordCount = 0;
-            let combinedCharCount = 0;
 
             // Wait for each promise and update UI progressively
             for (const promise of allPromises) {
@@ -252,12 +235,6 @@ class AIService {
                     if (result.requestId) {
                         const promptName = result.promptName || 'General';
                         this.replaceRequestPlaceholder(result.requestId, result.recommendations, promptName);
-                    }
-
-                    // Update counters from first result only
-                    if (completedCount === 0) {
-                        combinedWordCount = result.word_count;
-                        combinedCharCount = result.character_count;
                     }
 
                     // Add recommendations grouped by prompt (for final completion callback)
@@ -272,8 +249,6 @@ class AIService {
                     if (completedCount === allPromises.length) {
                         onProgressiveComplete({
                             groupedRecommendations: [...groupedRecommendations],
-                            word_count: combinedWordCount,
-                            character_count: combinedCharCount,
                             isComplete: true,
                             completedCount,
                             totalCount: allPromises.length
@@ -300,8 +275,6 @@ class AIService {
                     if (completedCount === allPromises.length) {
                         onProgressiveComplete({
                             groupedRecommendations: [...groupedRecommendations],
-                            word_count: combinedWordCount,
-                            character_count: combinedCharCount,
                             isComplete: true,
                             completedCount,
                             totalCount: allPromises.length

@@ -67,8 +67,6 @@ class Recommendation(BaseModel):
 
 class RecommendationsResponse(BaseModel):
     recommendations: List[Recommendation]
-    word_count: int
-    character_count: int
     prompt_name: str = "General"
 
 @app.get("/")
@@ -145,14 +143,8 @@ async def analyze_text(request: TextRequest):
                     priority=rec.get("priority", "medium")
                 ))
 
-        # Calculate text statistics
-        word_count = len(request.text.split())
-        character_count = len(request.text)
-
         return RecommendationsResponse(
             recommendations=validated_recommendations,
-            word_count=word_count,
-            character_count=character_count,
             prompt_name="General"
         )
 
@@ -166,8 +158,6 @@ async def analyze_text(request: TextRequest):
                     priority="medium"
                 )
             ],
-            word_count=len(request.text.split()),
-            character_count=len(request.text),
             prompt_name="General"
         )
     except Exception as e:
@@ -280,14 +270,8 @@ Please respond in JSON format with an array of recommendations:
                     priority=rec.get("priority", "medium")
                 ))
 
-        # Calculate text statistics
-        word_count = len(request.text.split())
-        character_count = len(request.text)
-
         return RecommendationsResponse(
             recommendations=validated_recommendations,
-            word_count=word_count,
-            character_count=character_count,
             prompt_name=request.prompt_name
         )
 
@@ -301,8 +285,6 @@ Please respond in JSON format with an array of recommendations:
                     priority="medium"
                 )
             ],
-            word_count=len(request.text.split()),
-            character_count=len(request.text),
             prompt_name=request.prompt_name
         )
     except Exception as e:

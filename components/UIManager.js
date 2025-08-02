@@ -464,30 +464,8 @@ class UIManager {
             return;
         }
         
-        const container = this.elements.recommendationsContainer;
-        
-        // Add document statistics at the end if we have the data
-        if (data.word_count !== undefined || data.character_count !== undefined) {
-            // Check if stats already exist
-            let statsElement = container.querySelector('.stats');
-            if (!statsElement) {
-                statsElement = document.createElement('div');
-                statsElement.className = 'recommendation-item stats';
-                statsElement.innerHTML = `
-                    <h4>📊 Document Statistics</h4>
-                    <p>Words: ${data.word_count || 0} | Characters: ${data.character_count || 0}</p>
-                `;
-                container.appendChild(statsElement);
-            } else {
-                // Update existing stats
-                statsElement.innerHTML = `
-                    <h4>📊 Document Statistics</h4>
-                    <p>Words: ${data.word_count || 0} | Characters: ${data.character_count || 0}</p>
-                `;
-            }
-        }
-        
         // Clean up any progress indicators
+        const container = this.elements.recommendationsContainer;
         const progressIndicator = container.querySelector('.analysis-progress');
         if (progressIndicator) {
             setTimeout(() => {
