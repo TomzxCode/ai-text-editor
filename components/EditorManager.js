@@ -18,7 +18,7 @@ class EditorManager {
             matchBrackets: true,
             indentUnit: 2,
             tabSize: 2,
-            mode: 'text/plain',
+            mode: 'markdown',
             extraKeys: {
                 'Ctrl-S': () => this.onChangeCallback('save'),
                 'Cmd-S': () => this.onChangeCallback('save'),
