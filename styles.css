@@ -898,10 +898,11 @@ body {
 
 /* Custom Prompts Section */
 .custom-prompts-section {
-    margin: 1rem 0;
-    padding: 0 1rem;
-    border-top: 1px solid #333;
-    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1rem;
+    overflow: hidden;
 }
 
 .section-header {
@@ -937,8 +938,9 @@ body {
 }
 
 .custom-prompts-list {
-    max-height: 200px;
+    flex: 1;
     overflow-y: auto;
+    padding-right: 0.5rem;
 }
 
 .no-prompts {
