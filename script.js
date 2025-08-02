@@ -267,9 +267,9 @@ class AITextEditor {
             return;
         }
         
-        const content = this.editorManager.getValue();
-        
         this.aiService.scheduleRecommendations(() => {
+            // Get content at execution time, not scheduling time
+            const content = this.editorManager.getValue();
             this.generateAIRecommendations(content);
         });
     }
@@ -277,6 +277,8 @@ class AITextEditor {
     generateAIRecommendations(content) {
         // Allow AI recommendations even without a current file, as long as there's content
         if (!content || content.trim().length === 0) {
+            // Restore initial placeholder if no content
+            this.uiManager.restoreInitialPlaceholder();
             return;
         }
         
@@ -285,7 +287,7 @@ class AITextEditor {
         
         this.aiService.generateRecommendations(
             content,
-            (show) => this.uiManager.showRecommendationsLoading(show),
+            (show) => {}, // No longer needed since we use individual placeholders
             (recommendations) => this.uiManager.displayRecommendations(recommendations),
             (error) => this.uiManager.showRecommendationError(error),
             enabledPrompts,

@@ -3,8 +3,7 @@ class AIService {
         this.isGeneratingRecommendations = false;
         this.hasPendingRecommendationRequest = false;
         this.recommendationTimer = null;
-        this.loadingStartTime = null;
-        this.loadingTimerInterval = null;
+        this.activeRequests = new Map(); // Track individual request timers
     }
 
     async getDefaultRecommendations(content) {
@@ -160,11 +159,16 @@ class AIService {
         this.hasPendingRecommendationRequest = false;
 
         onLoading(true);
-        this.startLoadingTimer();
 
         // Check if AI recommendations are disabled
         if (!settings.enableAIRecommendations) {
             try {
+                // Clear initial placeholder
+                const initialPlaceholder = document.getElementById('initialPlaceholder');
+                if (initialPlaceholder) {
+                    initialPlaceholder.remove();
+                }
+                
                 const disabledRecommendations = [{
                     promptName: 'AI Recommendations Disabled',
                     recommendations: [
@@ -192,7 +196,6 @@ class AIService {
 
             } finally {
                 onLoading(false);
-                this.stopLoadingTimer();
                 this.isGeneratingRecommendations = false;
 
                 if (this.hasPendingRecommendationRequest) {
@@ -206,19 +209,33 @@ class AIService {
         }
 
         try {
-            // Start with default recommendations
+            // Clear any existing placeholders and initial placeholder message
+            this.clearAllRequestPlaceholders();
+            const initialPlaceholder = document.getElementById('initialPlaceholder');
+            if (initialPlaceholder) {
+                initialPlaceholder.remove();
+            }
+            
+            // Create placeholder for default recommendations
+            const defaultRequestId = 'default';
+            this.createRequestPlaceholder(defaultRequestId, 'General');
             const defaultPromise = this.getDefaultRecommendations(content);
 
-            // Create promises for all custom prompts
+            // Create promises and placeholders for all custom prompts
             const customPromises = customPrompts
                 .filter(prompt => prompt.enabled)
-                .map(prompt =>
-                    this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
-                        .then(result => ({ ...result, promptId: prompt.id }))
-                );
+                .map(prompt => {
+                    const requestId = `custom-${prompt.id}`;
+                    this.createRequestPlaceholder(requestId, prompt.name);
+                    return this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
+                        .then(result => ({ ...result, promptId: prompt.id, requestId }));
+                });
 
-            // Combine all promises
-            const allPromises = [defaultPromise, ...customPromises];
+            // Combine all promises with their request IDs
+            const allPromises = [
+                defaultPromise.then(result => ({ ...result, requestId: defaultRequestId })),
+                ...customPromises
+            ];
 
             // Process results as they complete
             let completedCount = 0;
@@ -231,13 +248,19 @@ class AIService {
                 try {
                     const result = await promise;
 
+                    // Replace the placeholder for this completed request
+                    if (result.requestId) {
+                        const promptName = result.promptName || 'General';
+                        this.replaceRequestPlaceholder(result.requestId, result.recommendations, promptName);
+                    }
+
                     // Update counters from first result only
                     if (completedCount === 0) {
                         combinedWordCount = result.word_count;
                         combinedCharCount = result.character_count;
                     }
 
-                    // Add recommendations grouped by prompt
+                    // Add recommendations grouped by prompt (for final completion callback)
                     const promptName = result.promptName || 'General';
                     groupedRecommendations.push({
                         promptName: promptName,
@@ -245,21 +268,25 @@ class AIService {
                     });
                     completedCount++;
 
-                    // Send progressive update
-                    onProgressiveComplete({
-                        groupedRecommendations: [...groupedRecommendations],
-                        word_count: combinedWordCount,
-                        character_count: combinedCharCount,
-                        isComplete: completedCount === allPromises.length,
-                        completedCount,
-                        totalCount: allPromises.length
-                    });
+                    // Only send completion signal when all are done
+                    if (completedCount === allPromises.length) {
+                        onProgressiveComplete({
+                            groupedRecommendations: [...groupedRecommendations],
+                            word_count: combinedWordCount,
+                            character_count: combinedCharCount,
+                            isComplete: true,
+                            completedCount,
+                            totalCount: allPromises.length
+                        });
+                    }
 
                 } catch (error) {
                     console.error('Error with individual prompt:', error);
+                    
+                    // For errors, we'll handle cleanup at the end since we can't identify which request failed
                     completedCount++;
 
-                    // Add error recommendation group
+                    // Add error recommendation group for final callback
                     groupedRecommendations.push({
                         promptName: 'Error',
                         recommendations: [{
@@ -269,15 +296,17 @@ class AIService {
                         }]
                     });
 
-                    // Send update even for errors
-                    onProgressiveComplete({
-                        groupedRecommendations: [...groupedRecommendations],
-                        word_count: combinedWordCount,
-                        character_count: combinedCharCount,
-                        isComplete: completedCount === allPromises.length,
-                        completedCount,
-                        totalCount: allPromises.length
-                    });
+                    // Send completion signal when all are done (including failed ones)
+                    if (completedCount === allPromises.length) {
+                        onProgressiveComplete({
+                            groupedRecommendations: [...groupedRecommendations],
+                            word_count: combinedWordCount,
+                            character_count: combinedCharCount,
+                            isComplete: true,
+                            completedCount,
+                            totalCount: allPromises.length
+                        });
+                    }
                 }
             }
 
@@ -286,7 +315,8 @@ class AIService {
             onError('Unable to generate recommendations. Please check your connection.');
         } finally {
             onLoading(false);
-            this.stopLoadingTimer();
+            // Clean up any remaining placeholders
+            this.clearAllRequestPlaceholders();
             this.isGeneratingRecommendations = false;
 
             if (this.hasPendingRecommendationRequest) {
@@ -298,27 +328,6 @@ class AIService {
         }
     }
 
-    startLoadingTimer() {
-        this.loadingStartTime = Date.now();
-        this.loadingTimerInterval = setInterval(() => {
-            const elapsed = (Date.now() - this.loadingStartTime) / 1000;
-            const timerElement = document.getElementById('loadingTimer');
-            if (timerElement) {
-                timerElement.textContent = elapsed.toFixed(1) + 's';
-            }
-        }, 100);
-    }
-
-    stopLoadingTimer() {
-        if (this.loadingTimerInterval) {
-            clearInterval(this.loadingTimerInterval);
-            this.loadingTimerInterval = null;
-        }
-        const timerElement = document.getElementById('loadingTimer');
-        if (timerElement) {
-            timerElement.textContent = '0.0s';
-        }
-    }
 
     getCategoryIcon(category) {
         const icons = {
@@ -334,8 +343,116 @@ class AIService {
         return icons[category] || '📋';
     }
 
+    createRequestPlaceholder(requestId, promptName) {
+        const container = document.getElementById('recommendationsContainer');
+        const placeholder = document.createElement('div');
+        placeholder.className = 'recommendation-item loading-item';
+        placeholder.id = `placeholder-${requestId}`;
+        placeholder.innerHTML = `
+            <h4>🔄 ${promptName}</h4>
+            <p>
+                <span class="loading-timer" id="timer-${requestId}">0.0s</span>
+                <span class="loading-text">Analyzing...</span>
+            </p>
+        `;
+        
+        // Insert at the beginning of the container
+        container.insertBefore(placeholder, container.firstChild);
+        
+        // Start timer for this request
+        const startTime = Date.now();
+        const timerInterval = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const timerElement = document.getElementById(`timer-${requestId}`);
+            if (timerElement) {
+                timerElement.textContent = elapsed.toFixed(1) + 's';
+            }
+        }, 100);
+        
+        this.activeRequests.set(requestId, {
+            startTime,
+            timerInterval,
+            promptName
+        });
+        
+        return placeholder;
+    }
+
+    replaceRequestPlaceholder(requestId, recommendations, promptName) {
+        const placeholder = document.getElementById(`placeholder-${requestId}`);
+        if (!placeholder) return;
+        
+        // Stop and clear the timer
+        const request = this.activeRequests.get(requestId);
+        if (request && request.timerInterval) {
+            clearInterval(request.timerInterval);
+        }
+        this.activeRequests.delete(requestId);
+        
+        // Create the new recommendation content
+        if (recommendations && recommendations.length > 0) {
+            const groupedRecs = {};
+            recommendations.forEach(rec => {
+                if (!groupedRecs[rec.category]) {
+                    groupedRecs[rec.category] = [];
+                }
+                groupedRecs[rec.category].push(rec);
+            });
+
+            let html = `<div class="recommendation-item">
+                <h4>✨ ${promptName}</h4>`;
+            
+            for (const [category, recs] of Object.entries(groupedRecs)) {
+                html += `
+                    <div class="category-section">
+                        <h5>${category}</h5>
+                        ${recs.map(rec => `
+                            <p class="recommendation-${rec.priority}">
+                                • ${rec.suggestion}
+                                <span class="priority-badge ${rec.priority}">${rec.priority}</span>
+                            </p>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            html += '</div>';
+            
+            placeholder.outerHTML = html;
+        } else {
+            // No recommendations - show a simple message
+            placeholder.outerHTML = `
+                <div class="recommendation-item">
+                    <h4>✨ ${promptName}</h4>
+                    <p>No specific recommendations at this time. Your text looks good!</p>
+                </div>
+            `;
+        }
+    }
+
+    removeRequestPlaceholder(requestId) {
+        const placeholder = document.getElementById(`placeholder-${requestId}`);
+        if (placeholder) {
+            placeholder.remove();
+        }
+        
+        const request = this.activeRequests.get(requestId);
+        if (request && request.timerInterval) {
+            clearInterval(request.timerInterval);
+        }
+        
+        this.activeRequests.delete(requestId);
+    }
+
+    clearAllRequestPlaceholders() {
+        // Clear all active request timers and placeholders
+        this.activeRequests.forEach((request, requestId) => {
+            this.removeRequestPlaceholder(requestId);
+        });
+        this.activeRequests.clear();
+    }
+
     clearTimers() {
         clearTimeout(this.recommendationTimer);
-        this.stopLoadingTimer();
+        this.clearAllRequestPlaceholders();
     }
 }

@@ -456,106 +456,57 @@ class UIManager {
     }
 
     displayRecommendations(data) {
-        const container = this.elements.recommendationsContainer;
+        // This method now only handles final completion signal
+        // Individual placeholders are handled directly by AIService
         
-        // Show progress if available
-        if (data.completedCount !== undefined && data.totalCount !== undefined) {
-            const progressText = data.isComplete ? 
-                'Analysis complete' : 
-                `Analyzing... ${data.completedCount}/${data.totalCount} complete`;
-            
-            // Update or create progress indicator
-            let progressIndicator = container.querySelector('.analysis-progress');
-            if (!progressIndicator) {
-                progressIndicator = document.createElement('div');
-                progressIndicator.className = 'analysis-progress';
-                container.insertBefore(progressIndicator, container.firstChild);
-            }
-            
-            if (!data.isComplete) {
-                progressIndicator.innerHTML = `
-                    <div class="progress-text">🔄 ${progressText}</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${(data.completedCount / data.totalCount) * 100}%"></div>
-                    </div>
-                `;
-            } else {
-                // Remove progress indicator when complete
-                setTimeout(() => {
-                    if (progressIndicator && progressIndicator.parentNode) {
-                        progressIndicator.remove();
-                    }
-                }, 1000);
-            }
-        }
-        
-        // Handle both old format (recommendations) and new format (groupedRecommendations)
-        const recommendationGroups = data.groupedRecommendations || 
-            (data.recommendations ? [{ 
-                promptName: data.prompt_name || 'General', 
-                recommendations: data.recommendations 
-            }] : []);
-
-        if (recommendationGroups.length === 0) {
-            // Only show this if analysis is complete
-            if (data.isComplete !== false) {
-                container.innerHTML = `
-                    <div class="recommendation-item">
-                        <h4>✨ General</h4>
-                        <p>No specific recommendations at this time. Your text looks good!</p>
-                    </div>
-                `;
-            }
+        if (!data.isComplete) {
+            // Don't do anything for non-complete updates
             return;
         }
-
-        let html = '';
         
-        // Create separate sections for each prompt
-        recommendationGroups.forEach(group => {
-            if (group.recommendations && group.recommendations.length > 0) {
-                const groupedRecs = {};
-                group.recommendations.forEach(rec => {
-                    if (!groupedRecs[rec.category]) {
-                        groupedRecs[rec.category] = [];
-                    }
-                    groupedRecs[rec.category].push(rec);
-                });
-
-                html += `<div class="recommendation-item">
-                    <h4>✨ ${group.promptName}</h4>`;
-                
-                for (const [category, recs] of Object.entries(groupedRecs)) {
-                    html += `
-                        <div class="category-section">
-                            <h5>${category}</h5>
-                            ${recs.map(rec => `
-                                <p class="recommendation-${rec.priority}">
-                                    • ${rec.suggestion}
-                                    <span class="priority-badge ${rec.priority}">${rec.priority}</span>
-                                </p>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-                html += '</div>';
+        const container = this.elements.recommendationsContainer;
+        
+        // Add document statistics at the end if we have the data
+        if (data.word_count !== undefined || data.character_count !== undefined) {
+            // Check if stats already exist
+            let statsElement = container.querySelector('.stats');
+            if (!statsElement) {
+                statsElement = document.createElement('div');
+                statsElement.className = 'recommendation-item stats';
+                statsElement.innerHTML = `
+                    <h4>📊 Document Statistics</h4>
+                    <p>Words: ${data.word_count || 0} | Characters: ${data.character_count || 0}</p>
+                `;
+                container.appendChild(statsElement);
+            } else {
+                // Update existing stats
+                statsElement.innerHTML = `
+                    <h4>📊 Document Statistics</h4>
+                    <p>Words: ${data.word_count || 0} | Characters: ${data.character_count || 0}</p>
+                `;
             }
-        });
-
-        if (data.word_count !== undefined) {
-            html += `
-                <div class="recommendation-item stats">
-                    <h4>📊 Text Statistics</h4>
-                    <p>Words: ${data.word_count} | Characters: ${data.character_count}</p>
-                </div>
-            `;
         }
-
-        container.innerHTML = html;
+        
+        // Clean up any progress indicators
+        const progressIndicator = container.querySelector('.analysis-progress');
+        if (progressIndicator) {
+            setTimeout(() => {
+                if (progressIndicator && progressIndicator.parentNode) {
+                    progressIndicator.remove();
+                }
+            }, 1000);
+        }
     }
 
     showRecommendationError(message) {
         const container = this.elements.recommendationsContainer;
+        
+        // Clear any existing content including initial placeholder
+        const initialPlaceholder = document.getElementById('initialPlaceholder');
+        if (initialPlaceholder) {
+            initialPlaceholder.remove();
+        }
+        
         container.innerHTML = `
             <div class="recommendation-item error">
                 <h4>⚠️ Connection Issue</h4>
@@ -565,15 +516,20 @@ class UIManager {
         `;
     }
 
-    showRecommendationsLoading(show) {
-        const loadingElement = document.getElementById('recommendationsLoading');
-        
-        if (show) {
-            loadingElement.style.display = 'block';
-        } else {
-            loadingElement.style.display = 'none';
+    restoreInitialPlaceholder() {
+        const container = this.elements.recommendationsContainer;
+        // Only restore if container is empty or only has error messages
+        if (container.children.length === 0 || container.querySelector('.error')) {
+            container.innerHTML = `
+                <div class="recommendation-item placeholder-message" id="initialPlaceholder">
+                    <h4>🤖 AI Assistant</h4>
+                    <p>Open a file or start typing to get AI-powered writing suggestions.</p>
+                    <p><small>The AI will analyze your text and provide recommendations for style, grammar, structure, and more.</small></p>
+                </div>
+            `;
         }
     }
+
 
     getCategoryIcon(category) {
         const icons = {
