@@ -148,7 +148,7 @@ class AIService {
         }, delay);
     }
 
-    async generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts = []) {
+    async generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts = [], settings = {}) {
         if (content.length < 10) return;
 
         if (this.isGeneratingRecommendations) {
@@ -161,6 +161,49 @@ class AIService {
 
         onLoading(true);
         this.startLoadingTimer();
+
+        // Check if AI recommendations are disabled
+        if (!settings.enableAIRecommendations) {
+            try {
+                const disabledRecommendations = [{
+                    promptName: 'AI Recommendations Disabled',
+                    recommendations: [
+                        {
+                            category: "AI Recommendations Disabled",
+                            suggestion: "AI recommendations are currently disabled in settings. Enable them in the Settings tab to get AI-powered writing suggestions.",
+                            priority: "low"
+                        },
+                        {
+                            category: "Text Statistics", 
+                            suggestion: `Word count: ${content.split(/\s+/).length}, Character count: ${content.length}`,
+                            priority: "low"
+                        }
+                    ]
+                }];
+
+                onProgressiveComplete({
+                    groupedRecommendations: disabledRecommendations,
+                    word_count: content.split(/\s+/).length,
+                    character_count: content.length,
+                    isComplete: true,
+                    completedCount: 1,
+                    totalCount: 1
+                });
+
+            } finally {
+                onLoading(false);
+                this.stopLoadingTimer();
+                this.isGeneratingRecommendations = false;
+
+                if (this.hasPendingRecommendationRequest) {
+                    this.hasPendingRecommendationRequest = false;
+                    setTimeout(() => {
+                        this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts, settings);
+                    }, 100);
+                }
+            }
+            return;
+        }
 
         try {
             // Start with default recommendations
@@ -249,7 +292,7 @@ class AIService {
             if (this.hasPendingRecommendationRequest) {
                 this.hasPendingRecommendationRequest = false;
                 setTimeout(() => {
-                    this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts);
+                    this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts, settings);
                 }, 100);
             }
         }

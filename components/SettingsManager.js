@@ -3,7 +3,8 @@ class SettingsManager {
         this.storageKey = 'aiTextEditor_settings';
         this.defaultSettings = {
             fontFamily: "'Monaco', 'Menlo', monospace",
-            fontSize: 14
+            fontSize: 14,
+            enableAIRecommendations: true
         };
         
         this.settings = this.loadSettings();
@@ -63,6 +64,7 @@ class SettingsManager {
         const fontFamilySelect = document.getElementById('fontFamily');
         const fontSizeRange = document.getElementById('fontSize');
         const fontSizeValue = document.getElementById('fontSizeValue');
+        const enableAICheckbox = document.getElementById('enableAIRecommendations');
 
         if (!fontFamilySelect || !fontSizeRange || !fontSizeValue) {
             console.error('Settings UI elements not found');
@@ -73,6 +75,10 @@ class SettingsManager {
         fontFamilySelect.value = this.settings.fontFamily;
         fontSizeRange.value = this.settings.fontSize;
         fontSizeValue.textContent = `${this.settings.fontSize}px`;
+        
+        if (enableAICheckbox) {
+            enableAICheckbox.checked = this.settings.enableAIRecommendations;
+        }
 
         // Font family change handler
         fontFamilySelect.addEventListener('change', (e) => {
@@ -85,6 +91,13 @@ class SettingsManager {
             fontSizeValue.textContent = `${size}px`;
             this.setSetting('fontSize', size);
         });
+
+        // AI recommendations toggle handler
+        if (enableAICheckbox) {
+            enableAICheckbox.addEventListener('change', (e) => {
+                this.setSetting('enableAIRecommendations', e.target.checked);
+            });
+        }
     }
 
     resetToDefaults() {

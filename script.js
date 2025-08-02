@@ -1,7 +1,5 @@
 class AITextEditor {
     constructor() {
-        this.aiRecommendationsEnabled = true;
-        
         this.fileSystemManager = new FileSystemManager();
         this.notificationManager = new NotificationManager();
         
@@ -262,25 +260,36 @@ class AITextEditor {
 
 
     scheduleAIRecommendations() {
-        if (!this.aiRecommendationsEnabled) return;
+        // Check if AI recommendations are enabled in settings
+        const aiEnabled = this.settingsManager.getSetting('enableAIRecommendations');
+        
+        if (!aiEnabled) {
+            return;
+        }
         
         const content = this.editorManager.getValue();
+        
         this.aiService.scheduleRecommendations(() => {
             this.generateAIRecommendations(content);
         });
     }
 
     generateAIRecommendations(content) {
-        if (!this.editorManager.hasCurrentFile()) return;
+        // Allow AI recommendations even without a current file, as long as there's content
+        if (!content || content.trim().length === 0) {
+            return;
+        }
         
         const enabledPrompts = this.customPromptsManager.getEnabledPrompts();
+        const settings = this.settingsManager.getAllSettings();
         
         this.aiService.generateRecommendations(
             content,
             (show) => this.uiManager.showRecommendationsLoading(show),
             (recommendations) => this.uiManager.displayRecommendations(recommendations),
             (error) => this.uiManager.showRecommendationError(error),
-            enabledPrompts
+            enabledPrompts,
+            settings
         );
     }
 
