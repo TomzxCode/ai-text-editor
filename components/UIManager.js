@@ -39,22 +39,51 @@ class UIManager {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
 
+        // Restore saved tab state
+        this.restoreActiveTab();
+
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetTab = btn.dataset.tab;
-                
-                // Remove active class from all buttons and contents
-                tabButtons.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                // Add active class to clicked button and corresponding content
-                btn.classList.add('active');
-                const targetContent = document.getElementById(`${targetTab}TabContent`);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
+                this.switchToTab(targetTab);
             });
         });
+    }
+
+    switchToTab(targetTab) {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Remove active class from all buttons and contents
+        tabButtons.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding content
+        const targetButton = document.querySelector(`[data-tab="${targetTab}"]`);
+        const targetContent = document.getElementById(`${targetTab}TabContent`);
+        
+        if (targetButton && targetContent) {
+            targetButton.classList.add('active');
+            targetContent.classList.add('active');
+            
+            // Save active tab to localStorage
+            localStorage.setItem('activeTab', targetTab);
+        }
+    }
+
+    restoreActiveTab() {
+        const savedTab = localStorage.getItem('activeTab');
+        if (savedTab) {
+            // Check if the saved tab exists
+            const savedTabButton = document.querySelector(`[data-tab="${savedTab}"]`);
+            if (savedTabButton) {
+                this.switchToTab(savedTab);
+                return;
+            }
+        }
+        
+        // If no saved tab or saved tab doesn't exist, set recommendations as default
+        this.switchToTab('recommendations');
     }
 
     setupMobileNavigation() {
