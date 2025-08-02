@@ -1,12 +1,14 @@
 class EditorManager {
-    constructor(textEditorElement, onChangeCallback) {
+    constructor(textEditorElement, onChangeCallback, settingsManager) {
         this.textEditorElement = textEditorElement;
         this.onChangeCallback = onChangeCallback;
+        this.settingsManager = settingsManager;
         this.editor = null;
         this.currentFile = null;
         this.isModified = false;
         
         this.initializeEditor();
+        this.setupSettingsListeners();
     }
 
     initializeEditor() {
@@ -36,6 +38,38 @@ class EditorManager {
                 this.onChangeCallback('input');
             }
         });
+
+        // Apply initial font settings
+        this.applyFontSettings();
+    }
+
+    setupSettingsListeners() {
+        if (this.settingsManager) {
+            this.settingsManager.onChange((key, value) => {
+                if (key === 'fontFamily' || key === 'fontSize') {
+                    this.applyFontSettings();
+                }
+            });
+        }
+    }
+
+    applyFontSettings() {
+        if (!this.editor || !this.settingsManager) return;
+
+        const fontFamily = this.settingsManager.getSetting('fontFamily');
+        const fontSize = this.settingsManager.getSetting('fontSize');
+
+        // Apply styles to the editor
+        const editorElement = this.editor.getWrapperElement();
+        editorElement.style.fontFamily = fontFamily;
+        editorElement.style.fontSize = `${fontSize}px`;
+
+        // Also apply to the textarea for consistency
+        this.textEditorElement.style.fontFamily = fontFamily;
+        this.textEditorElement.style.fontSize = `${fontSize}px`;
+
+        // Refresh the editor to apply changes
+        this.editor.refresh();
     }
 
     handleEditorChange() {

@@ -366,6 +366,86 @@ body {
     display: flex;
 }
 
+/* Settings Styles */
+.settings-section {
+    padding: 1rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.setting-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ccc;
+}
+
+.setting-select {
+    padding: 0.5rem;
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.setting-select:focus {
+    outline: 2px solid #007acc;
+    outline-offset: 2px;
+}
+
+.font-size-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.setting-range {
+    flex: 1;
+    height: 4px;
+    background-color: #555;
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.setting-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background-color: #007acc;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.setting-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: #007acc;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+}
+
+.setting-value {
+    font-size: 0.9rem;
+    color: #007acc;
+    font-weight: 600;
+    min-width: 40px;
+}
+
 .recommendations-container {
     flex: 1;
     padding: 1rem;

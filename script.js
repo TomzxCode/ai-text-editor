@@ -58,9 +58,11 @@ class AITextEditor {
     }
 
     initializeManagers() {
+        this.settingsManager = new SettingsManager();
+        
         this.editorManager = new EditorManager(this.elements.textEditor, (event, data) => {
             this.handleEditorEvent(event, data);
-        });
+        }, this.settingsManager);
         
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
@@ -68,6 +70,11 @@ class AITextEditor {
         
         this.currentEditingPromptId = null;
         this.renderCustomPrompts();
+        
+        // Setup settings UI after DOM is ready
+        setTimeout(() => {
+            this.settingsManager.setupUI();
+        }, 0);
     }
 
     setupEventListeners() {

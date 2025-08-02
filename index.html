@@ -66,6 +66,7 @@
                 <div class="tab-nav">
                     <button class="tab-btn active" id="recommendationsTab" data-tab="recommendations">Recommendations</button>
                     <button class="tab-btn" id="promptsTab" data-tab="prompts">Custom Prompts</button>
+                    <button class="tab-btn" id="settingsTab" data-tab="settings">Settings</button>
                 </div>
                 
                 <!-- Recommendations Tab Content -->
@@ -107,6 +108,36 @@
                         </div>
                         <div class="custom-prompts-list" id="customPromptsList">
                             <p class="no-prompts">No custom prompts yet. Click + to add one.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Tab Content -->
+                <div class="tab-content" id="settingsTabContent">
+                    <div class="settings-section">
+                        <div class="section-header">
+                            <h4>Editor Settings</h4>
+                        </div>
+                        <div class="settings-content">
+                            <div class="setting-group">
+                                <label for="fontFamily">Font Family:</label>
+                                <select id="fontFamily" class="setting-select">
+                                    <option value="'JetBrains Mono', 'Fira Code', 'Consolas', monospace">JetBrains Mono</option>
+                                    <option value="'Fira Code', 'Consolas', monospace">Fira Code</option>
+                                    <option value="'Source Code Pro', monospace">Source Code Pro</option>
+                                    <option value="'Monaco', 'Menlo', monospace" selected>Monaco</option>
+                                    <option value="'Consolas', monospace">Consolas</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="monospace">System Monospace</option>
+                                </select>
+                            </div>
+                            <div class="setting-group">
+                                <label for="fontSize">Font Size:</label>
+                                <div class="font-size-controls">
+                                    <input type="range" id="fontSize" class="setting-range" min="10" max="24" value="14" step="1">
+                                    <span id="fontSizeValue" class="setting-value">14px</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -179,6 +210,7 @@
     <script src="/static/components/AIService.js"></script>
     <script src="/static/components/UIManager.js"></script>
     <script src="/static/components/CustomPromptsManager.js"></script>
+    <script src="/static/components/SettingsManager.js"></script>
     <!-- Main application script -->
     <script src="/static/script.js"></script>
 </body>
