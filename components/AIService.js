@@ -59,10 +59,34 @@ class AIService {
             }
 
             const data = await response.json();
-            return {
-                recommendations: data.recommendations || [],
-                promptName: promptName
-            };
+            
+            // Handle new generic response format
+            if (data.items && data.response_type) {
+                // Convert generic items to recommendations format for UI compatibility
+                const recommendations = this.convertGenericItemsToRecommendations(data.items, data.response_type);
+                return {
+                    recommendations: recommendations,
+                    promptName: promptName,
+                    responseType: data.response_type,
+                    originalItems: data.items
+                };
+            } 
+            // Handle legacy recommendations format
+            else if (data.recommendations) {
+                return {
+                    recommendations: data.recommendations || [],
+                    promptName: promptName,
+                    responseType: 'recommendations'
+                };
+            }
+            // Fallback
+            else {
+                return {
+                    recommendations: [],
+                    promptName: promptName,
+                    responseType: 'analysis'
+                };
+            }
         } catch (error) {
             console.error(`Error calling custom prompt API for '${promptName}':`, error);
             return {
@@ -73,9 +97,74 @@ class AIService {
                         priority: "high"
                     }
                 ],
-                promptName: promptName
+                promptName: promptName,
+                responseType: 'error'
             };
         }
+    }
+
+    convertGenericItemsToRecommendations(items, responseType) {
+        if (!items || !Array.isArray(items)) {
+            return [];
+        }
+
+        return items.map(item => {
+            switch (item.type) {
+                case 'recommendation':
+                    return {
+                        category: item.content.category || 'Analysis',
+                        suggestion: item.content.suggestion || '',
+                        priority: item.content.priority || 'medium'
+                    };
+                
+                case 'citation':
+                case 'reference':
+                    return {
+                        category: 'References',
+                        suggestion: this.formatCitation(item.content),
+                        priority: 'medium'
+                    };
+                
+                case 'diff':
+                    return {
+                        category: 'Suggested Edits',
+                        suggestion: this.formatDiff(item.content),
+                        priority: 'high'
+                    };
+                
+                case 'analysis':
+                case 'insight':
+                    return {
+                        category: item.content.title || 'Analysis',
+                        suggestion: item.content.description || JSON.stringify(item.content),
+                        priority: 'medium'
+                    };
+                
+                default:
+                    return {
+                        category: item.type?.charAt(0).toUpperCase() + item.type?.slice(1) || 'Analysis',
+                        suggestion: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
+                        priority: 'medium'
+                    };
+            }
+        });
+    }
+
+    formatCitation(content) {
+        const parts = [];
+        if (content.source) parts.push(`**Source:** ${content.source}`);
+        if (content.title) parts.push(`**Title:** ${content.title}`);
+        if (content.url) parts.push(`**URL:** ${content.url}`);
+        if (content.relevance) parts.push(`**Relevance:** ${content.relevance}`);
+        return parts.join('\n');
+    }
+
+    formatDiff(content) {
+        const parts = [];
+        if (content.original) parts.push(`**Original:** "${content.original}"`);
+        if (content.suggested) parts.push(`**Suggested:** "${content.suggested}"`);
+        if (content.reason) parts.push(`**Reason:** ${content.reason}`);
+        return parts.join('\n');
     }
 
     async improveText(text) {
@@ -311,7 +400,13 @@ class AIService {
             'Clarity': '💡',
             'Syntax': '⚙️',
             'Connection Error': '⚠️',
-            'AI Analysis': '🤖'
+            'AI Analysis': '🤖',
+            'References': '📚',
+            'Suggested Edits': '✏️',
+            'Analysis': '🔍',
+            'Citations': '📖',
+            'Diffs': '📝',
+            'Insights': '💡'
         };
         return icons[category] || '📋';
     }

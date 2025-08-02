@@ -69,6 +69,15 @@ class RecommendationsResponse(BaseModel):
     recommendations: List[Recommendation]
     prompt_name: str = "General"
 
+class GenericResponseItem(BaseModel):
+    type: str  # "recommendation", "citation", "reference", "diff", "analysis", etc.
+    content: Dict[str, Any]  # Flexible content structure
+
+class GenericResponse(BaseModel):
+    items: List[GenericResponseItem]
+    response_type: str  # Overall response type
+    prompt_name: str = "General"
+
 @app.get("/")
 async def serve_frontend():
     """Serve the main HTML file"""
@@ -208,10 +217,11 @@ async def summarize_text(request: TextRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error summarizing text: {str(e)}")
 
-@app.post("/analyze-custom-prompt", response_model=RecommendationsResponse)
+@app.post("/analyze-custom-prompt")
 async def analyze_custom_prompt(request: CustomPromptRequest):
     """
-    Analyze text using a custom prompt and return recommendations.
+    Analyze text using a custom prompt and return a flexible response.
+    Can return recommendations, citations, references, diffs, or other types of analysis.
     """
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
@@ -223,19 +233,73 @@ async def analyze_custom_prompt(request: CustomPromptRequest):
         # Replace {text} placeholder in custom prompt
         custom_prompt_text = request.prompt_text.replace("{text}", request.text)
 
-        # Add instructions for JSON response format
+        # Add instructions for flexible JSON response format
         full_custom_prompt = f"""{custom_prompt_text}
 
-Please respond in JSON format with an array of recommendations:
+Please respond in JSON format. You can return any type of analysis result. Here are some common formats:
+
+For recommendations:
 {{
-    "recommendations": [
+    "response_type": "recommendations",
+    "items": [
         {{
-            "category": "Analysis",
-            "suggestion": "Your specific suggestion here",
-            "priority": "medium"
+            "type": "recommendation",
+            "content": {{
+                "category": "Style",
+                "suggestion": "Your suggestion here",
+                "priority": "high"
+            }}
         }}
     ]
-}}"""
+}}
+
+For citations/references:
+{{
+    "response_type": "citations",
+    "items": [
+        {{
+            "type": "citation",
+            "content": {{
+                "source": "Author Name (Year)",
+                "title": "Title of work",
+                "url": "https://example.com",
+                "relevance": "How this relates to the text"
+            }}
+        }}
+    ]
+}}
+
+For text diffs/edits:
+{{
+    "response_type": "edits",
+    "items": [
+        {{
+            "type": "diff",
+            "content": {{
+                "original": "original text segment",
+                "suggested": "improved text segment",
+                "reason": "explanation of change"
+            }}
+        }}
+    ]
+}}
+
+For general analysis:
+{{
+    "response_type": "analysis",
+    "items": [
+        {{
+            "type": "insight",
+            "content": {{
+                "title": "Key insight",
+                "description": "Detailed analysis",
+                "evidence": "Supporting evidence from text"
+            }}
+        }}
+    ]
+}}
+
+Choose the most appropriate format for your response based on the prompt's intent."""
 
         # Call Claude CLI
         response_text = await call_claude_cli(full_custom_prompt)
@@ -249,46 +313,97 @@ Please respond in JSON format with an array of recommendations:
         if json_match:
             json_str = json_match.group()
             claude_response = json.loads(json_str)
-            recommendations = claude_response.get("recommendations", [])
+            
+            # Handle new generic format
+            if "items" in claude_response and "response_type" in claude_response:
+                items = []
+                for item in claude_response.get("items", []):
+                    if isinstance(item, dict) and "type" in item and "content" in item:
+                        items.append(GenericResponseItem(
+                            type=item["type"],
+                            content=item["content"]
+                        ))
+                
+                return GenericResponse(
+                    items=items,
+                    response_type=claude_response.get("response_type", "analysis"),
+                    prompt_name=request.prompt_name
+                )
+            
+            # Backward compatibility: handle old recommendations format
+            elif "recommendations" in claude_response:
+                recommendations = claude_response.get("recommendations", [])
+                items = []
+                for rec in recommendations:
+                    if isinstance(rec, dict) and "suggestion" in rec:
+                        items.append(GenericResponseItem(
+                            type="recommendation",
+                            content={
+                                "category": rec.get('category', 'Analysis'),
+                                "suggestion": rec.get("suggestion", ""),
+                                "priority": rec.get("priority", "medium")
+                            }
+                        ))
+                
+                return GenericResponse(
+                    items=items,
+                    response_type="recommendations",
+                    prompt_name=request.prompt_name
+                )
+            
+            else:
+                # Unknown JSON format, treat as general analysis
+                items = [GenericResponseItem(
+                    type="analysis",
+                    content={
+                        "title": "Custom Analysis",
+                        "description": json.dumps(claude_response),
+                        "source": "custom_prompt"
+                    }
+                )]
+                
+                return GenericResponse(
+                    items=items,
+                    response_type="analysis",
+                    prompt_name=request.prompt_name
+                )
+        
         else:
-            # Fallback: treat entire response as suggestion
-            recommendations = [
-                {
-                    "category": "Analysis",
-                    "suggestion": response_text[:200] + "..." if len(response_text) > 200 else response_text,
-                    "priority": "medium"
+            # Fallback: treat entire response as general analysis
+            items = [GenericResponseItem(
+                type="analysis",
+                content={
+                    "title": "Text Analysis",
+                    "description": response_text[:500] + "..." if len(response_text) > 500 else response_text,
+                    "source": "custom_prompt"
                 }
-            ]
-
-        # Ensure we have valid recommendation objects
-        validated_recommendations = []
-        for rec in recommendations:
-            if isinstance(rec, dict) and "suggestion" in rec:
-                validated_recommendations.append(Recommendation(
-                    category=rec.get('category', 'Analysis'),
-                    suggestion=rec.get("suggestion", ""),
-                    priority=rec.get("priority", "medium")
-                ))
-
-        return RecommendationsResponse(
-            recommendations=validated_recommendations,
-            prompt_name=request.prompt_name
-        )
+            )]
+            
+            return GenericResponse(
+                items=items,
+                response_type="analysis",
+                prompt_name=request.prompt_name
+            )
 
     except json.JSONDecodeError:
-        # If JSON parsing fails, create a general recommendation
-        return RecommendationsResponse(
-            recommendations=[
-                Recommendation(
-                    category="Analysis",
-                    suggestion="Unable to parse detailed recommendations. Consider reviewing text for clarity and structure.",
-                    priority="medium"
-                )
-            ],
+        # If JSON parsing fails, create a general analysis
+        items = [GenericResponseItem(
+            type="analysis",
+            content={
+                "title": "Analysis Result",
+                "description": "Unable to parse structured response. Raw analysis available.",
+                "source": "custom_prompt"
+            }
+        )]
+        
+        return GenericResponse(
+            items=items,
+            response_type="analysis",
             prompt_name=request.prompt_name
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing with custom prompt: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
