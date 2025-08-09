@@ -236,67 +236,6 @@ class AIService {
         return div.innerHTML;
     }
 
-    async improveText(text) {
-        try {
-            const response = await fetch('/improve-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: text
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            // Backend now returns HTML directly
-            const htmlContent = await response.text();
-            return htmlContent;
-        } catch (error) {
-            console.error('Error calling improve text API:', error);
-            const errorHtml = `
-                <div class="error-container">
-                    <h3>❌ Error</h3>
-                    <p class="error-message">Unable to improve text. Please check your internet connection.</p>
-                </div>
-            `;
-            return errorHtml;
-        }
-    }
-
-    async summarizeText(text) {
-        try {
-            const response = await fetch('/summarize-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: text
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            // Backend now returns HTML directly
-            const htmlContent = await response.text();
-            return htmlContent;
-        } catch (error) {
-            console.error('Error calling summarization API:', error);
-            const errorHtml = `
-                <div class="error-container">
-                    <h3>❌ Error</h3>
-                    <p class="error-message">Unable to generate summary. Please check your internet connection.</p>
-                </div>
-            `;
-            return errorHtml;
-        }
-    }
 
     scheduleFeedback(callback, delay = 1000) {
         clearTimeout(this.feedbackTimer);

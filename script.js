@@ -36,10 +36,8 @@ class AITextEditor {
             filesNavBtn: document.getElementById('filesNavBtn'),
             editorNavBtn: document.getElementById('editorNavBtn'),
             aiNavBtn: document.getElementById('aiNavBtn'),
-            improveTextBtn: document.getElementById('improveTextBtn'),
             leftResize: document.getElementById('leftResize'),
             rightResize: document.getElementById('rightResize'),
-            summarizeBtn: document.getElementById('summarizeBtn'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             feedbackContainer: document.querySelector('.feedback-container'),
             addPromptBtn: document.getElementById('addPromptBtn'),
@@ -88,13 +86,6 @@ class AITextEditor {
             this.saveCurrentFile();
         });
 
-        this.elements.improveTextBtn.addEventListener('click', () => {
-            this.improveText();
-        });
-
-        this.elements.summarizeBtn.addEventListener('click', () => {
-            this.summarizeText();
-        });
 
         this.elements.addPromptBtn.addEventListener('click', () => {
             this.showPromptModal();
@@ -313,82 +304,6 @@ class AITextEditor {
 
 
 
-    async improveText() {
-        if (!this.editorManager.hasCurrentFile()) return;
-        
-        const selectedText = this.editorManager.getSelection();
-        const textToImprove = selectedText || this.editorManager.getValue();
-        
-        if (!textToImprove.trim()) return;
-        
-        this.uiManager.showLoading(true);
-        
-        try {
-            const htmlResponse = await this.aiService.improveText(textToImprove);
-            
-            // Extract plain text from HTML response for editor
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlResponse;
-            const improvedText = tempDiv.querySelector('.improved-text-content')?.textContent || tempDiv.textContent || htmlResponse;
-            
-            if (selectedText) {
-                this.editorManager.replaceSelection(improvedText);
-            } else {
-                this.editorManager.setValue(improvedText);
-            }
-            
-            this.notificationManager.success('Text improved successfully');
-        } catch (error) {
-            console.error('Error improving text:', error);
-            this.notificationManager.error('Error improving text. Check your connection.');
-        } finally {
-            this.uiManager.showLoading(false);
-        }
-    }
-
-    async summarizeText() {
-        if (!this.editorManager.hasCurrentFile()) return;
-        
-        const content = this.editorManager.getValue();
-        if (!content.trim()) return;
-        
-        this.uiManager.showLoading(true);
-        
-        try {
-            const htmlResponse = await this.aiService.summarizeText(content);
-            const currentFile = this.editorManager.getCurrentFile();
-            
-            // Extract plain text from HTML response for the popup
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlResponse;
-            const summary = tempDiv.querySelector('.summary-content')?.textContent || tempDiv.textContent || htmlResponse;
-            
-            const summaryWindow = window.open('', '_blank', 'width=600,height=400');
-            summaryWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Text Summary</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-                            h1 { color: #333; }
-                            .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Summary of ${currentFile.name}</h1>
-                        <div class="summary">${summary}</div>
-                    </body>
-                </html>
-            `);
-            
-            this.notificationManager.success('Summary generated successfully');
-        } catch (error) {
-            console.error('Error summarizing text:', error);
-            this.notificationManager.error('Error generating summary');
-        } finally {
-            this.uiManager.showLoading(false);
-        }
-    }
 
     renderPrompts() {
         const prompts = this.promptsManager.getAllPrompts();
