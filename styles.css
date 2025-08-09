@@ -720,6 +720,11 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+.update-indicator {
+    display: inline-block;
+    transition: opacity 0.3s ease;
+}
+
 /* Mobile Responsive Design */
 @media (max-width: 768px) {
     .header {

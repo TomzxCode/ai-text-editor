@@ -398,16 +398,19 @@ class AIService {
         }
 
         try {
-            // Clear any existing placeholders and initial placeholder message
-            this.clearAllRequestPlaceholders();
+            // Clear any existing loading placeholders but preserve completed recommendations
+            this.clearOnlyLoadingPlaceholders();
             const initialPlaceholder = document.getElementById('initialPlaceholder');
             if (initialPlaceholder) {
                 initialPlaceholder.remove();
             }
             
+            // Show update indicators for existing recommendations that will be refreshed
+            this.showUpdateIndicatorsForExistingRecommendations(['General', ...customPrompts.filter(p => p.enabled).map(p => p.name)]);
+            
             // Create placeholder for default recommendations
             const defaultRequestId = 'default';
-            this.createRequestPlaceholder(defaultRequestId, 'General');
+            this.createOrUpdateRequestContainer(defaultRequestId, 'General', true);
             const defaultPromise = this.getDefaultRecommendations(content);
 
             // Create promises and placeholders for all custom prompts
@@ -415,7 +418,7 @@ class AIService {
                 .filter(prompt => prompt.enabled)
                 .map(prompt => {
                     const requestId = `custom-${prompt.id}`;
-                    this.createRequestPlaceholder(requestId, prompt.name);
+                    this.createOrUpdateRequestContainer(requestId, prompt.name, true);
                     return this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
                         .then(result => ({ ...result, promptId: prompt.id, requestId }));
                 });
@@ -570,6 +573,10 @@ class AIService {
         if (request && request.timerInterval) {
             clearInterval(request.timerInterval);
         }
+        
+        // Check if this was an existing container converted to loading state
+        const wasExistingContainer = request && request.existingContainer;
+        
         this.activeRequests.delete(requestId);
         
         // Create the new recommendation content
@@ -582,62 +589,151 @@ class AIService {
                 groupedRecs[rec.category].push(rec);
             });
 
-            let html = `<div class="recommendation-item">
-                <h4>✨ ${promptName}</h4>`;
+            let html = '';
             
-            for (const [category, recs] of Object.entries(groupedRecs)) {
-                html += `<div class="category-section">
-                    <h5>${category}</h5>`;
+            if (wasExistingContainer) {
+                // Update the existing container in place
+                placeholder.classList.remove('loading-item');
+                placeholder.id = ''; // Remove the placeholder ID
                 
-                recs.forEach(rec => {
-                    // Use specialized display for citations and diffs
-                    if (rec.type === 'citation') {
-                        html += `
-                            <div class="citation-item">
-                                <div class="citation-header">
-                                    <span class="citation-icon">📚</span>
-                                    <h6 class="citation-title">Citation</h6>
-                                </div>
-                                ${rec.htmlContent}
-                                <span class="priority-badge citation">${rec.priority}</span>
-                            </div>
-                        `;
-                    } else if (rec.type === 'diff') {
-                        html += `
-                            <div class="diff-item">
-                                <div class="diff-header">
-                                    <span class="diff-icon">✏️</span>
-                                    <h6 class="diff-title">Suggested Edit</h6>
-                                </div>
-                                ${rec.htmlContent}
-                                <span class="priority-badge diff">${rec.priority}</span>
-                            </div>
-                        `;
-                    } else {
-                        // Standard recommendation display
-                        const priorityClass = rec.type || rec.priority;
-                        html += `
-                            <p class="recommendation-${rec.priority}">
-                                • ${this.escapeHTML(rec.suggestion)}
-                                <span class="priority-badge ${priorityClass}">${rec.priority}</span>
-                            </p>
-                        `;
-                    }
-                });
+                // Update the heading
+                const heading = placeholder.querySelector('h4');
+                if (heading) {
+                    heading.innerHTML = `✨ ${promptName}`;
+                }
                 
-                html += `</div>`;
+                // Replace the content but keep the container
+                let contentHtml = '';
+                for (const [category, recs] of Object.entries(groupedRecs)) {
+                    contentHtml += `<div class="category-section">
+                        <h5>${category}</h5>`;
+                    
+                    recs.forEach(rec => {
+                        // Use specialized display for citations and diffs
+                        if (rec.type === 'citation') {
+                            contentHtml += `
+                                <div class="citation-item">
+                                    <div class="citation-header">
+                                        <span class="citation-icon">📚</span>
+                                        <h6 class="citation-title">Citation</h6>
+                                    </div>
+                                    ${rec.htmlContent}
+                                    <span class="priority-badge citation">${rec.priority}</span>
+                                </div>
+                            `;
+                        } else if (rec.type === 'diff') {
+                            contentHtml += `
+                                <div class="diff-item">
+                                    <div class="diff-header">
+                                        <span class="diff-icon">✏️</span>
+                                        <h6 class="diff-title">Suggested Edit</h6>
+                                    </div>
+                                    ${rec.htmlContent}
+                                    <span class="priority-badge diff">${rec.priority}</span>
+                                </div>
+                            `;
+                        } else {
+                            // Standard recommendation display
+                            const priorityClass = rec.type || rec.priority;
+                            contentHtml += `
+                                <p class="recommendation-${rec.priority}">
+                                    • ${this.escapeHTML(rec.suggestion)}
+                                    <span class="priority-badge ${priorityClass}">${rec.priority}</span>
+                                </p>
+                            `;
+                        }
+                    });
+                    
+                    contentHtml += `</div>`;
+                }
+                
+                // Remove all content except the heading and add new content
+                const elementsToRemove = placeholder.querySelectorAll('.category-section, p:not(.loading-text)');
+                elementsToRemove.forEach(el => el.remove());
+                
+                // Remove any loading text
+                const loadingText = placeholder.querySelector('.loading-text');
+                if (loadingText && loadingText.parentElement) {
+                    loadingText.parentElement.remove();
+                }
+                
+                placeholder.insertAdjacentHTML('beforeend', contentHtml);
+                
+            } else {
+                // Replace entire placeholder as before
+                html = `<div class="recommendation-item">
+                    <h4>✨ ${promptName}</h4>`;
+                
+                for (const [category, recs] of Object.entries(groupedRecs)) {
+                    html += `<div class="category-section">
+                        <h5>${category}</h5>`;
+                    
+                    recs.forEach(rec => {
+                        // Use specialized display for citations and diffs
+                        if (rec.type === 'citation') {
+                            html += `
+                                <div class="citation-item">
+                                    <div class="citation-header">
+                                        <span class="citation-icon">📚</span>
+                                        <h6 class="citation-title">Citation</h6>
+                                    </div>
+                                    ${rec.htmlContent}
+                                    <span class="priority-badge citation">${rec.priority}</span>
+                                </div>
+                            `;
+                        } else if (rec.type === 'diff') {
+                            html += `
+                                <div class="diff-item">
+                                    <div class="diff-header">
+                                        <span class="diff-icon">✏️</span>
+                                        <h6 class="diff-title">Suggested Edit</h6>
+                                    </div>
+                                    ${rec.htmlContent}
+                                    <span class="priority-badge diff">${rec.priority}</span>
+                                </div>
+                            `;
+                        } else {
+                            // Standard recommendation display
+                            const priorityClass = rec.type || rec.priority;
+                            html += `
+                                <p class="recommendation-${rec.priority}">
+                                    • ${this.escapeHTML(rec.suggestion)}
+                                    <span class="priority-badge ${priorityClass}">${rec.priority}</span>
+                                </p>
+                            `;
+                        }
+                    });
+                    
+                    html += `</div>`;
+                }
+                html += '</div>';
+                
+                placeholder.outerHTML = html;
             }
-            html += '</div>';
-            
-            placeholder.outerHTML = html;
         } else {
             // No recommendations - show a simple message
-            placeholder.outerHTML = `
-                <div class="recommendation-item">
-                    <h4>✨ ${promptName}</h4>
-                    <p>No specific recommendations at this time. Your text looks good!</p>
-                </div>
-            `;
+            if (wasExistingContainer) {
+                placeholder.classList.remove('loading-item');
+                placeholder.id = '';
+                
+                const heading = placeholder.querySelector('h4');
+                if (heading) {
+                    heading.innerHTML = `✨ ${promptName}`;
+                }
+                
+                // Remove loading content and add no-recommendations message
+                const elementsToRemove = placeholder.querySelectorAll('.category-section, p');
+                elementsToRemove.forEach(el => el.remove());
+                
+                placeholder.insertAdjacentHTML('beforeend', '<p>No specific recommendations at this time. Your text looks good!</p>');
+            } else {
+                placeholder.outerHTML = `
+                    <div class="recommendation-item">
+                        <h4>✨ ${promptName}</h4>
+                        <p>No specific recommendations at this time. Your text looks good!</p>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -661,6 +757,148 @@ class AIService {
             this.removeRequestPlaceholder(requestId);
         });
         this.activeRequests.clear();
+    }
+
+    clearOnlyLoadingPlaceholders() {
+        // Clear only placeholders that are currently loading (have timers)
+        const loadingRequestIds = [];
+        this.activeRequests.forEach((request, requestId) => {
+            if (request.timerInterval) {
+                loadingRequestIds.push(requestId);
+            }
+        });
+        
+        loadingRequestIds.forEach(requestId => {
+            this.removeRequestPlaceholder(requestId);
+        });
+    }
+
+    showUpdateIndicatorsForExistingRecommendations(promptNames) {
+        const container = document.getElementById('recommendationsContainer');
+        if (!container) return;
+        
+        promptNames.forEach(promptName => {
+            // Find existing recommendation container for this prompt
+            const existingContainer = this.findExistingRecommendationContainer(promptName);
+            if (existingContainer && !existingContainer.classList.contains('loading-item')) {
+                // Add update indicator to existing container
+                this.addUpdateIndicator(existingContainer, promptName);
+            }
+        });
+    }
+
+    findExistingRecommendationContainer(promptName) {
+        const container = document.getElementById('recommendationsContainer');
+        if (!container) return null;
+        
+        // Look for a container with this prompt name in its heading
+        const containers = container.querySelectorAll('.recommendation-item');
+        for (const cont of containers) {
+            const heading = cont.querySelector('h4');
+            if (heading && heading.textContent.includes(promptName)) {
+                return cont;
+            }
+        }
+        return null;
+    }
+
+    addUpdateIndicator(container, promptName) {
+        // Remove any existing update indicator
+        const existingIndicator = container.querySelector('.update-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Add a subtle update indicator
+        const heading = container.querySelector('h4');
+        if (heading) {
+            const indicator = document.createElement('span');
+            indicator.className = 'update-indicator';
+            indicator.innerHTML = '🔄';
+            indicator.style.opacity = '0.6';
+            indicator.style.fontSize = '0.8em';
+            indicator.style.marginLeft = '8px';
+            heading.appendChild(indicator);
+            
+            // Start a subtle animation
+            let opacity = 0.3;
+            let increasing = true;
+            const animateInterval = setInterval(() => {
+                if (increasing) {
+                    opacity += 0.1;
+                    if (opacity >= 0.8) increasing = false;
+                } else {
+                    opacity -= 0.1;
+                    if (opacity <= 0.3) increasing = true;
+                }
+                indicator.style.opacity = opacity;
+            }, 200);
+            
+            // Store the interval so we can clear it later
+            indicator.dataset.animationInterval = animateInterval;
+        }
+    }
+
+    createOrUpdateRequestContainer(requestId, promptName, isLoading = false) {
+        const container = document.getElementById('recommendationsContainer');
+        if (!container) return null;
+        
+        // Check if there's already a container for this prompt
+        const existingContainer = this.findExistingRecommendationContainer(promptName);
+        
+        if (existingContainer && !isLoading) {
+            // Just update the existing container
+            return existingContainer;
+        } else if (existingContainer && isLoading) {
+            // Convert existing container to loading state
+            this.convertToLoadingState(existingContainer, requestId, promptName);
+            return existingContainer;
+        } else {
+            // Create new placeholder as before
+            return this.createRequestPlaceholder(requestId, promptName);
+        }
+    }
+
+    convertToLoadingState(existingContainer, requestId, promptName) {
+        // Remove any existing update indicator
+        const updateIndicator = existingContainer.querySelector('.update-indicator');
+        if (updateIndicator) {
+            // Clear the animation interval
+            const intervalId = updateIndicator.dataset.animationInterval;
+            if (intervalId) {
+                clearInterval(parseInt(intervalId));
+            }
+            updateIndicator.remove();
+        }
+        
+        // Add loading state to the existing container
+        existingContainer.classList.add('loading-item');
+        existingContainer.id = `placeholder-${requestId}`;
+        
+        // Add a loading indicator to the heading
+        const heading = existingContainer.querySelector('h4');
+        if (heading) {
+            // Update the heading with loading indicator
+            const originalText = heading.textContent.replace(/^[🔄✨]\s*/, '');
+            heading.innerHTML = `🔄 ${originalText} <span class="loading-timer" id="timer-${requestId}">0.0s</span>`;
+        }
+        
+        // Start timer for this request
+        const startTime = Date.now();
+        const timerInterval = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const timerElement = document.getElementById(`timer-${requestId}`);
+            if (timerElement) {
+                timerElement.textContent = elapsed.toFixed(1) + 's';
+            }
+        }, 100);
+        
+        this.activeRequests.set(requestId, {
+            startTime,
+            timerInterval,
+            promptName,
+            existingContainer: true
+        });
     }
 
     clearTimers() {
