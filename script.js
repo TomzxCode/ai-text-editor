@@ -112,10 +112,21 @@ class AITextEditor {
             this.hidePromptModal();
         });
 
-        this.elements.promptModal.addEventListener('click', (e) => {
-            if (e.target === this.elements.promptModal) {
+        // Track mousedown to distinguish between clicks and text selection
+        let modalMouseDownTarget = null;
+        
+        this.elements.promptModal.addEventListener('mousedown', (e) => {
+            modalMouseDownTarget = e.target;
+        });
+        
+        this.elements.promptModal.addEventListener('mouseup', (e) => {
+            // Only close modal if mousedown and mouseup happened on the same target (overlay)
+            // and that target is the modal overlay itself
+            if (e.target === this.elements.promptModal && 
+                modalMouseDownTarget === this.elements.promptModal) {
                 this.hidePromptModal();
             }
+            modalMouseDownTarget = null;
         });
 
         window.addEventListener('beforeunload', (e) => {
