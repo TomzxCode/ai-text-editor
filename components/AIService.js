@@ -114,22 +114,31 @@ class AIService {
                     return {
                         category: item.content.category || 'Analysis',
                         suggestion: item.content.suggestion || '',
-                        priority: item.content.priority || 'medium'
+                        priority: item.content.priority || 'medium',
+                        type: 'recommendation'
                     };
                 
                 case 'citation':
                 case 'reference':
+                    const citationFormatted = this.formatCitation(item.content);
                     return {
                         category: 'References',
-                        suggestion: this.formatCitation(item.content),
-                        priority: 'medium'
+                        suggestion: citationFormatted.text,
+                        priority: 'medium',
+                        type: 'citation',
+                        htmlContent: citationFormatted.html,
+                        originalContent: item.content
                     };
                 
                 case 'diff':
+                    const diffFormatted = this.formatDiff(item.content);
                     return {
                         category: 'Suggested Edits',
-                        suggestion: this.formatDiff(item.content),
-                        priority: 'high'
+                        suggestion: diffFormatted.text,
+                        priority: 'high',
+                        type: 'diff',
+                        htmlContent: diffFormatted.html,
+                        originalContent: item.content
                     };
                 
                 case 'analysis':
@@ -137,34 +146,140 @@ class AIService {
                     return {
                         category: item.content.title || 'Analysis',
                         suggestion: item.content.description || JSON.stringify(item.content),
-                        priority: 'medium'
+                        priority: 'medium',
+                        type: 'analysis'
                     };
                 
                 default:
                     return {
                         category: item.type?.charAt(0).toUpperCase() + item.type?.slice(1) || 'Analysis',
                         suggestion: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
-                        priority: 'medium'
+                        priority: 'medium',
+                        type: 'general'
                     };
             }
         });
     }
 
     formatCitation(content) {
-        const parts = [];
-        if (content.source) parts.push(`**Source:** ${content.source}`);
-        if (content.title) parts.push(`**Title:** ${content.title}`);
-        if (content.url) parts.push(`**URL:** ${content.url}`);
-        if (content.relevance) parts.push(`**Relevance:** ${content.relevance}`);
-        return parts.join('\n');
+        // Create a structured citation display
+        return {
+            html: this.createCitationHTML(content),
+            text: this.createCitationText(content)
+        };
     }
 
     formatDiff(content) {
+        // Create a structured diff display
+        return {
+            html: this.createDiffHTML(content),
+            text: this.createDiffText(content)
+        };
+    }
+
+    createCitationHTML(content) {
+        const fields = [];
+        
+        if (content.source) {
+            fields.push(`
+                <div class="citation-field">
+                    <span class="field-label">Source</span>
+                    <span class="field-value">${this.escapeHTML(content.source)}</span>
+                </div>
+            `);
+        }
+        
+        if (content.title) {
+            fields.push(`
+                <div class="citation-field">
+                    <span class="field-label">Title</span>
+                    <span class="field-value">${this.escapeHTML(content.title)}</span>
+                </div>
+            `);
+        }
+        
+        if (content.url) {
+            fields.push(`
+                <div class="citation-field">
+                    <span class="field-label">URL</span>
+                    <span class="field-value link" onclick="window.open('${this.escapeHTML(content.url)}', '_blank')">${this.escapeHTML(content.url)}</span>
+                </div>
+            `);
+        }
+        
+        if (content.relevance) {
+            fields.push(`
+                <div class="citation-field">
+                    <span class="field-label">Relevance</span>
+                    <span class="field-value">${this.escapeHTML(content.relevance)}</span>
+                </div>
+            `);
+        }
+
+        return `
+            <div class="citation-content">
+                ${fields.join('')}
+            </div>
+        `;
+    }
+
+    createDiffHTML(content) {
+        let html = '<div class="diff-content">';
+        
+        if (content.original) {
+            html += `
+                <div class="diff-section">
+                    <div class="diff-text original" data-label="Original">
+                        ${this.escapeHTML(content.original)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (content.suggested) {
+            html += `
+                <div class="diff-section">
+                    <div class="diff-text suggested" data-label="Suggested">
+                        ${this.escapeHTML(content.suggested)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (content.reason) {
+            html += `
+                <div class="diff-reason">
+                    ${this.escapeHTML(content.reason)}
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    createCitationText(content) {
         const parts = [];
-        if (content.original) parts.push(`**Original:** "${content.original}"`);
-        if (content.suggested) parts.push(`**Suggested:** "${content.suggested}"`);
-        if (content.reason) parts.push(`**Reason:** ${content.reason}`);
+        if (content.source) parts.push(`Source: ${content.source}`);
+        if (content.title) parts.push(`Title: ${content.title}`);
+        if (content.url) parts.push(`URL: ${content.url}`);
+        if (content.relevance) parts.push(`Relevance: ${content.relevance}`);
         return parts.join('\n');
+    }
+
+    createDiffText(content) {
+        const parts = [];
+        if (content.original) parts.push(`Original: "${content.original}"`);
+        if (content.suggested) parts.push(`Suggested: "${content.suggested}"`);
+        if (content.reason) parts.push(`Reason: ${content.reason}`);
+        return parts.join('\n');
+    }
+
+    escapeHTML(text) {
+        if (typeof text !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async improveText(text) {
@@ -471,17 +586,46 @@ class AIService {
                 <h4>✨ ${promptName}</h4>`;
             
             for (const [category, recs] of Object.entries(groupedRecs)) {
-                html += `
-                    <div class="category-section">
-                        <h5>${category}</h5>
-                        ${recs.map(rec => `
+                html += `<div class="category-section">
+                    <h5>${category}</h5>`;
+                
+                recs.forEach(rec => {
+                    // Use specialized display for citations and diffs
+                    if (rec.type === 'citation') {
+                        html += `
+                            <div class="citation-item">
+                                <div class="citation-header">
+                                    <span class="citation-icon">📚</span>
+                                    <h6 class="citation-title">Citation</h6>
+                                </div>
+                                ${rec.htmlContent}
+                                <span class="priority-badge citation">${rec.priority}</span>
+                            </div>
+                        `;
+                    } else if (rec.type === 'diff') {
+                        html += `
+                            <div class="diff-item">
+                                <div class="diff-header">
+                                    <span class="diff-icon">✏️</span>
+                                    <h6 class="diff-title">Suggested Edit</h6>
+                                </div>
+                                ${rec.htmlContent}
+                                <span class="priority-badge diff">${rec.priority}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Standard recommendation display
+                        const priorityClass = rec.type || rec.priority;
+                        html += `
                             <p class="recommendation-${rec.priority}">
-                                • ${rec.suggestion}
-                                <span class="priority-badge ${rec.priority}">${rec.priority}</span>
+                                • ${this.escapeHTML(rec.suggestion)}
+                                <span class="priority-badge ${priorityClass}">${rec.priority}</span>
                             </p>
-                        `).join('')}
-                    </div>
-                `;
+                        `;
+                    }
+                });
+                
+                html += `</div>`;
             }
             html += '</div>';
             

@@ -1146,6 +1146,279 @@ body {
 }
 
 
+/* Citation/Reference Specific Styles */
+.citation-item {
+    background-color: #2a3441;
+    border-left: 4px solid #4db8ff;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.citation-item .citation-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.citation-item .citation-icon {
+    color: #4db8ff;
+    font-size: 1.1rem;
+}
+
+.citation-item .citation-title {
+    font-size: 0.9rem;
+    color: #4db8ff;
+    font-weight: 600;
+    margin: 0;
+}
+
+.citation-content {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.citation-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.citation-field .field-label {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.citation-field .field-value {
+    font-size: 0.85rem;
+    color: #e0e0e0;
+    line-height: 1.4;
+}
+
+.citation-field .field-value.link {
+    color: #66b3ff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.citation-field .field-value.link:hover {
+    color: #4da6ff;
+}
+
+/* Diff/Edit Specific Styles */
+.diff-item {
+    background-color: #2d1b1b;
+    border-left: 4px solid #ff6b6b;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.diff-item .diff-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.diff-item .diff-icon {
+    color: #ff6b6b;
+    font-size: 1.1rem;
+}
+
+.diff-item .diff-title {
+    font-size: 0.9rem;
+    color: #ff6b6b;
+    font-weight: 600;
+    margin: 0;
+}
+
+.diff-content {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.diff-section {
+    position: relative;
+}
+
+.diff-section .section-label {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.diff-text {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.diff-text.original {
+    background-color: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.3);
+    color: #ffcccc;
+}
+
+.diff-text.suggested {
+    background-color: rgba(107, 255, 107, 0.1);
+    border-color: rgba(107, 255, 107, 0.3);
+    color: #ccffcc;
+}
+
+.diff-text::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -0.5rem;
+    left: 0.75rem;
+    background-color: #2d2d2d;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    color: #888;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.diff-reason {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    color: #ccc;
+    line-height: 1.4;
+    border-left: 3px solid #007acc;
+    margin-top: 0.5rem;
+}
+
+.diff-reason::before {
+    content: "💡 ";
+    color: #007acc;
+    font-weight: bold;
+}
+
+/* Reference List Styles */
+.reference-list {
+    background-color: #1a2332;
+    border-left: 4px solid #66b3ff;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.reference-list .reference-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.reference-list .reference-icon {
+    color: #66b3ff;
+    font-size: 1.1rem;
+}
+
+.reference-list .reference-title {
+    font-size: 0.9rem;
+    color: #66b3ff;
+    font-weight: 600;
+    margin: 0;
+}
+
+.reference-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.reference-item {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    padding: 0.75rem;
+    border: 1px solid rgba(102, 179, 255, 0.2);
+}
+
+.reference-source {
+    font-weight: 600;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.reference-details {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.reference-detail {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.reference-detail .detail-label {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+    min-width: 70px;
+    flex-shrink: 0;
+}
+
+.reference-detail .detail-value {
+    font-size: 0.8rem;
+    color: #ccc;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.reference-detail .detail-value.url {
+    color: #66b3ff;
+    text-decoration: underline;
+    cursor: pointer;
+    word-break: break-all;
+}
+
+.reference-detail .detail-value.url:hover {
+    color: #4da6ff;
+}
+
+/* Enhanced priority badges for special content types */
+.priority-badge.citation {
+    background-color: #4db8ff;
+    color: #ffffff;
+}
+
+.priority-badge.diff {
+    background-color: #ff6b6b;
+    color: #ffffff;
+}
+
+.priority-badge.reference {
+    background-color: #66b3ff;
+    color: #ffffff;
+}
+
+.priority-badge.analysis {
+    background-color: #9966ff;
+    color: #ffffff;
+}
+
 /* Mobile Modal Adjustments */
 @media (max-width: 768px) {
     .modal {
@@ -1157,5 +1430,21 @@ body {
     .modal-body,
     .modal-footer {
         padding: 1rem;
+    }
+
+    .citation-item,
+    .diff-item,
+    .reference-list {
+        padding: 0.75rem;
+    }
+
+    .diff-text {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .citation-content,
+    .diff-content {
+        gap: 0.5rem;
     }
 }
