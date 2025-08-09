@@ -324,7 +324,12 @@ class AITextEditor {
         this.uiManager.showLoading(true);
         
         try {
-            const improvedText = await this.aiService.improveText(textToImprove);
+            const htmlResponse = await this.aiService.improveText(textToImprove);
+            
+            // Extract plain text from HTML response for editor
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlResponse;
+            const improvedText = tempDiv.querySelector('.improved-text-content')?.textContent || tempDiv.textContent || htmlResponse;
             
             if (selectedText) {
                 this.editorManager.replaceSelection(improvedText);
@@ -350,8 +355,13 @@ class AITextEditor {
         this.uiManager.showLoading(true);
         
         try {
-            const summary = await this.aiService.summarizeText(content);
+            const htmlResponse = await this.aiService.summarizeText(content);
             const currentFile = this.editorManager.getCurrentFile();
+            
+            // Extract plain text from HTML response for the popup
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlResponse;
+            const summary = tempDiv.querySelector('.summary-content')?.textContent || tempDiv.textContent || htmlResponse;
             
             const summaryWindow = window.open('', '_blank', 'width=600,height=400');
             summaryWindow.document.write(`

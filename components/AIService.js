@@ -25,45 +25,31 @@ class AIService {
                 throw new Error(`API request failed: ${response.status}`);
             }
 
-            const data = await response.json();
+            // Backend now returns HTML directly
+            const htmlContent = await response.text();
             
-            // Handle new generic response format
-            if (data.items && data.response_type) {
-                // Convert generic items to feedback format for UI compatibility
-                const feedback = this.convertGenericItemsToFeedback(data.items, data.response_type);
-                return {
-                    feedback: feedback,
-                    promptName: promptName,
-                    responseType: data.response_type,
-                    originalItems: data.items
-                };
-            } 
-            // Handle legacy feedback format
-            else if (data.recommendations || data.feedback) {
-                return {
-                    feedback: data.recommendations || data.feedback || [],
-                    promptName: promptName,
-                    responseType: 'feedback'
-                };
-            }
-            // Fallback
-            else {
-                return {
-                    feedback: [],
-                    promptName: promptName,
-                    responseType: 'analysis'
-                };
-            }
+            return {
+                htmlContent: htmlContent,
+                promptName: promptName,
+                responseType: 'html'
+            };
         } catch (error) {
             console.error(`Error calling prompt API for '${promptName}':`, error);
+            // Return error as HTML format too for consistency
+            const errorHtml = `
+                <div class="feedback-item">
+                    <h4>❌ ${promptName} - Connection Error</h4>
+                    <div class="category-section">
+                        <h5>Connection Error</h5>
+                        <p class="feedback-high">
+                            • Unable to connect to AI service. Please check your internet connection.
+                            <span class="priority-badge high">high</span>
+                        </p>
+                    </div>
+                </div>
+            `;
             return {
-                feedback: [
-                    {
-                        category: `${promptName} - Connection Error`,
-                        suggestion: "Unable to connect to AI service. Please check your internet connection.",
-                        priority: "high"
-                    }
-                ],
+                htmlContent: errorHtml,
                 promptName: promptName,
                 responseType: 'error'
             };
@@ -266,11 +252,18 @@ class AIService {
                 throw new Error(`API request failed: ${response.status}`);
             }
 
-            const data = await response.json();
-            return data.improved_text || text;
+            // Backend now returns HTML directly
+            const htmlContent = await response.text();
+            return htmlContent;
         } catch (error) {
             console.error('Error calling improve text API:', error);
-            throw new Error('Unable to improve text. Please check your internet connection.');
+            const errorHtml = `
+                <div class="error-container">
+                    <h3>❌ Error</h3>
+                    <p class="error-message">Unable to improve text. Please check your internet connection.</p>
+                </div>
+            `;
+            return errorHtml;
         }
     }
 
@@ -290,11 +283,18 @@ class AIService {
                 throw new Error(`API request failed: ${response.status}`);
             }
 
-            const data = await response.json();
-            return data.summary || 'Unable to generate summary.';
+            // Backend now returns HTML directly
+            const htmlContent = await response.text();
+            return htmlContent;
         } catch (error) {
             console.error('Error calling summarization API:', error);
-            throw new Error('Unable to generate summary. Please check your internet connection.');
+            const errorHtml = `
+                <div class="error-container">
+                    <h3>❌ Error</h3>
+                    <p class="error-message">Unable to generate summary. Please check your internet connection.</p>
+                </div>
+            `;
+            return errorHtml;
         }
     }
 
@@ -333,15 +333,21 @@ class AIService {
                     initialPlaceholder.remove();
                 }
                 
+                const disabledHtml = `
+                    <div class="feedback-item">
+                        <h4>🔇 AI Feedback Disabled</h4>
+                        <div class="category-section">
+                            <h5>AI Feedback Disabled</h5>
+                            <p class="feedback-low">
+                                • AI feedback is currently disabled in settings. Enable it in the Settings tab to get AI-powered writing suggestions.
+                                <span class="priority-badge low">low</span>
+                            </p>
+                        </div>
+                    </div>
+                `;
                 const disabledFeedback = [{
                     promptName: 'AI Feedback Disabled',
-                    feedback: [
-                        {
-                            category: "AI Feedback Disabled",
-                            suggestion: "AI feedback is currently disabled in settings. Enable it in the Settings tab to get AI-powered writing suggestions.",
-                            priority: "low"
-                        }
-                    ]
+                    htmlContent: disabledHtml
                 }];
 
                 onProgressiveComplete({
@@ -378,15 +384,21 @@ class AIService {
             
             // If no prompts are enabled, show a message
             if (enabledPrompts.length === 0) {
+                const noPromptsHtml = `
+                    <div class="feedback-item">
+                        <h4>📝 No Prompts</h4>
+                        <div class="category-section">
+                            <h5>Setup Required</h5>
+                            <p class="feedback-low">
+                                • No prompts are enabled. Go to the Prompts tab to create and enable prompts for AI analysis.
+                                <span class="priority-badge low">low</span>
+                            </p>
+                        </div>
+                    </div>
+                `;
                 const noPromptsFeedback = [{
                     promptName: 'No Prompts',
-                    feedback: [
-                        {
-                            category: "Setup Required",
-                            suggestion: "No prompts are enabled. Go to the Prompts tab to create and enable prompts for AI analysis.",
-                            priority: "low"
-                        }
-                    ]
+                    htmlContent: noPromptsHtml
                 }];
 
                 onProgressiveComplete({
@@ -418,17 +430,17 @@ class AIService {
                 try {
                     const result = await promise;
 
-                    // Replace the placeholder for this completed request
+                    // Replace the placeholder for this completed request with HTML content
                     if (result.requestId) {
                         const promptName = result.promptName || 'General';
-                        this.replaceRequestPlaceholder(result.requestId, result.feedback, promptName);
+                        this.replaceRequestPlaceholderWithHTML(result.requestId, result.htmlContent, promptName);
                     }
 
                     // Add feedback grouped by prompt (for final completion callback)
                     const promptName = result.promptName || 'General';
                     groupedFeedback.push({
                         promptName: promptName,
-                        feedback: result.feedback
+                        htmlContent: result.htmlContent
                     });
                     completedCount++;
 
@@ -449,13 +461,21 @@ class AIService {
                     completedCount++;
 
                     // Add error feedback group for final callback
+                    const errorHtml = `
+                        <div class="feedback-item">
+                            <h4>❌ Error</h4>
+                            <div class="category-section">
+                                <h5>Error</h5>
+                                <p class="feedback-low">
+                                    • One of the analysis requests failed. Please try again.
+                                    <span class="priority-badge low">low</span>
+                                </p>
+                            </div>
+                        </div>
+                    `;
                     groupedFeedback.push({
                         promptName: 'Error',
-                        feedback: [{
-                            category: "Error",
-                            suggestion: "One of the analysis requests failed. Please try again.",
-                            priority: "low"
-                        }]
+                        htmlContent: errorHtml
                     });
 
                     // Send completion signal when all are done (including failed ones)
@@ -542,6 +562,21 @@ class AIService {
         });
         
         return placeholder;
+    }
+
+    replaceRequestPlaceholderWithHTML(requestId, htmlContent, promptName) {
+        const placeholder = document.getElementById(`placeholder-${requestId}`);
+        if (!placeholder) return;
+        
+        // Stop and clear the timer
+        const request = this.activeRequests.get(requestId);
+        if (request && request.timerInterval) {
+            clearInterval(request.timerInterval);
+        }
+        this.activeRequests.delete(requestId);
+        
+        // Simply replace the entire placeholder with the HTML content
+        placeholder.outerHTML = htmlContent;
     }
 
     replaceRequestPlaceholder(requestId, feedback, promptName) {

@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from litellm import completion
 from pydantic import BaseModel
@@ -28,6 +28,172 @@ app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
 
 # Get the path to the Claude CLI
 claude_path = shutil.which("claude")
+
+
+def escape_html(text):
+    """Escape HTML special characters"""
+    if not isinstance(text, str):
+        text = str(text)
+    return (text.replace('&', '&amp;')
+                .replace('<', '&lt;')
+                .replace('>', '&gt;')
+                .replace('"', '&quot;')
+                .replace("'", '&#x27;'))
+
+
+def format_content_to_html(items, response_type, prompt_name):
+    """Convert AI response items to HTML format"""
+    html_parts = []
+    
+    # Group items by category
+    categories = {}
+    for item in items:
+        category = item.get("content", {}).get("category", "Analysis")
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(item)
+    
+    for category, category_items in categories.items():
+        html_parts.append(f'<div class="category-section">')
+        html_parts.append(f'<h5>{escape_html(category)}</h5>')
+        
+        for item in category_items:
+            item_type = item.get("type", "analysis")
+            content = item.get("content", {})
+            
+            if item_type == "citation":
+                html_parts.append(format_citation_html(content))
+            elif item_type == "diff":
+                html_parts.append(format_diff_html(content))
+            elif item_type == "feedback":
+                priority = content.get("priority", "medium")
+                suggestion = content.get("suggestion", "")
+                html_parts.append(f'''
+                    <p class="feedback-{priority}">
+                        • {escape_html(suggestion)}
+                        <span class="priority-badge {priority}">{priority}</span>
+                    </p>
+                ''')
+            elif item_type == "analysis" or item_type == "insight":
+                title = content.get("title", "Analysis")
+                description = content.get("description", "")
+                html_parts.append(f'''
+                    <div class="analysis-item">
+                        <h6>{escape_html(title)}</h6>
+                        <p>{escape_html(description)}</p>
+                    </div>
+                ''')
+            else:
+                # Generic content display
+                if isinstance(content, dict):
+                    suggestion = content.get("suggestion") or content.get("description") or str(content)
+                else:
+                    suggestion = str(content)
+                html_parts.append(f'<p>• {escape_html(suggestion)}</p>')
+        
+        html_parts.append('</div>')
+    
+    return f'''
+    <div class="feedback-item">
+        <h4>✨ {escape_html(prompt_name)}</h4>
+        {"".join(html_parts)}
+    </div>
+    '''
+
+
+def format_citation_html(content):
+    """Format citation content as HTML"""
+    fields = []
+    
+    if content.get("source"):
+        fields.append(f'''
+            <div class="citation-field">
+                <span class="field-label">Source</span>
+                <span class="field-value">{escape_html(content["source"])}</span>
+            </div>
+        ''')
+    
+    if content.get("title"):
+        fields.append(f'''
+            <div class="citation-field">
+                <span class="field-label">Title</span>
+                <span class="field-value">{escape_html(content["title"])}</span>
+            </div>
+        ''')
+    
+    if content.get("url"):
+        fields.append(f'''
+            <div class="citation-field">
+                <span class="field-label">URL</span>
+                <span class="field-value link" onclick="window.open('{escape_html(content["url"])}', '_blank')">{escape_html(content["url"])}</span>
+            </div>
+        ''')
+    
+    if content.get("relevance"):
+        fields.append(f'''
+            <div class="citation-field">
+                <span class="field-label">Relevance</span>
+                <span class="field-value">{escape_html(content["relevance"])}</span>
+            </div>
+        ''')
+
+    return f'''
+        <div class="citation-item">
+            <div class="citation-header">
+                <span class="citation-icon">📚</span>
+                <h6 class="citation-title">Citation</h6>
+            </div>
+            <div class="citation-content">
+                {"".join(fields)}
+            </div>
+            <span class="priority-badge citation">{content.get("priority", "medium")}</span>
+        </div>
+    '''
+
+
+def format_diff_html(content):
+    """Format diff content as HTML"""
+    html = '<div class="diff-item">'
+    html += '''
+        <div class="diff-header">
+            <span class="diff-icon">✏️</span>
+            <h6 class="diff-title">Suggested Edit</h6>
+        </div>
+        <div class="diff-content">
+    '''
+    
+    if content.get("original"):
+        html += f'''
+            <div class="diff-section">
+                <div class="diff-text original" data-label="Original">
+                    {escape_html(content["original"])}
+                </div>
+            </div>
+        '''
+    
+    if content.get("suggested"):
+        html += f'''
+            <div class="diff-section">
+                <div class="diff-text suggested" data-label="Suggested">
+                    {escape_html(content["suggested"])}
+                </div>
+            </div>
+        '''
+    
+    if content.get("reason"):
+        html += f'''
+            <div class="diff-reason">
+                {escape_html(content["reason"])}
+            </div>
+        '''
+    
+    html += f'''
+        </div>
+        <span class="priority-badge diff">{content.get("priority", "high")}</span>
+    </div>
+    '''
+    
+    return html
 
 
 # Helper function to call AI model via LiteLLM
@@ -98,10 +264,25 @@ async def improve_text(request: TextRequest):
 
         improved_text = call_ai_model(prompt)
 
-        return {"improved_text": improved_text}
+        html_response = f"""
+        <div class="improved-text-container">
+            <h3>✨ Improved Text</h3>
+            <div class="improved-text-content">
+                <p>{improved_text.replace(chr(10), '</p><p>')}</p>
+            </div>
+        </div>
+        """
+
+        return HTMLResponse(content=html_response)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error improving text: {str(e)}")
+        error_html = f"""
+        <div class="error-container">
+            <h3>❌ Error</h3>
+            <p class="error-message">Error improving text: {str(e)}</p>
+        </div>
+        """
+        raise HTTPException(status_code=500, detail=error_html)
 
 
 @app.post("/summarize-text")
@@ -121,10 +302,25 @@ async def summarize_text(request: TextRequest):
 
         summary = call_ai_model(prompt)
 
-        return {"summary": summary}
+        html_response = f"""
+        <div class="summary-container">
+            <h3>📝 Summary</h3>
+            <div class="summary-content">
+                <p>{summary.replace(chr(10), '</p><p>')}</p>
+            </div>
+        </div>
+        """
+
+        return HTMLResponse(content=html_response)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error summarizing text: {str(e)}")
+        error_html = f"""
+        <div class="error-container">
+            <h3>❌ Error</h3>
+            <p class="error-message">Error summarizing text: {str(e)}</p>
+        </div>
+        """
+        raise HTTPException(status_code=500, detail=error_html)
 
 
 @app.post("/analyze-prompt")
@@ -226,106 +422,87 @@ Choose the most appropriate format for your response based on the prompt's inten
 
             # Handle new generic format
             if "items" in claude_response and "response_type" in claude_response:
-                items = []
-                for item in claude_response.get("items", []):
-                    if isinstance(item, dict) and "type" in item and "content" in item:
-                        items.append(
-                            GenericResponseItem(
-                                type=item["type"], content=item["content"]
-                            )
-                        )
-
-                return GenericResponse(
-                    items=items,
-                    response_type=claude_response.get("response_type", "analysis"),
-                    prompt_name=request.prompt_name,
-                )
+                items = claude_response.get("items", [])
+                html_response = format_content_to_html(items, claude_response.get("response_type", "analysis"), request.prompt_name)
+                return HTMLResponse(content=html_response)
 
             # Backward compatibility: handle old feedback format
             elif "recommendations" in claude_response or "feedback" in claude_response:
-                feedback = claude_response.get(
-                    "recommendations"
-                ) or claude_response.get("feedback", [])
+                feedback = claude_response.get("recommendations") or claude_response.get("feedback", [])
                 items = []
                 for item in feedback:
                     if isinstance(item, dict) and "suggestion" in item:
-                        items.append(
-                            GenericResponseItem(
-                                type="feedback",
-                                content={
-                                    "category": item.get("category", "Analysis"),
-                                    "suggestion": item.get("suggestion", ""),
-                                    "priority": item.get("priority", "medium"),
-                                },
-                            )
-                        )
+                        items.append({
+                            "type": "feedback",
+                            "content": {
+                                "category": item.get("category", "Analysis"),
+                                "suggestion": item.get("suggestion", ""),
+                                "priority": item.get("priority", "medium"),
+                            }
+                        })
 
-                return GenericResponse(
-                    items=items,
-                    response_type="feedback",
-                    prompt_name=request.prompt_name,
-                )
+                html_response = format_content_to_html(items, "feedback", request.prompt_name)
+                return HTMLResponse(content=html_response)
 
             else:
                 # Unknown JSON format, treat as general analysis
-                items = [
-                    GenericResponseItem(
-                        type="analysis",
-                        content={
-                            "title": "Custom Analysis",
-                            "description": json.dumps(claude_response),
-                            "source": "prompt",
-                        },
-                    )
-                ]
+                items = [{
+                    "type": "analysis",
+                    "content": {
+                        "title": "Custom Analysis",
+                        "description": json.dumps(claude_response),
+                        "category": "Analysis",
+                    }
+                }]
 
-                return GenericResponse(
-                    items=items,
-                    response_type="analysis",
-                    prompt_name=request.prompt_name,
-                )
+                html_response = format_content_to_html(items, "analysis", request.prompt_name)
+                return HTMLResponse(content=html_response)
 
         else:
             # Fallback: treat entire response as general analysis
-            items = [
-                GenericResponseItem(
-                    type="analysis",
-                    content={
-                        "title": "Text Analysis",
-                        "description": (
-                            response_text[:500] + "..."
-                            if len(response_text) > 500
-                            else response_text
-                        ),
-                        "source": "prompt",
-                    },
-                )
-            ]
+            items = [{
+                "type": "analysis",
+                "content": {
+                    "title": "Text Analysis",
+                    "description": (
+                        response_text[:500] + "..."
+                        if len(response_text) > 500
+                        else response_text
+                    ),
+                    "category": "Analysis",
+                }
+            }]
 
-            return GenericResponse(
-                items=items, response_type="analysis", prompt_name=request.prompt_name
-            )
+            html_response = format_content_to_html(items, "analysis", request.prompt_name)
+            return HTMLResponse(content=html_response)
 
     except json.JSONDecodeError:
         # If JSON parsing fails, create a general analysis
-        items = [
-            GenericResponseItem(
-                type="analysis",
-                content={
-                    "title": "Analysis Result",
-                    "description": "Unable to parse structured response. Raw analysis available.",
-                    "source": "prompt",
-                },
-            )
-        ]
+        items = [{
+            "type": "analysis",
+            "content": {
+                "title": "Analysis Result",
+                "description": "Unable to parse structured response. Raw analysis available.",
+                "category": "Analysis",
+            }
+        }]
 
-        return GenericResponse(
-            items=items, response_type="analysis", prompt_name=request.prompt_name
-        )
+        html_response = format_content_to_html(items, "analysis", request.prompt_name)
+        return HTMLResponse(content=html_response)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error analyzing with prompt: {str(e)}"
-        )
+        error_html = f"""
+        <div class="feedback-item">
+            <h4>❌ Error - {escape_html(request.prompt_name)}</h4>
+            <div class="category-section">
+                <h5>Error</h5>
+                <p class="feedback-high">
+                    • Error analyzing with prompt: {escape_html(str(e))}
+                    <span class="priority-badge high">high</span>
+                </p>
+            </div>
+        </div>
+        """
+        raise HTTPException(status_code=500, detail=error_html)
 
 
 if __name__ == "__main__":
