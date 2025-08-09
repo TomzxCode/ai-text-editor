@@ -980,10 +980,26 @@ body {
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     position: relative;
+    cursor: move;
+    transition: all 0.2s ease;
 }
 
 .custom-prompt-item.disabled {
     opacity: 0.6;
+}
+
+.custom-prompt-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.custom-prompt-item.drag-over-top {
+    border-top: 2px solid #007acc;
+}
+
+.custom-prompt-item.drag-over-bottom {
+    border-bottom: 2px solid #007acc;
 }
 
 .custom-prompt-header {
@@ -991,6 +1007,23 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+}
+
+.drag-handle {
+    color: #666;
+    font-size: 16px;
+    margin-right: 8px;
+    cursor: grab;
+    user-select: none;
+    line-height: 1;
+}
+
+.drag-handle:hover {
+    color: #007acc;
+}
+
+.custom-prompt-item.dragging .drag-handle {
+    cursor: grabbing;
 }
 
 .custom-prompt-name {

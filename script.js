@@ -389,9 +389,13 @@ class AITextEditor {
             return;
         }
         
-        container.innerHTML = prompts.map(prompt => `
-            <div class="custom-prompt-item ${!prompt.enabled ? 'disabled' : ''}" data-id="${prompt.id}">
+        container.innerHTML = prompts.map((prompt, index) => `
+            <div class="custom-prompt-item ${!prompt.enabled ? 'disabled' : ''}" 
+                 data-id="${prompt.id}" 
+                 data-index="${index}"
+                 draggable="true">
                 <div class="custom-prompt-header">
+                    <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
                     <span class="custom-prompt-name">${this.escapeHtml(prompt.name)}</span>
                     <div class="custom-prompt-actions">
                         <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${prompt.enabled ? 'Disable' : 'Enable'}">
@@ -404,6 +408,9 @@ class AITextEditor {
                 <div class="custom-prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
         `).join('');
+        
+        // Add drag and drop event listeners
+        this.setupDragAndDrop();
     }
 
     showPromptModal(promptId = null) {
@@ -503,6 +510,99 @@ class AITextEditor {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    setupDragAndDrop() {
+        const container = this.elements.customPromptsList;
+        const items = container.querySelectorAll('.custom-prompt-item');
+        
+        let draggedElement = null;
+        let draggedIndex = null;
+        
+        items.forEach((item, index) => {
+            item.addEventListener('dragstart', (e) => {
+                draggedElement = item;
+                draggedIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.outerHTML);
+            });
+            
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('dragging');
+                // Remove all drag-over indicators
+                items.forEach(i => i.classList.remove('drag-over-top', 'drag-over-bottom'));
+                draggedElement = null;
+                draggedIndex = null;
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                if (item === draggedElement) return;
+                
+                const rect = item.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                // Remove previous indicators
+                item.classList.remove('drag-over-top', 'drag-over-bottom');
+                
+                // Add appropriate indicator
+                if (e.clientY < midpoint) {
+                    item.classList.add('drag-over-top');
+                } else {
+                    item.classList.add('drag-over-bottom');
+                }
+            });
+            
+            item.addEventListener('dragleave', (e) => {
+                // Only remove indicators if we're actually leaving the item
+                if (!item.contains(e.relatedTarget)) {
+                    item.classList.remove('drag-over-top', 'drag-over-bottom');
+                }
+            });
+            
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                
+                if (item === draggedElement) return;
+                
+                const rect = item.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                const dropIndex = parseInt(item.dataset.index);
+                
+                let targetIndex;
+                if (e.clientY < midpoint) {
+                    // Drop above this item
+                    targetIndex = dropIndex;
+                } else {
+                    // Drop below this item
+                    targetIndex = dropIndex + 1;
+                }
+                
+                // Adjust target index if dragging down
+                if (draggedIndex < targetIndex) {
+                    targetIndex--;
+                }
+                
+                this.movePrompt(draggedIndex, targetIndex);
+                
+                // Remove indicators
+                item.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+        });
+    }
+    
+    movePrompt(fromIndex, toIndex) {
+        try {
+            if (this.customPromptsManager.reorderPrompts(fromIndex, toIndex)) {
+                this.renderCustomPrompts();
+                this.notificationManager.success('Prompt order updated');
+            }
+        } catch (error) {
+            this.notificationManager.error('Failed to reorder prompt: ' + error.message);
+        }
     }
 
 

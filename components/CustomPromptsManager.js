@@ -141,4 +141,30 @@ class CustomPromptsManager {
             throw new Error('Failed to import prompts: ' + error.message);
         }
     }
+
+    reorderPrompts(fromIndex, toIndex) {
+        if (fromIndex < 0 || fromIndex >= this.prompts.length || 
+            toIndex < 0 || toIndex >= this.prompts.length || 
+            fromIndex === toIndex) {
+            return false;
+        }
+
+        // Remove the item from the old position
+        const [movedPrompt] = this.prompts.splice(fromIndex, 1);
+        
+        // Insert it at the new position
+        this.prompts.splice(toIndex, 0, movedPrompt);
+        
+        this.savePrompts();
+        return true;
+    }
+
+    movePromptById(promptId, toIndex) {
+        const fromIndex = this.prompts.findIndex(p => p.id === promptId);
+        if (fromIndex === -1) {
+            throw new Error('Prompt not found');
+        }
+        
+        return this.reorderPrompts(fromIndex, toIndex);
+    }
 }
