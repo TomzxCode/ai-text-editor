@@ -55,7 +55,7 @@
             <!-- Right Resize Handle -->
             <div class="resize-handle right-resize" id="rightResize"></div>
 
-            <!-- AI Recommendations Sidebar -->
+            <!-- AI Feedback Sidebar -->
             <aside class="ai-sidebar" id="aiSidebar">
                 <div class="sidebar-header">
                     <h3>AI Assistant</h3>
@@ -64,18 +64,18 @@
 
                 <!-- Tab Navigation -->
                 <div class="tab-nav">
-                    <button class="tab-btn" id="recommendationsTab" data-tab="recommendations">Recommendations</button>
-                    <button class="tab-btn" id="promptsTab" data-tab="prompts">Custom Prompts</button>
+                    <button class="tab-btn" id="feedbackTab" data-tab="feedback">Feedback</button>
+                    <button class="tab-btn" id="promptsTab" data-tab="prompts">Prompts</button>
                     <button class="tab-btn" id="settingsTab" data-tab="settings">Settings</button>
                 </div>
 
-                <!-- Recommendations Tab Content -->
-                <div class="tab-content" id="recommendationsTabContent">
-                    <div class="recommendations-container" id="recommendationsContainer">
-                        <div class="recommendation-item placeholder-message" id="initialPlaceholder">
+                <!-- Feedback Tab Content -->
+                <div class="tab-content" id="feedbackTabContent">
+                    <div class="feedback-container" id="feedbackContainer">
+                        <div class="feedback-item placeholder-message" id="initialPlaceholder">
                             <h4>🤖 AI Assistant</h4>
                             <p>Open a file or start typing to get AI-powered writing suggestions.</p>
-                            <p><small>The AI will analyze your text and provide recommendations for style, grammar, structure, and more.</small></p>
+                            <p><small>The AI will analyze your text and provide feedback for style, grammar, structure, and more.</small></p>
                         </div>
                     </div>
 
@@ -85,15 +85,15 @@
                     </div>
                 </div>
 
-                <!-- Custom Prompts Tab Content -->
+                <!-- Prompts Tab Content -->
                 <div class="tab-content" id="promptsTabContent">
-                    <div class="custom-prompts-section">
+                    <div class="prompts-section">
                         <div class="section-header">
-                            <h4>Custom Prompts</h4>
+                            <h4>Prompts</h4>
                             <button class="btn-small" id="addPromptBtn">+</button>
                         </div>
-                        <div class="custom-prompts-list" id="customPromptsList">
-                            <p class="no-prompts">No custom prompts yet. Click + to add one.</p>
+                        <div class="prompts-list" id="promptsList">
+                            <p class="no-prompts">No prompts yet. Click + to add one.</p>
                         </div>
                     </div>
                 </div>
@@ -126,8 +126,8 @@
                             </div>
                             <div class="setting-group">
                                 <label>
-                                    <input type="checkbox" id="enableAIRecommendations">
-                                    Enable AI Recommendations
+                                    <input type="checkbox" id="enableAIFeedback">
+                                    Enable AI Feedback
                                 </label>
                                 <p class="setting-description">When enabled, the editor will automatically analyze your text and provide AI-powered writing suggestions.</p>
                             </div>
@@ -154,11 +154,11 @@
         </nav>
     </div>
 
-    <!-- Custom Prompt Modal -->
+    <!-- Prompt Modal -->
     <div class="modal-overlay" id="promptModal" style="display: none;">
         <div class="modal">
             <div class="modal-header">
-                <h3 id="promptModalTitle">Add Custom Prompt</h3>
+                <h3 id="promptModalTitle">Add Prompt</h3>
                 <button class="modal-close" id="closePromptModal">×</button>
             </div>
             <div class="modal-body">
@@ -168,7 +168,7 @@
                 </div>
                 <div class="form-group">
                     <label for="promptText">Prompt:</label>
-                    <textarea id="promptText" placeholder="Enter your custom prompt here. Use {text} where you want the analyzed text to be inserted." rows="4"></textarea>
+                    <textarea id="promptText" placeholder="Enter your prompt here. Use {text} where you want the analyzed text to be inserted." rows="4"></textarea>
                     <p class="form-hint">💡 <strong>Tip:</strong> Place the placeholder text at the beginning of your prompt to benefit from prompt caching, which can improve response speed for repeated requests and reduce costs.</p>
                 </div>
                 <div class="form-group">
@@ -203,7 +203,7 @@
     <script src="/static/components/EditorManager.js"></script>
     <script src="/static/components/AIService.js"></script>
     <script src="/static/components/UIManager.js"></script>
-    <script src="/static/components/CustomPromptsManager.js"></script>
+    <script src="/static/components/PromptsManager.js"></script>
     <script src="/static/components/SettingsManager.js"></script>
     <!-- Main application script -->
     <script src="/static/script.js"></script>

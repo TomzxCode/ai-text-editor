@@ -41,9 +41,9 @@ class AITextEditor {
             rightResize: document.getElementById('rightResize'),
             summarizeBtn: document.getElementById('summarizeBtn'),
             loadingOverlay: document.getElementById('loadingOverlay'),
-            recommendationsContainer: document.querySelector('.recommendations-container'),
+            feedbackContainer: document.querySelector('.feedback-container'),
             addPromptBtn: document.getElementById('addPromptBtn'),
-            customPromptsList: document.getElementById('customPromptsList'),
+            promptsList: document.getElementById('promptsList'),
             promptModal: document.getElementById('promptModal'),
             promptModalTitle: document.getElementById('promptModalTitle'),
             promptName: document.getElementById('promptName'),
@@ -64,10 +64,10 @@ class AITextEditor {
         
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
-        this.customPromptsManager = new CustomPromptsManager();
+        this.promptsManager = new PromptsManager();
         
         this.currentEditingPromptId = null;
-        this.renderCustomPrompts();
+        this.renderPrompts();
         
         // Setup settings UI after DOM is ready
         setTimeout(() => {
@@ -146,7 +146,7 @@ class AITextEditor {
                 this.createNewFile();
                 break;
             case 'input':
-                this.scheduleAIRecommendations();
+                this.scheduleAIFeedback();
                 break;
             case 'contentChange':
                 this.updateFileTitle(data.fileName, data.isModified);
@@ -214,7 +214,7 @@ class AITextEditor {
             this.elements.saveFileBtn.disabled = false;
             
             this.uiManager.updateActiveFileInTree(filePath);
-            this.scheduleAIRecommendations();
+            this.scheduleAIFeedback();
 
             if (window.innerWidth <= 768) {
                 this.uiManager.showMobilePanel('editor');
@@ -270,37 +270,37 @@ class AITextEditor {
 
 
 
-    scheduleAIRecommendations() {
-        // Check if AI recommendations are enabled in settings
-        const aiEnabled = this.settingsManager.getSetting('enableAIRecommendations');
+    scheduleAIFeedback() {
+        // Check if AI feedback is enabled in settings
+        const aiEnabled = this.settingsManager.getSetting('enableAIFeedback');
         
         if (!aiEnabled) {
             return;
         }
         
-        this.aiService.scheduleRecommendations(() => {
+        this.aiService.scheduleFeedback(() => {
             // Get content at execution time, not scheduling time
             const content = this.editorManager.getValue();
-            this.generateAIRecommendations(content);
+            this.generateAIFeedback(content);
         });
     }
 
-    generateAIRecommendations(content) {
-        // Allow AI recommendations even without a current file, as long as there's content
+    generateAIFeedback(content) {
+        // Allow AI feedback even without a current file, as long as there's content
         if (!content || content.trim().length === 0) {
             // Restore initial placeholder if no content
             this.uiManager.restoreInitialPlaceholder();
             return;
         }
         
-        const enabledPrompts = this.customPromptsManager.getEnabledPrompts();
+        const enabledPrompts = this.promptsManager.getEnabledPrompts();
         const settings = this.settingsManager.getAllSettings();
         
-        this.aiService.generateRecommendations(
+        this.aiService.generateFeedback(
             content,
             (show) => {}, // No longer needed since we use individual placeholders
-            (recommendations) => this.uiManager.displayRecommendations(recommendations),
-            (error) => this.uiManager.showRecommendationError(error),
+            (feedback) => this.uiManager.displayFeedback(feedback),
+            (error) => this.uiManager.showFeedbackError(error),
             enabledPrompts,
             settings
         );
@@ -380,24 +380,24 @@ class AITextEditor {
         }
     }
 
-    renderCustomPrompts() {
-        const prompts = this.customPromptsManager.getAllPrompts();
-        const container = this.elements.customPromptsList;
+    renderPrompts() {
+        const prompts = this.promptsManager.getAllPrompts();
+        const container = this.elements.promptsList;
         
         if (prompts.length === 0) {
-            container.innerHTML = '<p class="no-prompts">No custom prompts yet. Click + to add one.</p>';
+            container.innerHTML = '<p class="no-prompts">No prompts yet. Click + to add one.</p>';
             return;
         }
         
         container.innerHTML = prompts.map((prompt, index) => `
-            <div class="custom-prompt-item ${!prompt.enabled ? 'disabled' : ''}" 
+            <div class="prompt-item ${!prompt.enabled ? 'disabled' : ''}" 
                  data-id="${prompt.id}" 
                  data-index="${index}"
                  draggable="true">
-                <div class="custom-prompt-header">
+                <div class="prompt-header">
                     <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-                    <span class="custom-prompt-name">${this.escapeHtml(prompt.name)}</span>
-                    <div class="custom-prompt-actions">
+                    <span class="prompt-name">${this.escapeHtml(prompt.name)}</span>
+                    <div class="prompt-actions">
                         <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${prompt.enabled ? 'Disable' : 'Enable'}">
                             ${prompt.enabled ? '●' : '○'}
                         </button>
@@ -405,7 +405,7 @@ class AITextEditor {
                         <button class="btn-icon danger" onclick="app.deletePrompt('${prompt.id}')" title="Delete">🗑️</button>
                     </div>
                 </div>
-                <div class="custom-prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
+                <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
         `).join('');
         
@@ -417,15 +417,15 @@ class AITextEditor {
         this.currentEditingPromptId = promptId;
         
         if (promptId) {
-            const prompt = this.customPromptsManager.getPrompt(promptId);
+            const prompt = this.promptsManager.getPrompt(promptId);
             if (prompt) {
-                this.elements.promptModalTitle.textContent = 'Edit Custom Prompt';
+                this.elements.promptModalTitle.textContent = 'Edit Prompt';
                 this.elements.promptName.value = prompt.name;
                 this.elements.promptText.value = prompt.prompt;
                 this.elements.promptEnabled.checked = prompt.enabled;
             }
         } else {
-            this.elements.promptModalTitle.textContent = 'Add Custom Prompt';
+            this.elements.promptModalTitle.textContent = 'Add Prompt';
             this.elements.promptName.value = '';
             this.elements.promptText.value = '';
             this.elements.promptEnabled.checked = true;
@@ -459,18 +459,18 @@ class AITextEditor {
         
         try {
             if (this.currentEditingPromptId) {
-                this.customPromptsManager.updatePrompt(this.currentEditingPromptId, {
+                this.promptsManager.updatePrompt(this.currentEditingPromptId, {
                     name,
                     prompt,
                     enabled
                 });
                 this.notificationManager.success('Prompt updated successfully');
             } else {
-                this.customPromptsManager.addPrompt(name, prompt, enabled);
+                this.promptsManager.addPrompt(name, prompt, enabled);
                 this.notificationManager.success('Prompt added successfully');
             }
             
-            this.renderCustomPrompts();
+            this.renderPrompts();
             this.hidePromptModal();
         } catch (error) {
             this.notificationManager.error(error.message);
@@ -483,8 +483,8 @@ class AITextEditor {
 
     togglePrompt(promptId) {
         try {
-            this.customPromptsManager.togglePrompt(promptId);
-            this.renderCustomPrompts();
+            this.promptsManager.togglePrompt(promptId);
+            this.renderPrompts();
             this.notificationManager.success('Prompt toggled successfully');
         } catch (error) {
             this.notificationManager.error(error.message);
@@ -492,13 +492,13 @@ class AITextEditor {
     }
 
     deletePrompt(promptId) {
-        const prompt = this.customPromptsManager.getPrompt(promptId);
+        const prompt = this.promptsManager.getPrompt(promptId);
         if (!prompt) return;
         
         if (confirm(`Are you sure you want to delete the prompt "${prompt.name}"?`)) {
             try {
-                this.customPromptsManager.deletePrompt(promptId);
-                this.renderCustomPrompts();
+                this.promptsManager.deletePrompt(promptId);
+                this.renderPrompts();
                 this.notificationManager.success('Prompt deleted successfully');
             } catch (error) {
                 this.notificationManager.error(error.message);
@@ -513,8 +513,8 @@ class AITextEditor {
     }
 
     setupDragAndDrop() {
-        const container = this.elements.customPromptsList;
-        const items = container.querySelectorAll('.custom-prompt-item');
+        const container = this.elements.promptsList;
+        const items = container.querySelectorAll('.prompt-item');
         
         let draggedElement = null;
         let draggedIndex = null;
@@ -596,13 +596,13 @@ class AITextEditor {
     
     movePrompt(fromIndex, toIndex) {
         try {
-            if (this.customPromptsManager.reorderPrompts(fromIndex, toIndex)) {
-                this.renderCustomPrompts();
+            if (this.promptsManager.reorderPrompts(fromIndex, toIndex)) {
+                this.renderPrompts();
                 
-                // Update the order of existing recommendations immediately
-                const enabledPrompts = this.customPromptsManager.getEnabledPrompts();
+                // Update the order of existing feedback immediately
+                const enabledPrompts = this.promptsManager.getEnabledPrompts();
                 const enabledPromptNames = enabledPrompts.map(p => p.name);
-                this.aiService.reorderRecommendationsByPromptOrder(enabledPromptNames);
+                this.aiService.reorderFeedbackByPromptOrder(enabledPromptNames);
                 
                 this.notificationManager.success('Prompt order updated');
             }

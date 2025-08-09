@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Text Editor is a modern, web-based text editor with integrated AI assistance powered by Claude AI. It features a responsive three-panel design: file explorer, code editor, and AI recommendations sidebar with tabbed interface.
+AI Text Editor is a modern, web-based text editor with integrated AI assistance powered by Claude AI. It features a responsive three-panel design: file explorer, code editor, and AI feedback sidebar with tabbed interface.
 
 ## Development Commands
 
@@ -44,32 +44,32 @@ The frontend uses a manager-based component pattern where each major functionali
 - **FileSystemManager.js** - File System Access API integration with directory selection and file operations
 - **EditorManager.js** - CodeMirror wrapper with syntax highlighting and file management
 - **UIManager.js** - Handles all UI state, mobile navigation, resizable panels, and tab switching
-- **CustomPromptsManager.js** - localStorage-based custom prompts with CRUD operations
+- **PromptsManager.js** - localStorage-based prompts with CRUD operations
 - **NotificationManager.js** - Toast notification system
 - **SettingsManager.js** - User preferences management with localStorage persistence
 
 ### Frontend-Backend Communication
-- REST endpoints: `/analyze-text`, `/improve-text`, `/summarize-text`, `/analyze-custom-prompt`
+- REST endpoints: `/analyze-text`, `/improve-text`, `/summarize-text`, `/analyze-prompt`
 - Backend uses subprocess calls to Claude CLI for AI operations
-- Progressive recommendation loading with real-time UI updates
-- Grouped recommendations by prompt source (General + custom prompts)
+- Progressive feedback loading with real-time UI updates
+- Grouped feedback by prompt source (General + prompts)
 
 ### Key Data Flow
 1. User types in editor → AIService schedules debounced analysis
-2. AIService calls multiple APIs in parallel (general + custom prompts)
+2. AIService calls multiple APIs in parallel (general + prompts)
 3. Backend processes each request via Claude CLI subprocess
-4. Progressive results update UI with grouped recommendations
+4. Progressive results update UI with grouped feedback
 5. File operations go through FileSystemManager → backend → file system
 
 ### Mobile-Responsive Design
 - Desktop: Three-panel layout with resizable sidebars
 - Mobile: Single-panel navigation with swipe gestures
-- Tab system in AI sidebar separates recommendations from custom prompts
+- Tab system in AI sidebar separates feedback from prompts
 - Touch-optimized interface elements
 
 ### Storage and State Management
 - File handles cached in FileSystemManager for direct file operations
-- Custom prompts stored in localStorage with JSON serialization
+- Prompts stored in localStorage with JSON serialization
 - User settings (fonts, AI toggle) managed by SettingsManager with localStorage persistence
 - Tab state persistence for AI sidebar navigation
 - UI state managed through event-driven component communication
@@ -85,13 +85,13 @@ The app uses the modern File System Access API for direct file operations. Key b
 
 ## AI Integration Patterns
 
-### Recommendation System
+### Feedback System
 - Debounced text analysis (1-second delay)
-- Parallel execution of general + custom prompt analyses
+- Parallel execution of general + prompt analyses
 - Progressive UI updates as each analysis completes
 - Grouped display with separate sections per prompt source
 
-### Custom Prompts
+### Prompts
 - User-created prompts with enable/disable toggle
 - Template system using `{text}` placeholder
 - Persistent storage with localStorage
@@ -99,13 +99,13 @@ The app uses the modern File System Access API for direct file operations. Key b
 
 ### Error Handling
 - Graceful degradation when Claude CLI unavailable
-- Connection error recommendations with retry suggestions
-- Fallback recommendations when JSON parsing fails
-- AI recommendations can be toggled on/off via settings
+- Connection error feedback with retry suggestions
+- Fallback feedback when JSON parsing fails
+- AI feedback can be toggled on/off via settings
 
 ### Settings System
 - Configurable font family and size for editor
-- AI recommendations toggle (enable/disable)
+- AI feedback toggle (enable/disable)
 - Settings persist in localStorage with automatic UI updates
 - Reset to defaults functionality available
 
@@ -120,8 +120,8 @@ The app uses the modern File System Access API for direct file operations. Key b
 ### When Modifying AI Features
 - Test with and without Claude CLI available
 - Ensure progressive loading continues to work
-- Update both grouped and fallback recommendation formats
-- Maintain backward compatibility for recommendation display
+- Update both grouped and fallback feedback formats
+- Maintain backward compatibility for feedback display
 
 ### When Working with File Operations
 - Use FileSystemManager for all file operations

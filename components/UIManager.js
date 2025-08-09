@@ -82,8 +82,8 @@ class UIManager {
             }
         }
         
-        // If no saved tab or saved tab doesn't exist, set recommendations as default
-        this.switchToTab('recommendations');
+        // If no saved tab or saved tab doesn't exist, set feedback as default
+        this.switchToTab('feedback');
     }
 
     setupMobileNavigation() {
@@ -455,7 +455,7 @@ class UIManager {
         this.elements.loadingOverlay.style.display = show ? 'flex' : 'none';
     }
 
-    displayRecommendations(data) {
+    displayFeedback(data) {
         // This method now only handles final completion signal
         // Individual placeholders are handled directly by AIService
         
@@ -465,7 +465,7 @@ class UIManager {
         }
         
         // Clean up any progress indicators
-        const container = this.elements.recommendationsContainer;
+        const container = this.elements.feedbackContainer;
         const progressIndicator = container.querySelector('.analysis-progress');
         if (progressIndicator) {
             setTimeout(() => {
@@ -476,8 +476,8 @@ class UIManager {
         }
     }
 
-    showRecommendationError(message) {
-        const container = this.elements.recommendationsContainer;
+    showFeedbackError(message) {
+        const container = this.elements.feedbackContainer;
         
         // Clear any existing content including initial placeholder
         const initialPlaceholder = document.getElementById('initialPlaceholder');
@@ -486,7 +486,7 @@ class UIManager {
         }
         
         container.innerHTML = `
-            <div class="recommendation-item error">
+            <div class="feedback-item error">
                 <h4>⚠️ Connection Issue</h4>
                 <p>${message}</p>
                 <p><small>Please check your internet connection and try again.</small></p>
@@ -495,14 +495,14 @@ class UIManager {
     }
 
     restoreInitialPlaceholder() {
-        const container = this.elements.recommendationsContainer;
+        const container = this.elements.feedbackContainer;
         // Only restore if container is empty or only has error messages
         if (container.children.length === 0 || container.querySelector('.error')) {
             container.innerHTML = `
-                <div class="recommendation-item placeholder-message" id="initialPlaceholder">
+                <div class="feedback-item placeholder-message" id="initialPlaceholder">
                     <h4>🤖 AI Assistant</h4>
                     <p>Open a file or start typing to get AI-powered writing suggestions.</p>
-                    <p><small>The AI will analyze your text and provide recommendations for style, grammar, structure, and more.</small></p>
+                    <p><small>The AI will analyze your text and provide feedback for style, grammar, structure, and more.</small></p>
                 </div>
             `;
         }

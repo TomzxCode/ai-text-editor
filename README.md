@@ -5,7 +5,7 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
 ## Features
 
 - 📝 Full-featured code editor with syntax highlighting
-- 🤖 AI-powered text analysis and recommendations
+- 🤖 AI-powered text analysis and feedback
 - ✨ Smart text improvement suggestions
 - 📊 Real-time text statistics
 - 📱 Mobile-responsive design
@@ -64,7 +64,7 @@ A modern web-based text editor with AI-powered suggestions and improvements usin
 ## API Endpoints
 
 ### `POST /analyze-text`
-Analyzes text and provides improvement recommendations.
+Analyzes text and provides improvement feedback.
 
 **Request:**
 ```json
@@ -76,7 +76,7 @@ Analyzes text and provides improvement recommendations.
 **Response:**
 ```json
 {
-  "recommendations": [
+  "feedback": [
     {
       "category": "Style",
       "suggestion": "Consider using more active voice",
@@ -127,7 +127,7 @@ Generates a summary of the provided text.
 1. **Start the application:** Run `uv run python backend.py` and open `http://localhost:8000`
 2. **Select a Directory:** Click "Select Directory" to choose a folder to work with
 3. **Edit Files:** Click on any file in the tree to open it in the editor
-4. **AI Recommendations:** Start typing to receive real-time AI suggestions
+4. **AI Feedback:** Start typing to receive real-time AI suggestions
 5. **Improve Text:** Use the "Improve Text" button to enhance your writing
 6. **Summarize:** Generate summaries with the "Summarize" button
 

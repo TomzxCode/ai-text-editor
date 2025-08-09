@@ -34,7 +34,7 @@ class EditorManager {
         });
 
         this.editor.on('inputRead', (cm, change) => {
-            // Trigger AI recommendations for various input types
+            // Trigger AI feedback for various input types
             if (change.origin === '+input' || 
                 change.origin === 'paste' || 
                 change.origin === '+delete' ||
@@ -43,7 +43,7 @@ class EditorManager {
             }
         });
 
-        // Add paste event listener to ensure paste operations trigger AI recommendations
+        // Add paste event listener to ensure paste operations trigger AI feedback
         this.editor.on('paste', () => {
             // Use setTimeout to ensure the paste content is processed first
             setTimeout(() => {

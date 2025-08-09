@@ -1,15 +1,15 @@
 class AIService {
     constructor() {
-        this.isGeneratingRecommendations = false;
-        this.hasPendingRecommendationRequest = false;
-        this.recommendationTimer = null;
+        this.isGeneratingFeedback = false;
+        this.hasPendingFeedbackRequest = false;
+        this.feedbackTimer = null;
         this.activeRequests = new Map(); // Track individual request timers
     }
 
 
-    async getCustomPromptRecommendations(content, promptName, promptText) {
+    async getPromptFeedback(content, promptName, promptText) {
         try {
-            const response = await fetch('/analyze-custom-prompt', {
+            const response = await fetch('/analyze-prompt', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -29,35 +29,35 @@ class AIService {
             
             // Handle new generic response format
             if (data.items && data.response_type) {
-                // Convert generic items to recommendations format for UI compatibility
-                const recommendations = this.convertGenericItemsToRecommendations(data.items, data.response_type);
+                // Convert generic items to feedback format for UI compatibility
+                const feedback = this.convertGenericItemsToFeedback(data.items, data.response_type);
                 return {
-                    recommendations: recommendations,
+                    feedback: feedback,
                     promptName: promptName,
                     responseType: data.response_type,
                     originalItems: data.items
                 };
             } 
-            // Handle legacy recommendations format
-            else if (data.recommendations) {
+            // Handle legacy feedback format
+            else if (data.recommendations || data.feedback) {
                 return {
-                    recommendations: data.recommendations || [],
+                    feedback: data.recommendations || data.feedback || [],
                     promptName: promptName,
-                    responseType: 'recommendations'
+                    responseType: 'feedback'
                 };
             }
             // Fallback
             else {
                 return {
-                    recommendations: [],
+                    feedback: [],
                     promptName: promptName,
                     responseType: 'analysis'
                 };
             }
         } catch (error) {
-            console.error(`Error calling custom prompt API for '${promptName}':`, error);
+            console.error(`Error calling prompt API for '${promptName}':`, error);
             return {
-                recommendations: [
+                feedback: [
                     {
                         category: `${promptName} - Connection Error`,
                         suggestion: "Unable to connect to AI service. Please check your internet connection.",
@@ -70,7 +70,7 @@ class AIService {
         }
     }
 
-    convertGenericItemsToRecommendations(items, responseType) {
+    convertGenericItemsToFeedback(items, responseType) {
         if (!items || !Array.isArray(items)) {
             return [];
         }
@@ -78,11 +78,12 @@ class AIService {
         return items.map(item => {
             switch (item.type) {
                 case 'recommendation':
+                case 'feedback':
                     return {
                         category: item.content.category || 'Analysis',
                         suggestion: item.content.suggestion || '',
                         priority: item.content.priority || 'medium',
-                        type: 'recommendation'
+                        type: 'feedback'
                     };
                 
                 case 'citation':
@@ -297,34 +298,34 @@ class AIService {
         }
     }
 
-    scheduleRecommendations(callback, delay = 1000) {
-        clearTimeout(this.recommendationTimer);
+    scheduleFeedback(callback, delay = 1000) {
+        clearTimeout(this.feedbackTimer);
 
-        if (this.isGeneratingRecommendations) {
-            this.hasPendingRecommendationRequest = true;
+        if (this.isGeneratingFeedback) {
+            this.hasPendingFeedbackRequest = true;
             return;
         }
 
-        this.recommendationTimer = setTimeout(() => {
+        this.feedbackTimer = setTimeout(() => {
             callback();
         }, delay);
     }
 
-    async generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts = [], settings = {}) {
+    async generateFeedback(content, onLoading, onProgressiveComplete, onError, prompts = [], settings = {}) {
         if (content.length < 10) return;
 
-        if (this.isGeneratingRecommendations) {
-            this.hasPendingRecommendationRequest = true;
+        if (this.isGeneratingFeedback) {
+            this.hasPendingFeedbackRequest = true;
             return;
         }
 
-        this.isGeneratingRecommendations = true;
-        this.hasPendingRecommendationRequest = false;
+        this.isGeneratingFeedback = true;
+        this.hasPendingFeedbackRequest = false;
 
         onLoading(true);
 
-        // Check if AI recommendations are disabled
-        if (!settings.enableAIRecommendations) {
+        // Check if AI feedback is disabled
+        if (!settings.enableAIFeedback) {
             try {
                 // Clear initial placeholder
                 const initialPlaceholder = document.getElementById('initialPlaceholder');
@@ -332,19 +333,19 @@ class AIService {
                     initialPlaceholder.remove();
                 }
                 
-                const disabledRecommendations = [{
-                    promptName: 'AI Recommendations Disabled',
-                    recommendations: [
+                const disabledFeedback = [{
+                    promptName: 'AI Feedback Disabled',
+                    feedback: [
                         {
-                            category: "AI Recommendations Disabled",
-                            suggestion: "AI recommendations are currently disabled in settings. Enable them in the Settings tab to get AI-powered writing suggestions.",
+                            category: "AI Feedback Disabled",
+                            suggestion: "AI feedback is currently disabled in settings. Enable it in the Settings tab to get AI-powered writing suggestions.",
                             priority: "low"
                         }
                     ]
                 }];
 
                 onProgressiveComplete({
-                    groupedRecommendations: disabledRecommendations,
+                    groupedFeedback: disabledFeedback,
                     isComplete: true,
                     completedCount: 1,
                     totalCount: 1
@@ -352,12 +353,12 @@ class AIService {
 
             } finally {
                 onLoading(false);
-                this.isGeneratingRecommendations = false;
+                this.isGeneratingFeedback = false;
 
-                if (this.hasPendingRecommendationRequest) {
-                    this.hasPendingRecommendationRequest = false;
+                if (this.hasPendingFeedbackRequest) {
+                    this.hasPendingFeedbackRequest = false;
                     setTimeout(() => {
-                        this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts, settings);
+                        this.generateFeedback(content, onLoading, onProgressiveComplete, onError, prompts, settings);
                     }, 100);
                 }
             }
@@ -365,31 +366,31 @@ class AIService {
         }
 
         try {
-            // Clear any existing loading placeholders but preserve completed recommendations
+            // Clear any existing loading placeholders but preserve completed feedback
             this.clearOnlyLoadingPlaceholders();
             const initialPlaceholder = document.getElementById('initialPlaceholder');
             if (initialPlaceholder) {
                 initialPlaceholder.remove();
             }
             
-            // Only use enabled custom prompts
-            const enabledPrompts = customPrompts.filter(prompt => prompt.enabled);
+            // Only use enabled prompts
+            const enabledPrompts = prompts.filter(prompt => prompt.enabled);
             
-            // If no custom prompts are enabled, show a message
+            // If no prompts are enabled, show a message
             if (enabledPrompts.length === 0) {
-                const noPromptsRecommendations = [{
-                    promptName: 'No Custom Prompts',
-                    recommendations: [
+                const noPromptsFeedback = [{
+                    promptName: 'No Prompts',
+                    feedback: [
                         {
                             category: "Setup Required",
-                            suggestion: "No custom prompts are enabled. Go to the Custom Prompts tab to create and enable prompts for AI analysis.",
+                            suggestion: "No prompts are enabled. Go to the Prompts tab to create and enable prompts for AI analysis.",
                             priority: "low"
                         }
                     ]
                 }];
 
                 onProgressiveComplete({
-                    groupedRecommendations: noPromptsRecommendations,
+                    groupedFeedback: noPromptsFeedback,
                     isComplete: true,
                     completedCount: 1,
                     totalCount: 1
@@ -397,20 +398,20 @@ class AIService {
                 return;
             }
             
-            // Show update indicators for existing recommendations that will be refreshed
-            this.showUpdateIndicatorsForExistingRecommendations(enabledPrompts.map(p => p.name));
+            // Show update indicators for existing feedback that will be refreshed
+            this.showUpdateIndicatorsForExistingFeedback(enabledPrompts.map(p => p.name));
 
-            // Create promises and placeholders for all custom prompts
+            // Create promises and placeholders for all prompts
             const allPromises = enabledPrompts.map(prompt => {
-                const requestId = `custom-${prompt.id}`;
+                const requestId = `prompt-${prompt.id}`;
                 this.createOrUpdateRequestContainer(requestId, prompt.name, true);
-                return this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
+                return this.getPromptFeedback(content, prompt.name, prompt.prompt)
                     .then(result => ({ ...result, promptId: prompt.id, requestId }));
             });
 
             // Process results as they complete
             let completedCount = 0;
-            const groupedRecommendations = [];
+            const groupedFeedback = [];
 
             // Wait for each promise and update UI progressively
             for (const promise of allPromises) {
@@ -420,21 +421,21 @@ class AIService {
                     // Replace the placeholder for this completed request
                     if (result.requestId) {
                         const promptName = result.promptName || 'General';
-                        this.replaceRequestPlaceholder(result.requestId, result.recommendations, promptName);
+                        this.replaceRequestPlaceholder(result.requestId, result.feedback, promptName);
                     }
 
-                    // Add recommendations grouped by prompt (for final completion callback)
+                    // Add feedback grouped by prompt (for final completion callback)
                     const promptName = result.promptName || 'General';
-                    groupedRecommendations.push({
+                    groupedFeedback.push({
                         promptName: promptName,
-                        recommendations: result.recommendations
+                        feedback: result.feedback
                     });
                     completedCount++;
 
                     // Only send completion signal when all are done
                     if (completedCount === allPromises.length) {
                         onProgressiveComplete({
-                            groupedRecommendations: [...groupedRecommendations],
+                            groupedFeedback: [...groupedFeedback],
                             isComplete: true,
                             completedCount,
                             totalCount: allPromises.length
@@ -447,10 +448,10 @@ class AIService {
                     // For errors, we'll handle cleanup at the end since we can't identify which request failed
                     completedCount++;
 
-                    // Add error recommendation group for final callback
-                    groupedRecommendations.push({
+                    // Add error feedback group for final callback
+                    groupedFeedback.push({
                         promptName: 'Error',
-                        recommendations: [{
+                        feedback: [{
                             category: "Error",
                             suggestion: "One of the analysis requests failed. Please try again.",
                             priority: "low"
@@ -460,7 +461,7 @@ class AIService {
                     // Send completion signal when all are done (including failed ones)
                     if (completedCount === allPromises.length) {
                         onProgressiveComplete({
-                            groupedRecommendations: [...groupedRecommendations],
+                            groupedFeedback: [...groupedFeedback],
                             isComplete: true,
                             completedCount,
                             totalCount: allPromises.length
@@ -470,18 +471,18 @@ class AIService {
             }
 
         } catch (error) {
-            console.error('Error generating AI recommendations:', error);
-            onError('Unable to generate recommendations. Please check your connection.');
+            console.error('Error generating AI feedback:', error);
+            onError('Unable to generate feedback. Please check your connection.');
         } finally {
             onLoading(false);
             // Clean up any remaining placeholders
             this.clearAllRequestPlaceholders();
-            this.isGeneratingRecommendations = false;
+            this.isGeneratingFeedback = false;
 
-            if (this.hasPendingRecommendationRequest) {
-                this.hasPendingRecommendationRequest = false;
+            if (this.hasPendingFeedbackRequest) {
+                this.hasPendingFeedbackRequest = false;
                 setTimeout(() => {
-                    this.generateRecommendations(content, onLoading, onProgressiveComplete, onError, customPrompts, settings);
+                    this.generateFeedback(content, onLoading, onProgressiveComplete, onError, prompts, settings);
                 }, 100);
             }
         }
@@ -509,9 +510,9 @@ class AIService {
     }
 
     createRequestPlaceholder(requestId, promptName) {
-        const container = document.getElementById('recommendationsContainer');
+        const container = document.getElementById('feedbackContainer');
         const placeholder = document.createElement('div');
-        placeholder.className = 'recommendation-item loading-item';
+        placeholder.className = 'feedback-item loading-item';
         placeholder.id = `placeholder-${requestId}`;
         placeholder.innerHTML = `
             <h4>🔄 ${promptName}</h4>
@@ -543,7 +544,7 @@ class AIService {
         return placeholder;
     }
 
-    replaceRequestPlaceholder(requestId, recommendations, promptName) {
+    replaceRequestPlaceholder(requestId, feedback, promptName) {
         const placeholder = document.getElementById(`placeholder-${requestId}`);
         if (!placeholder) return;
         
@@ -558,14 +559,14 @@ class AIService {
         
         this.activeRequests.delete(requestId);
         
-        // Create the new recommendation content
-        if (recommendations && recommendations.length > 0) {
-            const groupedRecs = {};
-            recommendations.forEach(rec => {
-                if (!groupedRecs[rec.category]) {
-                    groupedRecs[rec.category] = [];
+        // Create the new feedback content
+        if (feedback && feedback.length > 0) {
+            const groupedFeedback = {};
+            feedback.forEach(item => {
+                if (!groupedFeedback[item.category]) {
+                    groupedFeedback[item.category] = [];
                 }
-                groupedRecs[rec.category].push(rec);
+                groupedFeedback[item.category].push(item);
             });
 
             let html = '';
@@ -583,41 +584,41 @@ class AIService {
                 
                 // Replace the content but keep the container
                 let contentHtml = '';
-                for (const [category, recs] of Object.entries(groupedRecs)) {
+                for (const [category, items] of Object.entries(groupedFeedback)) {
                     contentHtml += `<div class="category-section">
                         <h5>${category}</h5>`;
                     
-                    recs.forEach(rec => {
+                    items.forEach(item => {
                         // Use specialized display for citations and diffs
-                        if (rec.type === 'citation') {
+                        if (item.type === 'citation') {
                             contentHtml += `
                                 <div class="citation-item">
                                     <div class="citation-header">
                                         <span class="citation-icon">📚</span>
                                         <h6 class="citation-title">Citation</h6>
                                     </div>
-                                    ${rec.htmlContent}
-                                    <span class="priority-badge citation">${rec.priority}</span>
+                                    ${item.htmlContent}
+                                    <span class="priority-badge citation">${item.priority}</span>
                                 </div>
                             `;
-                        } else if (rec.type === 'diff') {
+                        } else if (item.type === 'diff') {
                             contentHtml += `
                                 <div class="diff-item">
                                     <div class="diff-header">
                                         <span class="diff-icon">✏️</span>
                                         <h6 class="diff-title">Suggested Edit</h6>
                                     </div>
-                                    ${rec.htmlContent}
-                                    <span class="priority-badge diff">${rec.priority}</span>
+                                    ${item.htmlContent}
+                                    <span class="priority-badge diff">${item.priority}</span>
                                 </div>
                             `;
                         } else {
-                            // Standard recommendation display
-                            const priorityClass = rec.type || rec.priority;
+                            // Standard feedback display
+                            const priorityClass = item.type || item.priority;
                             contentHtml += `
-                                <p class="recommendation-${rec.priority}">
-                                    • ${this.escapeHTML(rec.suggestion)}
-                                    <span class="priority-badge ${priorityClass}">${rec.priority}</span>
+                                <p class="feedback-${item.priority}">
+                                    • ${this.escapeHTML(item.suggestion)}
+                                    <span class="priority-badge ${priorityClass}">${item.priority}</span>
                                 </p>
                             `;
                         }
@@ -640,44 +641,44 @@ class AIService {
                 
             } else {
                 // Replace entire placeholder as before
-                html = `<div class="recommendation-item">
+                html = `<div class="feedback-item">
                     <h4>✨ ${promptName}</h4>`;
                 
-                for (const [category, recs] of Object.entries(groupedRecs)) {
+                for (const [category, items] of Object.entries(groupedFeedback)) {
                     html += `<div class="category-section">
                         <h5>${category}</h5>`;
                     
-                    recs.forEach(rec => {
+                    items.forEach(item => {
                         // Use specialized display for citations and diffs
-                        if (rec.type === 'citation') {
+                        if (item.type === 'citation') {
                             html += `
                                 <div class="citation-item">
                                     <div class="citation-header">
                                         <span class="citation-icon">📚</span>
                                         <h6 class="citation-title">Citation</h6>
                                     </div>
-                                    ${rec.htmlContent}
-                                    <span class="priority-badge citation">${rec.priority}</span>
+                                    ${item.htmlContent}
+                                    <span class="priority-badge citation">${item.priority}</span>
                                 </div>
                             `;
-                        } else if (rec.type === 'diff') {
+                        } else if (item.type === 'diff') {
                             html += `
                                 <div class="diff-item">
                                     <div class="diff-header">
                                         <span class="diff-icon">✏️</span>
                                         <h6 class="diff-title">Suggested Edit</h6>
                                     </div>
-                                    ${rec.htmlContent}
-                                    <span class="priority-badge diff">${rec.priority}</span>
+                                    ${item.htmlContent}
+                                    <span class="priority-badge diff">${item.priority}</span>
                                 </div>
                             `;
                         } else {
-                            // Standard recommendation display
-                            const priorityClass = rec.type || rec.priority;
+                            // Standard feedback display
+                            const priorityClass = item.type || item.priority;
                             html += `
-                                <p class="recommendation-${rec.priority}">
-                                    • ${this.escapeHTML(rec.suggestion)}
-                                    <span class="priority-badge ${priorityClass}">${rec.priority}</span>
+                                <p class="feedback-${item.priority}">
+                                    • ${this.escapeHTML(item.suggestion)}
+                                    <span class="priority-badge ${priorityClass}">${item.priority}</span>
                                 </p>
                             `;
                         }
@@ -690,7 +691,7 @@ class AIService {
                 placeholder.outerHTML = html;
             }
         } else {
-            // No recommendations - show a simple message
+            // No feedback - show a simple message
             if (wasExistingContainer) {
                 placeholder.classList.remove('loading-item');
                 placeholder.id = '';
@@ -700,16 +701,16 @@ class AIService {
                     heading.innerHTML = `✨ ${promptName}`;
                 }
                 
-                // Remove loading content and add no-recommendations message
+                // Remove loading content and add no-feedback message
                 const elementsToRemove = placeholder.querySelectorAll('.category-section, p');
                 elementsToRemove.forEach(el => el.remove());
                 
-                placeholder.insertAdjacentHTML('beforeend', '<p>No specific recommendations at this time. Your text looks good!</p>');
+                placeholder.insertAdjacentHTML('beforeend', '<p>No specific feedback at this time. Your text looks good!</p>');
             } else {
                 placeholder.outerHTML = `
-                    <div class="recommendation-item">
+                    <div class="feedback-item">
                         <h4>✨ ${promptName}</h4>
-                        <p>No specific recommendations at this time. Your text looks good!</p>
+                        <p>No specific feedback at this time. Your text looks good!</p>
                     </div>
                 `;
             }
@@ -752,13 +753,13 @@ class AIService {
         });
     }
 
-    showUpdateIndicatorsForExistingRecommendations(promptNames) {
-        const container = document.getElementById('recommendationsContainer');
+    showUpdateIndicatorsForExistingFeedback(promptNames) {
+        const container = document.getElementById('feedbackContainer');
         if (!container) return;
         
         promptNames.forEach(promptName => {
-            // Find existing recommendation container for this prompt
-            const existingContainer = this.findExistingRecommendationContainer(promptName);
+            // Find existing feedback container for this prompt
+            const existingContainer = this.findExistingFeedbackContainer(promptName);
             if (existingContainer && !existingContainer.classList.contains('loading-item')) {
                 // Add update indicator to existing container
                 this.addUpdateIndicator(existingContainer, promptName);
@@ -766,12 +767,12 @@ class AIService {
         });
     }
 
-    findExistingRecommendationContainer(promptName) {
-        const container = document.getElementById('recommendationsContainer');
+    findExistingFeedbackContainer(promptName) {
+        const container = document.getElementById('feedbackContainer');
         if (!container) return null;
         
         // Look for a container with this prompt name in its heading
-        const containers = container.querySelectorAll('.recommendation-item');
+        const containers = container.querySelectorAll('.feedback-item');
         for (const cont of containers) {
             const heading = cont.querySelector('h4');
             if (heading && heading.textContent.includes(promptName)) {
@@ -819,11 +820,11 @@ class AIService {
     }
 
     createOrUpdateRequestContainer(requestId, promptName, isLoading = false) {
-        const container = document.getElementById('recommendationsContainer');
+        const container = document.getElementById('feedbackContainer');
         if (!container) return null;
         
         // Check if there's already a container for this prompt
-        const existingContainer = this.findExistingRecommendationContainer(promptName);
+        const existingContainer = this.findExistingFeedbackContainer(promptName);
         
         if (existingContainer && !isLoading) {
             // Just update the existing container
@@ -880,16 +881,16 @@ class AIService {
         });
     }
 
-    reorderRecommendationsByPromptOrder(promptNames) {
-        const container = document.getElementById('recommendationsContainer');
+    reorderFeedbackByPromptOrder(promptNames) {
+        const container = document.getElementById('feedbackContainer');
         if (!container) return;
         
-        // Get all recommendation items
-        const recommendationItems = Array.from(container.querySelectorAll('.recommendation-item'));
+        // Get all feedback items
+        const feedbackItems = Array.from(container.querySelectorAll('.feedback-item'));
         
         // Create a map of prompt name to DOM element
         const promptToElement = new Map();
-        recommendationItems.forEach(item => {
+        feedbackItems.forEach(item => {
             const heading = item.querySelector('h4');
             if (heading) {
                 // Extract prompt name from heading text (remove emoji and trim)
@@ -899,7 +900,7 @@ class AIService {
         });
         
         // Remove all items from container
-        recommendationItems.forEach(item => item.remove());
+        feedbackItems.forEach(item => item.remove());
         
         // Re-append items in the new order based on promptNames array
         promptNames.forEach(promptName => {
@@ -910,7 +911,7 @@ class AIService {
         });
         
         // Append any items that weren't in the promptNames list (like error messages)
-        recommendationItems.forEach(item => {
+        feedbackItems.forEach(item => {
             if (!container.contains(item)) {
                 container.appendChild(item);
             }
@@ -918,7 +919,7 @@ class AIService {
     }
 
     clearTimers() {
-        clearTimeout(this.recommendationTimer);
+        clearTimeout(this.feedbackTimer);
         this.clearAllRequestPlaceholders();
     }
 }

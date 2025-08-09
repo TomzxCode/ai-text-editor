@@ -1,6 +1,6 @@
-class CustomPromptsManager {
+class PromptsManager {
     constructor() {
-        this.storageKey = 'ai_editor_custom_prompts';
+        this.storageKey = 'ai_editor_prompts';
         this.prompts = this.loadPrompts();
     }
 
@@ -9,7 +9,7 @@ class CustomPromptsManager {
             const stored = localStorage.getItem(this.storageKey);
             return stored ? JSON.parse(stored) : [];
         } catch (error) {
-            console.error('Error loading custom prompts:', error);
+            console.error('Error loading prompts:', error);
             return [];
         }
     }
@@ -19,7 +19,7 @@ class CustomPromptsManager {
             localStorage.setItem(this.storageKey, JSON.stringify(this.prompts));
             return true;
         } catch (error) {
-            console.error('Error saving custom prompts:', error);
+            console.error('Error saving prompts:', error);
             return false;
         }
     }
