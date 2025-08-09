@@ -53,14 +53,7 @@ class CustomPromptRequest(BaseModel):
     prompt_name: str
     prompt_text: str
 
-class Recommendation(BaseModel):
-    category: str
-    suggestion: str
-    priority: str
 
-class RecommendationsResponse(BaseModel):
-    recommendations: List[Recommendation]
-    prompt_name: str = "General"
 
 class GenericResponseItem(BaseModel):
     type: str  # "recommendation", "citation", "reference", "diff", "analysis", etc.
@@ -80,90 +73,6 @@ async def serve_frontend():
 async def api_root():
     return {"message": "AI Text Editor API is running"}
 
-@app.post("/analyze-text", response_model=RecommendationsResponse)
-async def analyze_text(request: TextRequest):
-    """
-    Analyze text and generate improvement recommendations using Claude CLI.
-    """
-    if not request.text.strip():
-        raise HTTPException(status_code=400, detail="Text cannot be empty")
-
-    try:
-        # Default analysis prompt
-        prompt = f"""Please analyze the following text and provide 3-5 specific recommendations for improvement.
-        Focus on areas like style, grammar, syntax, vocabulary, clarity, and structure.
-
-        For each recommendation, provide:
-        1. Category (e.g., "Style", "Grammar", "Vocabulary", "Structure", "Clarity")
-        2. Specific suggestion for improvement
-        3. Priority level ("high", "medium", "low")
-
-        Text to analyze:
-        "{request.text}"
-
-        Please respond in JSON format with an array of recommendations:
-        {{
-            "recommendations": [
-                {{
-                    "category": "Style",
-                    "suggestion": "Specific improvement suggestion here",
-                    "priority": "high"
-                }}
-            ]
-        }}"""
-
-        # Call AI model
-        response_text = call_ai_model(prompt)
-
-        # Process default recommendations
-        import json
-        import re
-
-        # Look for JSON in the response
-        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if json_match:
-            json_str = json_match.group()
-            claude_response = json.loads(json_str)
-            recommendations = claude_response.get("recommendations", [])
-        else:
-            # Fallback: create recommendations from text response
-            recommendations = [
-                {
-                    "category": "AI Analysis",
-                    "suggestion": response_text[:200] + "..." if len(response_text) > 200 else response_text,
-                    "priority": "medium"
-                }
-            ]
-
-        # Ensure we have valid recommendation objects
-        validated_recommendations = []
-        for rec in recommendations:
-            if isinstance(rec, dict) and "category" in rec and "suggestion" in rec:
-                validated_recommendations.append(Recommendation(
-                    category=rec.get('category', 'Analysis'),
-                    suggestion=rec.get("suggestion", ""),
-                    priority=rec.get("priority", "medium")
-                ))
-
-        return RecommendationsResponse(
-            recommendations=validated_recommendations,
-            prompt_name="General"
-        )
-
-    except json.JSONDecodeError:
-        # If JSON parsing fails, create a general recommendation
-        return RecommendationsResponse(
-            recommendations=[
-                Recommendation(
-                    category="AI Analysis",
-                    suggestion="Unable to parse detailed recommendations. Consider reviewing text for clarity and structure.",
-                    priority="medium"
-                )
-            ],
-            prompt_name="General"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing text: {str(e)}")
 
 @app.post("/improve-text")
 async def improve_text(request: TextRequest):

@@ -6,39 +6,6 @@ class AIService {
         this.activeRequests = new Map(); // Track individual request timers
     }
 
-    async getDefaultRecommendations(content) {
-        try {
-            const response = await fetch('/analyze-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: content,
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return {
-                recommendations: data.recommendations || []
-            };
-        } catch (error) {
-            console.error('Error calling default analysis API:', error);
-            return {
-                recommendations: [
-                    {
-                        category: "Connection Error",
-                        suggestion: "Unable to connect to AI service. Please check your internet connection.",
-                        priority: "high"
-                    }
-                ]
-            };
-        }
-    }
 
     async getCustomPromptRecommendations(content, promptName, promptText) {
         try {
@@ -405,29 +372,41 @@ class AIService {
                 initialPlaceholder.remove();
             }
             
-            // Show update indicators for existing recommendations that will be refreshed
-            this.showUpdateIndicatorsForExistingRecommendations(['General', ...customPrompts.filter(p => p.enabled).map(p => p.name)]);
+            // Only use enabled custom prompts
+            const enabledPrompts = customPrompts.filter(prompt => prompt.enabled);
             
-            // Create placeholder for default recommendations
-            const defaultRequestId = 'default';
-            this.createOrUpdateRequestContainer(defaultRequestId, 'General', true);
-            const defaultPromise = this.getDefaultRecommendations(content);
+            // If no custom prompts are enabled, show a message
+            if (enabledPrompts.length === 0) {
+                const noPromptsRecommendations = [{
+                    promptName: 'No Custom Prompts',
+                    recommendations: [
+                        {
+                            category: "Setup Required",
+                            suggestion: "No custom prompts are enabled. Go to the Custom Prompts tab to create and enable prompts for AI analysis.",
+                            priority: "low"
+                        }
+                    ]
+                }];
+
+                onProgressiveComplete({
+                    groupedRecommendations: noPromptsRecommendations,
+                    isComplete: true,
+                    completedCount: 1,
+                    totalCount: 1
+                });
+                return;
+            }
+            
+            // Show update indicators for existing recommendations that will be refreshed
+            this.showUpdateIndicatorsForExistingRecommendations(enabledPrompts.map(p => p.name));
 
             // Create promises and placeholders for all custom prompts
-            const customPromises = customPrompts
-                .filter(prompt => prompt.enabled)
-                .map(prompt => {
-                    const requestId = `custom-${prompt.id}`;
-                    this.createOrUpdateRequestContainer(requestId, prompt.name, true);
-                    return this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
-                        .then(result => ({ ...result, promptId: prompt.id, requestId }));
-                });
-
-            // Combine all promises with their request IDs
-            const allPromises = [
-                defaultPromise.then(result => ({ ...result, requestId: defaultRequestId })),
-                ...customPromises
-            ];
+            const allPromises = enabledPrompts.map(prompt => {
+                const requestId = `custom-${prompt.id}`;
+                this.createOrUpdateRequestContainer(requestId, prompt.name, true);
+                return this.getCustomPromptRecommendations(content, prompt.name, prompt.prompt)
+                    .then(result => ({ ...result, promptId: prompt.id, requestId }));
+            });
 
             // Process results as they complete
             let completedCount = 0;
