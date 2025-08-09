@@ -598,6 +598,12 @@ class AITextEditor {
         try {
             if (this.customPromptsManager.reorderPrompts(fromIndex, toIndex)) {
                 this.renderCustomPrompts();
+                
+                // Update the order of existing recommendations immediately
+                const enabledPrompts = this.customPromptsManager.getEnabledPrompts();
+                const enabledPromptNames = enabledPrompts.map(p => p.name);
+                this.aiService.reorderRecommendationsByPromptOrder(enabledPromptNames);
+                
                 this.notificationManager.success('Prompt order updated');
             }
         } catch (error) {

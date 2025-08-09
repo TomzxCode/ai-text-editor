@@ -521,8 +521,8 @@ class AIService {
             </p>
         `;
         
-        // Insert at the beginning of the container
-        container.insertBefore(placeholder, container.firstChild);
+        // Append at the end of the container to maintain order
+        container.appendChild(placeholder);
         
         // Start timer for this request
         const startTime = Date.now();
@@ -877,6 +877,43 @@ class AIService {
             timerInterval,
             promptName,
             existingContainer: true
+        });
+    }
+
+    reorderRecommendationsByPromptOrder(promptNames) {
+        const container = document.getElementById('recommendationsContainer');
+        if (!container) return;
+        
+        // Get all recommendation items
+        const recommendationItems = Array.from(container.querySelectorAll('.recommendation-item'));
+        
+        // Create a map of prompt name to DOM element
+        const promptToElement = new Map();
+        recommendationItems.forEach(item => {
+            const heading = item.querySelector('h4');
+            if (heading) {
+                // Extract prompt name from heading text (remove emoji and trim)
+                const promptName = heading.textContent.replace(/^[🔄✨]\s*/, '').trim();
+                promptToElement.set(promptName, item);
+            }
+        });
+        
+        // Remove all items from container
+        recommendationItems.forEach(item => item.remove());
+        
+        // Re-append items in the new order based on promptNames array
+        promptNames.forEach(promptName => {
+            const element = promptToElement.get(promptName);
+            if (element) {
+                container.appendChild(element);
+            }
+        });
+        
+        // Append any items that weren't in the promptNames list (like error messages)
+        recommendationItems.forEach(item => {
+            if (!container.contains(item)) {
+                container.appendChild(item);
+            }
         });
     }
 
