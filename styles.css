@@ -1137,6 +1137,17 @@ body {
     cursor: pointer;
 }
 
+.form-hint {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(0, 122, 204, 0.1);
+    border-left: 3px solid #007acc;
+    border-radius: 0 4px 4px 0;
+}
+
 .modal-footer {
     display: flex;
     justify-content: flex-end;

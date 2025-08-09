@@ -61,14 +61,14 @@
                     <h3>AI Assistant</h3>
                     <button class="close-panel" id="closeSidebar">×</button>
                 </div>
-                
+
                 <!-- Tab Navigation -->
                 <div class="tab-nav">
                     <button class="tab-btn" id="recommendationsTab" data-tab="recommendations">Recommendations</button>
                     <button class="tab-btn" id="promptsTab" data-tab="prompts">Custom Prompts</button>
                     <button class="tab-btn" id="settingsTab" data-tab="settings">Settings</button>
                 </div>
-                
+
                 <!-- Recommendations Tab Content -->
                 <div class="tab-content" id="recommendationsTabContent">
                     <div class="recommendations-container" id="recommendationsContainer">
@@ -78,13 +78,13 @@
                             <p><small>The AI will analyze your text and provide recommendations for style, grammar, structure, and more.</small></p>
                         </div>
                     </div>
-                    
+
                     <div class="ai-actions">
                         <button class="btn-ai" id="improveTextBtn">Improve Text</button>
                         <button class="btn-ai" id="summarizeBtn">Summarize</button>
                     </div>
                 </div>
-                
+
                 <!-- Custom Prompts Tab Content -->
                 <div class="tab-content" id="promptsTabContent">
                     <div class="custom-prompts-section">
@@ -97,7 +97,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Settings Tab Content -->
                 <div class="tab-content" id="settingsTabContent">
                     <div class="settings-section">
@@ -169,6 +169,7 @@
                 <div class="form-group">
                     <label for="promptText">Prompt:</label>
                     <textarea id="promptText" placeholder="Enter your custom prompt here. Use {text} where you want the analyzed text to be inserted." rows="4"></textarea>
+                    <p class="form-hint">💡 <strong>Tip:</strong> Place the placeholder text at the beginning of your prompt to benefit from prompt caching, which can improve response speed for repeated requests and reduce costs.</p>
                 </div>
                 <div class="form-group">
                     <label>
