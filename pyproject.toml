@@ -23,6 +23,9 @@ dependencies = [
     "fastapi>=0.104.1",
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.5.0",
+    "litellm>=1.75.0",
+    "async-generator>=1.10",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]

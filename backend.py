@@ -9,8 +9,12 @@ import shutil
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from litellm import completion
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -25,25 +29,14 @@ app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
 # Get the path to the Claude CLI
 claude_path = shutil.which("claude")
 
-# Helper function to call Claude CLI
-async def call_claude_cli(prompt: str) -> str:
-    """Call the Claude CLI with the given prompt and return the response."""
-    try:
-        result = subprocess.run(
-            [claude_path, "--print"],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60,  # 60 second timeout
-            check=True,
-        )
-        return result.stdout.strip()
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=408, detail="Claude CLI request timed out")
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Claude CLI error: {e.stderr}")
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="Claude CLI not found. Please install Claude CLI first.")
+# Helper function to call AI model via LiteLLM
+def call_ai_model(prompt: str) -> str:
+    response = completion(
+        model="groq/openai/gpt-oss-120b",
+        messages=[{ "content": prompt,"role": "user"}],
+        #stream=True,
+    )
+    return response.choices[0].message.content
 
 class CustomPrompt(BaseModel):
     id: str
@@ -119,8 +112,8 @@ async def analyze_text(request: TextRequest):
             ]
         }}"""
 
-        # Call Claude CLI
-        response_text = await call_claude_cli(prompt)
+        # Call AI model
+        response_text = call_ai_model(prompt)
 
         # Process default recommendations
         import json
@@ -188,7 +181,7 @@ async def improve_text(request: TextRequest):
 
         Please provide only the improved version of the text without additional commentary."""
 
-        improved_text = await call_claude_cli(prompt)
+        improved_text = call_ai_model(prompt)
 
         return {"improved_text": improved_text}
 
@@ -210,7 +203,7 @@ async def summarize_text(request: TextRequest):
 
         Please provide a clear, well-structured summary."""
 
-        summary = await call_claude_cli(prompt)
+        summary = call_ai_model(prompt)
 
         return {"summary": summary}
 
@@ -301,8 +294,8 @@ For general analysis:
 
 Choose the most appropriate format for your response based on the prompt's intent."""
 
-        # Call Claude CLI
-        response_text = await call_claude_cli(full_custom_prompt)
+        # Call AI model
+        response_text = call_ai_model(full_custom_prompt)
 
         # Try to extract JSON from response
         import json
@@ -313,7 +306,7 @@ Choose the most appropriate format for your response based on the prompt's inten
         if json_match:
             json_str = json_match.group()
             claude_response = json.loads(json_str)
-            
+
             # Handle new generic format
             if "items" in claude_response and "response_type" in claude_response:
                 items = []
@@ -323,13 +316,13 @@ Choose the most appropriate format for your response based on the prompt's inten
                             type=item["type"],
                             content=item["content"]
                         ))
-                
+
                 return GenericResponse(
                     items=items,
                     response_type=claude_response.get("response_type", "analysis"),
                     prompt_name=request.prompt_name
                 )
-            
+
             # Backward compatibility: handle old recommendations format
             elif "recommendations" in claude_response:
                 recommendations = claude_response.get("recommendations", [])
@@ -344,13 +337,13 @@ Choose the most appropriate format for your response based on the prompt's inten
                                 "priority": rec.get("priority", "medium")
                             }
                         ))
-                
+
                 return GenericResponse(
                     items=items,
                     response_type="recommendations",
                     prompt_name=request.prompt_name
                 )
-            
+
             else:
                 # Unknown JSON format, treat as general analysis
                 items = [GenericResponseItem(
@@ -361,13 +354,13 @@ Choose the most appropriate format for your response based on the prompt's inten
                         "source": "custom_prompt"
                     }
                 )]
-                
+
                 return GenericResponse(
                     items=items,
                     response_type="analysis",
                     prompt_name=request.prompt_name
                 )
-        
+
         else:
             # Fallback: treat entire response as general analysis
             items = [GenericResponseItem(
@@ -378,7 +371,7 @@ Choose the most appropriate format for your response based on the prompt's inten
                     "source": "custom_prompt"
                 }
             )]
-            
+
             return GenericResponse(
                 items=items,
                 response_type="analysis",
@@ -395,7 +388,7 @@ Choose the most appropriate format for your response based on the prompt's inten
                 "source": "custom_prompt"
             }
         )]
-        
+
         return GenericResponse(
             items=items,
             response_type="analysis",
@@ -407,6 +400,6 @@ Choose the most appropriate format for your response based on the prompt's inten
 
 if __name__ == "__main__":
     import uvicorn
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
     logger.info(f"Using Claude CLI at: {claude_path}")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", 8000)))
