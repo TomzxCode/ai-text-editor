@@ -33,6 +33,7 @@ class TextAnalysisManager {
         const currentWordCount = currentWords.length;
         const currentSentenceCount = currentSentences.length;
 
+
         // Check for word completion
         if (this.hasCompletedWord(currentText, currentWordCount)) {
             const completedWord = this.getLastCompletedWord(currentText);
@@ -71,13 +72,20 @@ class TextAnalysisManager {
     }
 
     hasCompletedWord(currentText, currentWordCount) {
-        if (currentWordCount <= this.previousWordCount) return false;
+        // Check if we just added a word boundary after a word
+        const lastChar = currentText.slice(-1);
+        const prevLastChar = this.previousText.slice(-1);
         
-        // Check if the user just finished typing a word (added space or punctuation after a word)
-        const lastChars = currentText.slice(-2);
-        const endsWithWordBoundary = /\w[\s.!?,:;]$/.test(lastChars);
+        // Word completion happens when:
+        // 1. Current text ends with word boundary (space/punctuation)
+        // 2. Previous text ended with a word character OR was shorter
+        // 3. We have at least one word
+        const endsWithWordBoundary = /[\s.!?,:;]$/.test(lastChar);
+        const prevEndedWithWordChar = /\w$/.test(prevLastChar) || this.previousText.length < currentText.length - 1;
+        const hasWords = currentWordCount > 0;
         
-        return endsWithWordBoundary;
+        
+        return endsWithWordBoundary && prevEndedWithWordChar && hasWords;
     }
 
     hasCompletedSentence(currentText, currentSentenceCount) {
@@ -94,20 +102,16 @@ class TextAnalysisManager {
         const words = this.extractWords(text);
         if (words.length === 0) return '';
         
-        // Check if the text ends with a word boundary
-        const trimmedText = text.trim();
-        const lastChar = trimmedText.slice(-1);
+        // Check if the text ends with whitespace or punctuation (word boundary)
+        const lastChar = text.slice(-1);
+        const endsWithBoundary = /[\s.!?,:;]$/.test(lastChar);
         
-        // If last character is not a letter/number, the previous word is completed
-        if (!/\w/.test(lastChar)) {
+        // If text ends with a boundary, the last word in our words array is completed
+        if (endsWithBoundary) {
             return words[words.length - 1] || '';
         }
         
-        // If we have at least 2 words and current text has word boundary indicators
-        if (words.length >= 2 && /\w[\s.!?,:;]/.test(text.slice(-2))) {
-            return words[words.length - 2] || '';
-        }
-        
+        // If no boundary at end, no completed word
         return '';
     }
 

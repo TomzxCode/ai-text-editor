@@ -1205,7 +1205,9 @@ class AIService {
     }
 
     async generateIndividualPromptFeedback(content, promptId, prompt, onLoading, onProgressiveComplete, onError, settings = {}) {
-        if (content.length < 10 || !settings.enableAIFeedback) return;
+        // For word/sentence triggers, allow shorter content. For custom triggers, keep minimum length
+        const minLength = (prompt.triggerTiming === 'word' || prompt.triggerTiming === 'sentence') ? 1 : 10;
+        if (content.length < minLength || !settings.enableAIFeedback) return;
 
         if (this.isGeneratingFeedback) return; // Avoid conflicts with batch generation
 
