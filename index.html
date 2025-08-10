@@ -41,7 +41,14 @@
             <!-- Editor Section -->
             <section class="editor-section">
                 <div class="editor-header">
-                    <span class="current-file" id="currentFile">No file selected</span>
+                    <div class="editor-info">
+                        <span class="current-file" id="currentFile">No file selected</span>
+                        <div class="text-stats">
+                            <span class="stat-item" id="wordCount">0 words</span>
+                            <span class="stat-separator">•</span>
+                            <span class="stat-item" id="sentenceCount">0 sentences</span>
+                        </div>
+                    </div>
                     <div class="editor-actions">
                         <button class="btn-secondary" id="newFileBtn">New</button>
                         <button class="btn-secondary" id="saveFileBtn" disabled>Save</button>
@@ -201,6 +208,7 @@
     <script src="/static/components/UIManager.js"></script>
     <script src="/static/components/PromptsManager.js"></script>
     <script src="/static/components/SettingsManager.js"></script>
+    <script src="/static/components/TextAnalysisManager.js"></script>
     <!-- Main application script -->
     <script src="/static/script.js"></script>
 </body>

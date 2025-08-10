@@ -2,11 +2,11 @@ class AITextEditor {
     constructor() {
         this.fileSystemManager = new FileSystemManager();
         this.notificationManager = new NotificationManager();
-        
+
         if (!this.fileSystemManager.supportsFileSystemAccess) {
             this.notificationManager.error('File System Access API not supported in this browser');
         }
-        
+
         this.init();
     }
 
@@ -25,6 +25,8 @@ class AITextEditor {
             searchClear: document.getElementById('searchClear'),
             textEditor: document.getElementById('textEditor'),
             currentFileSpan: document.getElementById('currentFile'),
+            wordCountSpan: document.getElementById('wordCount'),
+            sentenceCountSpan: document.getElementById('sentenceCount'),
             newFileBtn: document.getElementById('newFileBtn'),
             saveFileBtn: document.getElementById('saveFileBtn'),
             menuToggle: document.getElementById('menuToggle'),
@@ -55,18 +57,25 @@ class AITextEditor {
 
     initializeManagers() {
         this.settingsManager = new SettingsManager();
-        
+        this.textAnalysisManager = new TextAnalysisManager();
+
         this.editorManager = new EditorManager(this.elements.textEditor, (event, data) => {
             this.handleEditorEvent(event, data);
         }, this.settingsManager);
-        
+
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
         this.promptsManager = new PromptsManager();
-        
+
         this.currentEditingPromptId = null;
         this.renderPrompts();
-        
+
+        // Setup text analysis callbacks
+        this.setupTextAnalysisCallbacks();
+
+        // Initialize text statistics display
+        this.updateTextStatisticsDisplay();
+
         // Setup settings UI after DOM is ready
         setTimeout(() => {
             this.settingsManager.setupUI();
@@ -105,15 +114,15 @@ class AITextEditor {
 
         // Track mousedown to distinguish between clicks and text selection
         let modalMouseDownTarget = null;
-        
+
         this.elements.promptModal.addEventListener('mousedown', (e) => {
             modalMouseDownTarget = e.target;
         });
-        
+
         this.elements.promptModal.addEventListener('mouseup', (e) => {
             // Only close modal if mousedown and mouseup happened on the same target (overlay)
             // and that target is the modal overlay itself
-            if (e.target === this.elements.promptModal && 
+            if (e.target === this.elements.promptModal &&
                 modalMouseDownTarget === this.elements.promptModal) {
                 this.hidePromptModal();
             }
@@ -128,6 +137,21 @@ class AITextEditor {
         });
     }
 
+    setupTextAnalysisCallbacks() {
+        // Setup word completion callback
+        this.textAnalysisManager.onWordCompletion((data) => {
+            // Future: trigger feedback refresh on word completion
+        });
+
+        // Setup sentence completion callback
+        this.textAnalysisManager.onSentenceCompletion((data) => {
+            // Future: trigger feedback refresh on sentence completion
+        });
+
+        // Start tracking when editor is ready
+        this.textAnalysisManager.startTracking();
+    }
+
     handleEditorEvent(event, data) {
         switch (event) {
             case 'save':
@@ -137,13 +161,17 @@ class AITextEditor {
                 this.createNewFile();
                 break;
             case 'input':
-                this.scheduleAIFeedback();
+                this.handleTextInput();
                 break;
             case 'contentChange':
                 this.updateFileTitle(data.fileName, data.isModified);
                 break;
             case 'fileLoaded':
                 this.updateFileTitle(data.fileName, data.isModified);
+                // Reset text analysis for new file
+                this.textAnalysisManager.reset();
+                // Update statistics display for new file
+                this.updateTextStatisticsDisplay();
                 break;
         }
     }
@@ -151,6 +179,35 @@ class AITextEditor {
     updateFileTitle(fileName, isModified) {
         const title = fileName + (isModified ? ' *' : '');
         this.elements.currentFileSpan.textContent = title;
+    }
+
+    handleTextInput() {
+        // Analyze text for word and sentence completion
+        const currentText = this.editorManager.getValue();
+        this.textAnalysisManager.analyzeText(currentText);
+
+        // Update text statistics display
+        this.updateTextStatisticsDisplay();
+
+        // Schedule AI feedback as before
+        this.scheduleAIFeedback();
+    }
+
+    getTextStatistics() {
+        const currentText = this.editorManager.getValue();
+        return this.textAnalysisManager.getStatistics(currentText);
+    }
+
+    updateTextStatisticsDisplay() {
+        const stats = this.getTextStatistics();
+
+        // Format word count
+        const wordText = stats.wordCount === 1 ? '1 word' : `${stats.wordCount} words`;
+        this.elements.wordCountSpan.textContent = wordText;
+
+        // Format sentence count
+        const sentenceText = stats.sentenceCount === 1 ? '1 sentence' : `${stats.sentenceCount} sentences`;
+        this.elements.sentenceCountSpan.textContent = sentenceText;
     }
 
 
@@ -203,7 +260,7 @@ class AITextEditor {
             const fileData = await this.fileSystemManager.readFile(filePath);
             this.editorManager.loadFile(fileData);
             this.elements.saveFileBtn.disabled = false;
-            
+
             this.uiManager.updateActiveFileInTree(filePath);
             this.scheduleAIFeedback();
 
@@ -236,7 +293,7 @@ class AITextEditor {
         if (!currentFile) return;
 
         const content = this.editorManager.getValue();
-        
+
         try {
             if (currentFile.handle && currentFile.handle.createWritable) {
                 await this.fileSystemManager.saveFile(currentFile.handle, content);
@@ -251,7 +308,7 @@ class AITextEditor {
             }
 
             this.editorManager.markAsSaved();
-            
+
         } catch (error) {
             console.error('Error saving file:', error);
             this.notificationManager.error('Error saving file');
@@ -264,11 +321,11 @@ class AITextEditor {
     scheduleAIFeedback() {
         // Check if AI feedback is enabled in settings
         const aiEnabled = this.settingsManager.getSetting('enableAIFeedback');
-        
+
         if (!aiEnabled) {
             return;
         }
-        
+
         this.aiService.scheduleFeedback(() => {
             // Get content at execution time, not scheduling time
             const content = this.editorManager.getValue();
@@ -283,10 +340,10 @@ class AITextEditor {
             this.uiManager.restoreInitialPlaceholder();
             return;
         }
-        
+
         const enabledPrompts = this.promptsManager.getEnabledPrompts();
         const settings = this.settingsManager.getAllSettings();
-        
+
         this.aiService.generateFeedback(
             content,
             (show) => {}, // No longer needed since we use individual placeholders
@@ -308,15 +365,15 @@ class AITextEditor {
     renderPrompts() {
         const prompts = this.promptsManager.getAllPrompts();
         const container = this.elements.promptsList;
-        
+
         if (prompts.length === 0) {
             container.innerHTML = '<p class="no-prompts">No prompts yet. Click + to add one.</p>';
             return;
         }
-        
+
         container.innerHTML = prompts.map((prompt, index) => `
-            <div class="prompt-item ${!prompt.enabled ? 'disabled' : ''}" 
-                 data-id="${prompt.id}" 
+            <div class="prompt-item ${!prompt.enabled ? 'disabled' : ''}"
+                 data-id="${prompt.id}"
                  data-index="${index}"
                  draggable="true">
                 <div class="prompt-header">
@@ -333,14 +390,14 @@ class AITextEditor {
                 <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
         `).join('');
-        
+
         // Add drag and drop event listeners
         this.setupDragAndDrop();
     }
 
     showPromptModal(promptId = null) {
         this.currentEditingPromptId = promptId;
-        
+
         if (promptId) {
             const prompt = this.promptsManager.getPrompt(promptId);
             if (prompt) {
@@ -355,7 +412,7 @@ class AITextEditor {
             this.elements.promptText.value = '';
             this.elements.promptEnabled.checked = true;
         }
-        
+
         this.elements.promptModal.style.display = 'flex';
         this.elements.promptName.focus();
     }
@@ -369,19 +426,19 @@ class AITextEditor {
         const name = this.elements.promptName.value.trim();
         const prompt = this.elements.promptText.value.trim();
         const enabled = this.elements.promptEnabled.checked;
-        
+
         if (!name) {
             this.notificationManager.error('Please enter a name for the prompt');
             this.elements.promptName.focus();
             return;
         }
-        
+
         if (!prompt) {
             this.notificationManager.error('Please enter the prompt text');
             this.elements.promptText.focus();
             return;
         }
-        
+
         try {
             if (this.currentEditingPromptId) {
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
@@ -394,7 +451,7 @@ class AITextEditor {
                 this.promptsManager.addPrompt(name, prompt, enabled);
                 this.notificationManager.success('Prompt added successfully');
             }
-            
+
             this.renderPrompts();
             this.hidePromptModal();
         } catch (error) {
@@ -419,7 +476,7 @@ class AITextEditor {
     deletePrompt(promptId) {
         const prompt = this.promptsManager.getPrompt(promptId);
         if (!prompt) return;
-        
+
         if (confirm(`Are you sure you want to delete the prompt "${prompt.name}"?`)) {
             try {
                 this.promptsManager.deletePrompt(promptId);
@@ -440,10 +497,10 @@ class AITextEditor {
     setupDragAndDrop() {
         const container = this.elements.promptsList;
         const items = container.querySelectorAll('.prompt-item');
-        
+
         let draggedElement = null;
         let draggedIndex = null;
-        
+
         items.forEach((item, index) => {
             item.addEventListener('dragstart', (e) => {
                 draggedElement = item;
@@ -452,7 +509,7 @@ class AITextEditor {
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/html', item.outerHTML);
             });
-            
+
             item.addEventListener('dragend', (e) => {
                 item.classList.remove('dragging');
                 // Remove all drag-over indicators
@@ -460,19 +517,19 @@ class AITextEditor {
                 draggedElement = null;
                 draggedIndex = null;
             });
-            
+
             item.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
-                
+
                 if (item === draggedElement) return;
-                
+
                 const rect = item.getBoundingClientRect();
                 const midpoint = rect.top + rect.height / 2;
-                
+
                 // Remove previous indicators
                 item.classList.remove('drag-over-top', 'drag-over-bottom');
-                
+
                 // Add appropriate indicator
                 if (e.clientY < midpoint) {
                     item.classList.add('drag-over-top');
@@ -480,23 +537,23 @@ class AITextEditor {
                     item.classList.add('drag-over-bottom');
                 }
             });
-            
+
             item.addEventListener('dragleave', (e) => {
                 // Only remove indicators if we're actually leaving the item
                 if (!item.contains(e.relatedTarget)) {
                     item.classList.remove('drag-over-top', 'drag-over-bottom');
                 }
             });
-            
+
             item.addEventListener('drop', (e) => {
                 e.preventDefault();
-                
+
                 if (item === draggedElement) return;
-                
+
                 const rect = item.getBoundingClientRect();
                 const midpoint = rect.top + rect.height / 2;
                 const dropIndex = parseInt(item.dataset.index);
-                
+
                 let targetIndex;
                 if (e.clientY < midpoint) {
                     // Drop above this item
@@ -505,30 +562,30 @@ class AITextEditor {
                     // Drop below this item
                     targetIndex = dropIndex + 1;
                 }
-                
+
                 // Adjust target index if dragging down
                 if (draggedIndex < targetIndex) {
                     targetIndex--;
                 }
-                
+
                 this.movePrompt(draggedIndex, targetIndex);
-                
+
                 // Remove indicators
                 item.classList.remove('drag-over-top', 'drag-over-bottom');
             });
         });
     }
-    
+
     movePrompt(fromIndex, toIndex) {
         try {
             if (this.promptsManager.reorderPrompts(fromIndex, toIndex)) {
                 this.renderPrompts();
-                
+
                 // Update the order of existing feedback immediately
                 const enabledPrompts = this.promptsManager.getEnabledPrompts();
                 const enabledPromptNames = enabledPrompts.map(p => p.name);
                 this.aiService.reorderFeedbackByPromptOrder(enabledPromptNames);
-                
+
                 this.notificationManager.success('Prompt order updated');
             }
         } catch (error) {
