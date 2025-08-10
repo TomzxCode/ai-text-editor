@@ -11,6 +11,7 @@ class AIService {
         this.pendingContent = new Map(); // Track content that is currently scheduled
         this.promptTimerInfo = new Map(); // Track timer start time and duration for countdown display
         this.countdownCallbacks = new Map(); // Track countdown update callbacks
+        this.lastFeedbackTime = new Map(); // Track when feedback was last generated for each prompt
     }
 
 
@@ -288,8 +289,7 @@ class AIService {
                 break;
             case 'custom':
             default:
-                delay = this.parseCustomDelay(customDelay);
-                if (delay === null) delay = 1000; // Fallback to 1 second if invalid
+                delay = this.calculateCustomDelay(promptId, customDelay);
                 break;
         }
 
@@ -297,6 +297,7 @@ class AIService {
         const timer = setTimeout(() => {
             // Store content when timer actually completes and clear pending
             this.lastTriggerContent.set(promptId, content);
+            this.lastFeedbackTime.set(promptId, Date.now()); // Track when feedback was generated
             this.pendingContent.delete(promptId);
             callback(promptId);
             this.promptTimers.delete(timerId);
@@ -325,6 +326,30 @@ class AIService {
                 }
             }
         }
+    }
+
+    calculateCustomDelay(promptId, customDelay) {
+        const baseDelay = this.parseCustomDelay(customDelay);
+        if (baseDelay === null) return 1000; // Fallback to 1 second if invalid
+        
+        const lastFeedbackTime = this.lastFeedbackTime.get(promptId);
+        if (!lastFeedbackTime) {
+            // No previous feedback, use regular debounce delay (1 second)
+            return 1000;
+        }
+        
+        const now = Date.now();
+        const timeSinceLastFeedback = now - lastFeedbackTime;
+        
+        // If the time since last feedback is greater than the custom delay,
+        // trigger immediately after user stops typing (1 second debounce)
+        if (timeSinceLastFeedback >= baseDelay) {
+            return 1000;
+        }
+        
+        // Otherwise, wait for the remaining time from the last feedback generation
+        const remainingDelay = baseDelay - timeSinceLastFeedback;
+        return Math.max(1000, remainingDelay); // Ensure at least 1 second for debouncing
     }
 
     parseCustomDelay(delayString) {
@@ -1228,6 +1253,7 @@ class AIService {
         });
         this.promptTimers.clear();
         this.lastTriggerContent.clear();
+        this.lastFeedbackTime.clear(); // Clear last feedback times
         
         // Clear all countdown intervals
         this.countdownCallbacks.forEach((interval, promptId) => {
