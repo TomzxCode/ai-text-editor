@@ -8,12 +8,15 @@ AI Text Editor is a modern, web-based text editor with integrated AI assistance 
 
 ## Development Commands
 
-### Backend (FastAPI + Claude CLI)
+### Backend (FastAPI + LiteLLM)
 ```bash
 # Install dependencies
 uv sync
 
-# Run development server
+# Run development server (production)
+uv run python backend.py
+
+# Run development server with auto-reload
 uv run uvicorn backend:app --reload --host 0.0.0.0 --port 8000
 
 # Code formatting
@@ -22,18 +25,21 @@ uv run isort .
 
 # Linting
 uv run flake8 .
+
+# Run tests (when available)
+uv run pytest
 ```
 
 ### Prerequisites
 - Python 3.12+
-- Claude CLI installed and authenticated (`claude --help` should work)
 - Modern browser (Chrome/Edge recommended for File System Access API)
+- AI model access via LiteLLM
 
 ## Architecture Overview
 
 ### Core Application Structure
 - **script.js** - Main AITextEditor class that orchestrates all components
-- **backend.py** - FastAPI server with Claude CLI subprocess integration
+- **backend.py** - FastAPI server with LiteLLM integration for AI model access
 - **index.html** - Three-panel responsive layout with tabbed AI sidebar
 - **components/** - Modular ES6 classes for different functionality areas
 
@@ -47,18 +53,19 @@ The frontend uses a manager-based component pattern where each major functionali
 - **PromptsManager.js** - localStorage-based prompts with CRUD operations
 - **NotificationManager.js** - Toast notification system
 - **SettingsManager.js** - User preferences management with localStorage persistence
+- **TextAnalysisManager.js** - Text analysis with word/sentence completion tracking and callbacks
 
 ### Frontend-Backend Communication
-- REST endpoints: `/analyze-text`, `/improve-text`, `/summarize-text`, `/analyze-prompt`
-- Backend uses subprocess calls to Claude CLI for AI operations
+- REST endpoint: `/analyze-prompt` - Processes text with custom prompts via LiteLLM
+- Backend uses LiteLLM for AI model integration (currently Groq/OpenAI GPT-OSS-120B)
+- HTML response format for flexible AI feedback display
 - Progressive feedback loading with real-time UI updates
-- Grouped feedback by prompt source (General + prompts)
 
 ### Key Data Flow
-1. User types in editor → AIService schedules debounced analysis
-2. AIService calls multiple APIs in parallel (general + prompts)
-3. Backend processes each request via Claude CLI subprocess
-4. Progressive results update UI with grouped feedback
+1. User types in editor → TextAnalysisManager tracks word/sentence completion
+2. AIService schedules debounced analysis for enabled prompts
+3. Backend processes each request via LiteLLM API calls
+4. AI responses returned as HTML for flexible display formatting
 5. File operations go through FileSystemManager → backend → file system
 
 ### Mobile-Responsive Design
@@ -98,9 +105,9 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Separate tab in AI sidebar for management
 
 ### Error Handling
-- Graceful degradation when Claude CLI unavailable
+- Graceful degradation when LiteLLM/AI model unavailable
 - Connection error feedback with retry suggestions
-- Fallback feedback when JSON parsing fails
+- HTML error responses with formatted display
 - AI feedback can be toggled on/off via settings
 
 ### Settings System
@@ -118,10 +125,11 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Add cleanup methods for timers/listeners
 
 ### When Modifying AI Features
-- Test with and without Claude CLI available
+- Test with and without LiteLLM/AI model available
 - Ensure progressive loading continues to work
-- Update both grouped and fallback feedback formats
+- Handle both HTML and fallback response formats
 - Maintain backward compatibility for feedback display
+- Consider rate limiting and API costs when making changes
 
 ### When Working with File Operations
 - Use FileSystemManager for all file operations
@@ -140,3 +148,9 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Ensure tab switching works on mobile
 - Verify responsive layout breakpoints
 - Test touch targets meet accessibility standards
+
+### Text Analysis Features
+- Word and sentence completion tracking via TextAnalysisManager
+- Configurable callbacks for completion events
+- Real-time counting and statistics display
+- Debounced analysis to avoid excessive API calls
