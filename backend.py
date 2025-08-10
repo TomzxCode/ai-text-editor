@@ -71,7 +71,6 @@ class TextRequest(BaseModel):
 
 
 class PromptRequest(BaseModel):
-    text: str
     prompt_name: str
     prompt_text: str
 
@@ -95,15 +94,13 @@ async def analyze_prompt(request: PromptRequest):
     Analyze text using a prompt and return a flexible response.
     Can return feedback, citations, references, diffs, or other types of analysis.
     """
-    if not request.text.strip():
-        raise HTTPException(status_code=400, detail="Text cannot be empty")
 
     if not request.prompt_text.strip():
         raise HTTPException(status_code=400, detail="Prompt text cannot be empty")
 
     try:
-        # Replace {text} placeholder in prompt
-        prompt_text = request.prompt_text.replace("{text}", request.text)
+        # Use the processed prompt text directly (placeholders already replaced in frontend)
+        prompt_text = request.prompt_text
 
         # Give the LLM freedom to respond in any format
         full_prompt = f"""{prompt_text}

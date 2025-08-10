@@ -43,7 +43,6 @@ class AIService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: content,
                     prompt_name: promptName,
                     prompt_text: processedPrompt
                 })
