@@ -4,6 +4,13 @@ class AIService {
         this.hasPendingFeedbackRequest = false;
         this.feedbackTimer = null;
         this.activeRequests = new Map(); // Track individual request timers
+        
+        // Individual prompt timers for different trigger types
+        this.promptTimers = new Map(); // Track individual prompt timers
+        this.lastTriggerContent = new Map(); // Track last content that triggered each prompt
+        this.pendingContent = new Map(); // Track content that is currently scheduled
+        this.promptTimerInfo = new Map(); // Track timer start time and duration for countdown display
+        this.countdownCallbacks = new Map(); // Track countdown update callbacks
     }
 
 
@@ -248,6 +255,280 @@ class AIService {
         this.feedbackTimer = setTimeout(() => {
             callback();
         }, delay);
+    }
+
+    schedulePromptFeedback(promptId, callback, triggerTiming = 'delay', content = '', customDelay = '') {
+        const timerId = `prompt-${promptId}`;
+        
+        // Check if content has changed from last processed content
+        const lastContent = this.lastTriggerContent.get(promptId);
+        const pendingContent = this.pendingContent.get(promptId);
+        
+        if (lastContent === content || pendingContent === content) {
+            return; // Same content already processed or scheduled
+        }
+        
+        // Track that this content is now pending
+        this.pendingContent.set(promptId, content);
+
+        // Clear existing timer for this prompt only after content change is confirmed
+        if (this.promptTimers.has(timerId)) {
+            clearTimeout(this.promptTimers.get(timerId));
+            this.promptTimers.delete(timerId);
+        }
+        
+        // Clear existing countdown for this prompt
+        this.clearCountdownInterval(promptId);
+
+        let delay = 0;
+        switch (triggerTiming) {
+            case 'word':
+            case 'sentence':
+                delay = 100; // Small delay to batch rapid completions
+                break;
+            case 'custom':
+            default:
+                delay = this.parseCustomDelay(customDelay);
+                if (delay === null) delay = 1000; // Fallback to 1 second if invalid
+                break;
+        }
+
+        const startTime = Date.now();
+        const timer = setTimeout(() => {
+            // Store content when timer actually completes and clear pending
+            this.lastTriggerContent.set(promptId, content);
+            this.pendingContent.delete(promptId);
+            callback(promptId);
+            this.promptTimers.delete(timerId);
+            this.promptTimerInfo.delete(promptId);
+            this.clearCountdownInterval(promptId);
+        }, delay);
+
+        this.promptTimers.set(timerId, timer);
+        
+        // Store timer info for countdown display (only for custom delays > 1 second)
+        if (triggerTiming === 'custom' && delay > 1000) {
+            // Check if there are existing feedback containers for this prompt
+            const prompt = window.app?.promptsManager?.getPrompt?.(promptId);
+            if (prompt) {
+                const existingContainers = this.findAllFeedbackContainersByName(prompt.name);
+                if (existingContainers.length > 0) {
+                    this.promptTimerInfo.set(promptId, {
+                        startTime,
+                        duration: delay,
+                        triggerTiming,
+                        customDelay
+                    });
+                    
+                    // Start countdown display only if there are existing containers
+                    this.startCountdownDisplay(promptId);
+                }
+            }
+        }
+    }
+
+    parseCustomDelay(delayString) {
+        if (!delayString) return null;
+        
+        // Parse format: Ad Bh Cm Ds (days, hours, minutes, seconds)
+        const regex = /(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?/i;
+        const match = delayString.trim().match(regex);
+        
+        if (!match || match[0] === '') return null;
+        
+        const days = parseInt(match[1] || 0);
+        const hours = parseInt(match[2] || 0);
+        const minutes = parseInt(match[3] || 0);
+        const seconds = parseInt(match[4] || 0);
+        
+        // Check if at least one unit was specified
+        if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
+            return null;
+        }
+        
+        // Convert to milliseconds
+        const totalMs = (days * 24 * 60 * 60 * 1000) + 
+                       (hours * 60 * 60 * 1000) + 
+                       (minutes * 60 * 1000) + 
+                       (seconds * 1000);
+        
+        return totalMs > 0 ? totalMs : null;
+    }
+
+    clearPromptTimer(promptId) {
+        const timerId = `prompt-${promptId}`;
+        if (this.promptTimers.has(timerId)) {
+            clearTimeout(this.promptTimers.get(timerId));
+            this.promptTimers.delete(timerId);
+        }
+        this.promptTimerInfo.delete(promptId);
+        this.pendingContent.delete(promptId);
+        this.clearCountdownInterval(promptId);
+    }
+
+    startCountdownDisplay(promptId) {
+        // Clear any existing countdown interval
+        this.clearCountdownInterval(promptId);
+        
+        const updateCountdown = () => {
+            const timerInfo = this.promptTimerInfo.get(promptId);
+            if (!timerInfo) return;
+            
+            const elapsed = Date.now() - timerInfo.startTime;
+            const remaining = Math.max(0, timerInfo.duration - elapsed);
+            
+            if (remaining <= 0) {
+                this.clearCountdownInterval(promptId);
+                return;
+            }
+            
+            // Format remaining time
+            const remainingSeconds = Math.ceil(remaining / 1000);
+            const countdownText = this.formatCountdownTime(remainingSeconds);
+            
+            // Update the countdown display in the UI
+            this.updateCountdownDisplay(promptId, countdownText);
+        };
+        
+        // Update immediately, then every 100ms for smooth countdown
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 100);
+        this.countdownCallbacks.set(promptId, interval);
+    }
+
+    clearCountdownInterval(promptId) {
+        const interval = this.countdownCallbacks.get(promptId);
+        if (interval) {
+            clearInterval(interval);
+            this.countdownCallbacks.delete(promptId);
+        }
+        // Remove countdown display from UI
+        this.removeCountdownDisplay(promptId);
+    }
+
+    formatCountdownTime(seconds) {
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else if (seconds < 3600) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            let result = `${hours}h`;
+            if (mins > 0) result += ` ${mins}m`;
+            if (secs > 0) result += ` ${secs}s`;
+            return result;
+        }
+    }
+
+    updateCountdownDisplay(promptId, countdownText) {
+        // Find existing feedback containers by prompt name
+        const prompt = window.app?.promptsManager?.getPrompt?.(promptId);
+        if (!prompt) {
+            return;
+        }
+        
+        const existingContainers = this.findAllFeedbackContainersByName(prompt.name);
+        
+        if (existingContainers.length === 0) {
+            return;
+        }
+        
+        // Add countdown to all containers for this prompt
+        existingContainers.forEach(container => {
+            // Find or create countdown element
+            let countdownElement = container.querySelector('.countdown-timer');
+            if (!countdownElement) {
+                countdownElement = document.createElement('div');
+                countdownElement.className = 'countdown-timer';
+                
+                // Insert after the heading
+                const heading = container.querySelector('h4');
+                if (heading) {
+                    heading.insertAdjacentElement('afterend', countdownElement);
+                } else {
+                    // If no heading, just append to container
+                    container.appendChild(countdownElement);
+                }
+            }
+            
+            countdownElement.textContent = `🔄 Updating in ${countdownText}`;
+        });
+    }
+
+
+    removeCountdownDisplay(promptId) {
+        // Get prompt name to find all related containers
+        const prompt = window.app?.promptsManager?.getPrompt?.(promptId);
+        if (!prompt) {
+            return;
+        }
+        
+        // Find all feedback containers for this prompt
+        const containers = this.findAllFeedbackContainersByName(prompt.name);
+        
+        containers.forEach(container => {
+            const countdownElement = container.querySelector('.countdown-timer');
+            if (countdownElement) {
+                countdownElement.remove();
+            }
+        });
+        
+        // Also remove any temporary countdown containers (legacy cleanup)
+        const countdownContainer = document.getElementById(`countdown-${promptId}`);
+        if (countdownContainer) {
+            countdownContainer.remove();
+        }
+    }
+
+    findExistingFeedbackContainer(promptId) {
+        // Try to find by prompt ID in the individual request containers
+        const individualContainer = document.getElementById(`placeholder-individual-${promptId}`);
+        if (individualContainer) return individualContainer;
+        
+        // Try to find any existing feedback container for this prompt
+        const prompt = window.app?.promptsManager?.getPrompt?.(promptId);
+        if (prompt) {
+            return this.findExistingFeedbackContainerByName(prompt.name);
+        }
+        
+        return null;
+    }
+
+    findExistingFeedbackContainerByName(promptName) {
+        const container = document.getElementById('feedbackContainer');
+        if (!container) return null;
+        
+        // Look for a container with this prompt name in its heading
+        const containers = container.querySelectorAll('.feedback-item');
+        for (const cont of containers) {
+            const heading = cont.querySelector('h4');
+            if (heading && heading.textContent.includes(promptName)) {
+                return cont;
+            }
+        }
+        return null;
+    }
+
+    findAllFeedbackContainersByName(promptName) {
+        const container = document.getElementById('feedbackContainer');
+        if (!container) return [];
+        
+        // Find all containers with this prompt name in their heading
+        const matchingContainers = [];
+        const containers = container.querySelectorAll('.feedback-item');
+        
+        containers.forEach(cont => {
+            const heading = cont.querySelector('h4');
+            if (heading && heading.textContent.includes(promptName)) {
+                matchingContainers.push(cont);
+            }
+        });
+        
+        return matchingContainers;
     }
 
     async generateFeedback(content, onLoading, onProgressiveComplete, onError, prompts = [], settings = {}) {
@@ -513,6 +794,12 @@ class AIService {
             clearInterval(request.timerInterval);
         }
         this.activeRequests.delete(requestId);
+        
+        // Clear any countdown display for this prompt
+        if (requestId.startsWith('individual-')) {
+            const promptId = requestId.replace('individual-', '');
+            this.clearCountdownInterval(promptId);
+        }
         
         // Simply replace the entire placeholder with the HTML content
         placeholder.outerHTML = htmlContent;
@@ -892,8 +1179,65 @@ class AIService {
         });
     }
 
+    async generateIndividualPromptFeedback(content, promptId, prompt, onLoading, onProgressiveComplete, onError, settings = {}) {
+        if (content.length < 10 || !settings.enableAIFeedback) return;
+
+        if (this.isGeneratingFeedback) return; // Avoid conflicts with batch generation
+
+        try {
+            // Remove initial placeholder when generating first feedback
+            const initialPlaceholder = document.getElementById('initialPlaceholder');
+            if (initialPlaceholder) {
+                initialPlaceholder.remove();
+            }
+            
+            const requestId = `individual-${promptId}`;
+            this.createOrUpdateRequestContainer(requestId, prompt.name, true);
+            
+            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt);
+            
+            if (result.requestId || requestId) {
+                this.replaceRequestPlaceholderWithHTML(requestId, result.htmlContent, prompt.name);
+            }
+
+            // Notify completion
+            onProgressiveComplete({
+                groupedFeedback: [{
+                    promptName: prompt.name,
+                    htmlContent: result.htmlContent
+                }],
+                isComplete: true,
+                completedCount: 1,
+                totalCount: 1,
+                isIndividualPrompt: true,
+                promptId: promptId
+            });
+
+        } catch (error) {
+            console.error('Error generating individual prompt feedback:', error);
+            onError('Unable to generate feedback for ' + prompt.name);
+        }
+    }
+
     clearTimers() {
         clearTimeout(this.feedbackTimer);
+        
+        // Clear all individual prompt timers
+        this.promptTimers.forEach((timer, timerId) => {
+            clearTimeout(timer);
+        });
+        this.promptTimers.clear();
+        this.lastTriggerContent.clear();
+        
+        // Clear all countdown intervals
+        this.countdownCallbacks.forEach((interval, promptId) => {
+            clearInterval(interval);
+            this.removeCountdownDisplay(promptId);
+        });
+        this.countdownCallbacks.clear();
+        this.promptTimerInfo.clear();
+        this.pendingContent.clear();
+        
         this.clearAllRequestPlaceholders();
     }
 }

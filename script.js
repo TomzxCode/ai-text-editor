@@ -48,6 +48,9 @@ class AITextEditor {
             promptModalTitle: document.getElementById('promptModalTitle'),
             promptName: document.getElementById('promptName'),
             promptText: document.getElementById('promptText'),
+            promptTriggerTiming: document.getElementById('promptTriggerTiming'),
+            promptCustomDelay: document.getElementById('promptCustomDelay'),
+            customDelayGroup: document.getElementById('customDelayGroup'),
             promptEnabled: document.getElementById('promptEnabled'),
             savePromptBtn: document.getElementById('savePromptBtn'),
             cancelPromptBtn: document.getElementById('cancelPromptBtn'),
@@ -112,6 +115,10 @@ class AITextEditor {
             this.hidePromptModal();
         });
 
+        this.elements.promptTriggerTiming.addEventListener('change', () => {
+            this.toggleCustomDelayField();
+        });
+
         // Track mousedown to distinguish between clicks and text selection
         let modalMouseDownTarget = null;
 
@@ -140,16 +147,64 @@ class AITextEditor {
     setupTextAnalysisCallbacks() {
         // Setup word completion callback
         this.textAnalysisManager.onWordCompletion((data) => {
-            // Future: trigger feedback refresh on word completion
+            this.handleTriggerTimingEvent('word');
         });
 
         // Setup sentence completion callback
         this.textAnalysisManager.onSentenceCompletion((data) => {
-            // Future: trigger feedback refresh on sentence completion
+            this.handleTriggerTimingEvent('sentence');
         });
 
         // Start tracking when editor is ready
         this.textAnalysisManager.startTracking();
+    }
+
+    handleTriggerTimingEvent(triggerType) {
+        const currentText = this.editorManager.getValue();
+        const enabledPrompts = this.promptsManager.getEnabledPromptsByTrigger(triggerType);
+        
+        if (enabledPrompts.length === 0) return;
+
+        const settings = this.settingsManager.getAllSettings();
+        if (!settings.enableAIFeedback) return;
+
+        // Schedule individual feedback for each prompt that matches this trigger type
+        enabledPrompts.forEach(prompt => {
+            this.aiService.schedulePromptFeedback(
+                prompt.id,
+                (promptId) => this.generateIndividualPromptFeedback(promptId, currentText),
+                triggerType,
+                currentText,
+                prompt.customDelay
+            );
+        });
+    }
+
+    generateIndividualPromptFeedback(promptId, content) {
+        const prompt = this.promptsManager.getPrompt(promptId);
+        if (!prompt || !prompt.enabled) return;
+
+        const settings = this.settingsManager.getAllSettings();
+        
+        this.aiService.generateIndividualPromptFeedback(
+            content,
+            promptId,
+            prompt,
+            (isLoading) => {
+                // Individual prompts don't need the main loading overlay
+            },
+            (data) => {
+                // Handle individual prompt completion
+                if (data.isIndividualPrompt) {
+                    // Individual prompt feedback is already handled by the AIService
+                    // Just ensure any existing delay-triggered feedback doesn't override it
+                }
+            },
+            (error) => {
+                console.error('Error generating individual prompt feedback:', error);
+            },
+            settings
+        );
     }
 
     handleEditorEvent(event, data) {
@@ -326,10 +381,18 @@ class AITextEditor {
             return;
         }
 
-        this.aiService.scheduleFeedback(() => {
-            // Get content at execution time, not scheduling time
-            const content = this.editorManager.getValue();
-            this.generateAIFeedback(content);
+        // Handle custom delay prompts individually (all delay-based prompts are now custom)
+        const currentText = this.editorManager.getValue();
+        const customDelayPrompts = this.promptsManager.getEnabledPromptsByTrigger('custom');
+        
+        customDelayPrompts.forEach(prompt => {
+            this.aiService.schedulePromptFeedback(
+                prompt.id,
+                (promptId) => this.generateIndividualPromptFeedback(promptId, currentText),
+                'custom',
+                currentText,
+                prompt.customDelay
+            );
         });
     }
 
@@ -341,7 +404,9 @@ class AITextEditor {
             return;
         }
 
-        const enabledPrompts = this.promptsManager.getEnabledPrompts();
+        // This method is no longer needed since all delay-based prompts are now custom delays
+        // and handled individually in scheduleAIFeedback
+        const delayTriggeredPrompts = [];
         const settings = this.settingsManager.getAllSettings();
 
         this.aiService.generateFeedback(
@@ -349,7 +414,7 @@ class AITextEditor {
             (show) => {}, // No longer needed since we use individual placeholders
             (feedback) => this.uiManager.displayFeedback(feedback),
             (error) => this.uiManager.showFeedbackError(error),
-            enabledPrompts,
+            delayTriggeredPrompts,
             settings
         );
     }
@@ -387,6 +452,7 @@ class AITextEditor {
                         <button class="btn-icon danger" onclick="app.deletePrompt('${prompt.id}')" title="Delete">🗑️</button>
                     </div>
                 </div>
+                <div class="prompt-trigger">${this.formatTriggerType(prompt)}</div>
                 <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
         `).join('');
@@ -404,17 +470,31 @@ class AITextEditor {
                 this.elements.promptModalTitle.textContent = 'Edit Prompt';
                 this.elements.promptName.value = prompt.name;
                 this.elements.promptText.value = prompt.prompt;
+                this.elements.promptTriggerTiming.value = prompt.triggerTiming || 'custom';
+                this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
                 this.elements.promptEnabled.checked = prompt.enabled;
             }
         } else {
             this.elements.promptModalTitle.textContent = 'Add Prompt';
             this.elements.promptName.value = '';
             this.elements.promptText.value = '';
+            this.elements.promptTriggerTiming.value = 'custom';
+            this.elements.promptCustomDelay.value = '1s';
             this.elements.promptEnabled.checked = true;
         }
 
         this.elements.promptModal.style.display = 'flex';
+        this.toggleCustomDelayField(); // Show/hide custom delay field based on selection
         this.elements.promptName.focus();
+    }
+
+    toggleCustomDelayField() {
+        const triggerTiming = this.elements.promptTriggerTiming.value;
+        if (triggerTiming === 'custom') {
+            this.elements.customDelayGroup.style.display = 'block';
+        } else {
+            this.elements.customDelayGroup.style.display = 'none';
+        }
     }
 
     hidePromptModal() {
@@ -425,6 +505,8 @@ class AITextEditor {
     savePrompt() {
         const name = this.elements.promptName.value.trim();
         const prompt = this.elements.promptText.value.trim();
+        const triggerTiming = this.elements.promptTriggerTiming.value;
+        const customDelay = this.elements.promptCustomDelay.value.trim();
         const enabled = this.elements.promptEnabled.checked;
 
         if (!name) {
@@ -439,16 +521,34 @@ class AITextEditor {
             return;
         }
 
+        // Validate custom delay if selected
+        if (triggerTiming === 'custom') {
+            if (!customDelay) {
+                this.notificationManager.error('Please enter a custom delay');
+                this.elements.promptCustomDelay.focus();
+                return;
+            }
+            
+            const delayMs = this.parseDelayString(customDelay);
+            if (delayMs === null) {
+                this.notificationManager.error('Invalid delay format. Use format like "5s", "2m 30s", "1h"');
+                this.elements.promptCustomDelay.focus();
+                return;
+            }
+        }
+
         try {
             if (this.currentEditingPromptId) {
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
                     name,
                     prompt,
+                    triggerTiming,
+                    customDelay: triggerTiming === 'custom' ? customDelay : '',
                     enabled
                 });
                 this.notificationManager.success('Prompt updated successfully');
             } else {
-                this.promptsManager.addPrompt(name, prompt, enabled);
+                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay);
                 this.notificationManager.success('Prompt added successfully');
             }
 
@@ -457,6 +557,34 @@ class AITextEditor {
         } catch (error) {
             this.notificationManager.error(error.message);
         }
+    }
+
+    parseDelayString(delayString) {
+        if (!delayString) return null;
+        
+        // Parse format: Ad Bh Cm Ds (days, hours, minutes, seconds)
+        const regex = /(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?/i;
+        const match = delayString.trim().match(regex);
+        
+        if (!match || match[0] === '') return null;
+        
+        const days = parseInt(match[1] || 0);
+        const hours = parseInt(match[2] || 0);
+        const minutes = parseInt(match[3] || 0);
+        const seconds = parseInt(match[4] || 0);
+        
+        // Check if at least one unit was specified
+        if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
+            return null;
+        }
+        
+        // Convert to milliseconds
+        const totalMs = (days * 24 * 60 * 60 * 1000) + 
+                       (hours * 60 * 60 * 1000) + 
+                       (minutes * 60 * 1000) + 
+                       (seconds * 1000);
+        
+        return totalMs > 0 ? totalMs : null;
     }
 
     editPrompt(promptId) {
@@ -492,6 +620,19 @@ class AITextEditor {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    formatTriggerType(prompt) {
+        switch (prompt.triggerTiming) {
+            case 'word':
+                return '📝 Word completion';
+            case 'sentence':
+                return '📖 Sentence completion';
+            case 'custom':
+                return `⏱️ Delay: ${prompt.customDelay || '1s'}`;
+            default:
+                return '⏱️ Delay: 1s';
+        }
     }
 
     setupDragAndDrop() {
@@ -606,4 +747,5 @@ class AITextEditor {
 let app;
 document.addEventListener('DOMContentLoaded', () => {
     app = new AITextEditor();
+    window.app = app; // Make app globally accessible
 });

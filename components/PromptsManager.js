@@ -7,11 +7,25 @@ class PromptsManager {
     loadPrompts() {
         try {
             const stored = localStorage.getItem(this.storageKey);
-            return stored ? JSON.parse(stored) : [];
+            let prompts = stored ? JSON.parse(stored) : [];
+            
+            // Migrate existing prompts to have triggerTiming and customDelay if they don't have them
+            prompts = prompts.map(prompt => ({
+                ...prompt,
+                triggerTiming: prompt.triggerTiming || 'custom',
+                customDelay: prompt.customDelay || (prompt.triggerTiming === 'delay' || !prompt.triggerTiming ? '1s' : '')
+            }));
+            
+            return prompts;
         } catch (error) {
             console.error('Error loading prompts:', error);
             return [];
         }
+    }
+
+    validateTriggerTiming(timing) {
+        const validTimings = ['word', 'sentence', 'custom'];
+        return validTimings.includes(timing) ? timing : 'custom';
     }
 
     savePrompts() {
@@ -24,7 +38,7 @@ class PromptsManager {
         }
     }
 
-    addPrompt(name, prompt, enabled = true) {
+    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s') {
         if (!name || !prompt) {
             throw new Error('Name and prompt are required');
         }
@@ -38,6 +52,8 @@ class PromptsManager {
             name: name.trim(),
             prompt: prompt.trim(),
             enabled,
+            triggerTiming: this.validateTriggerTiming(triggerTiming),
+            customDelay: triggerTiming === 'custom' ? customDelay.trim() : '',
             createdAt: new Date().toISOString()
         };
 
@@ -92,6 +108,10 @@ class PromptsManager {
         return this.prompts.filter(p => p.enabled);
     }
 
+    getEnabledPromptsByTrigger(triggerTiming) {
+        return this.prompts.filter(p => p.enabled && p.triggerTiming === triggerTiming);
+    }
+
     togglePrompt(id) {
         const prompt = this.getPrompt(id);
         if (!prompt) {
@@ -119,7 +139,9 @@ class PromptsManager {
                     ...p,
                     id: p.id || Date.now().toString() + Math.random(),
                     createdAt: p.createdAt || new Date().toISOString(),
-                    enabled: p.enabled !== false
+                    enabled: p.enabled !== false,
+                    triggerTiming: this.validateTriggerTiming(p.triggerTiming),
+                    customDelay: p.customDelay || ''
                 }));
             } else {
                 const existingNames = new Set(this.prompts.map(p => p.name));
@@ -129,7 +151,9 @@ class PromptsManager {
                         ...p,
                         id: Date.now().toString() + Math.random(),
                         createdAt: new Date().toISOString(),
-                        enabled: p.enabled !== false
+                        enabled: p.enabled !== false,
+                        triggerTiming: this.validateTriggerTiming(p.triggerTiming),
+                        customDelay: p.customDelay || ''
                     }));
                 
                 this.prompts.push(...newPrompts);
