@@ -15,8 +15,28 @@ class AIService {
     }
 
 
-    async getPromptFeedback(content, promptName, promptText) {
+    processPromptWithPlaceholders(promptText, fullText, textAnalysisManager) {
+        // Find all placeholders in the format {placeholder}
+        const placeholderPattern = /\{(text|sentence|word)\}/g;
+        let processedPrompt = promptText;
+        
+        // Replace each placeholder with appropriate content
+        processedPrompt = processedPrompt.replace(placeholderPattern, (match, placeholderType) => {
+            const content = textAnalysisManager ? 
+                textAnalysisManager.getPlaceholderContent(placeholderType, fullText) : 
+                (placeholderType === 'text' ? fullText : '');
+            
+            return content || '';
+        });
+        
+        return processedPrompt;
+    }
+
+    async getPromptFeedback(content, promptName, promptText, textAnalysisManager = null) {
         try {
+            // Process the prompt to handle placeholders
+            const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
+            
             const response = await fetch('/analyze-prompt', {
                 method: 'POST',
                 headers: {
@@ -25,7 +45,7 @@ class AIService {
                 body: JSON.stringify({
                     text: content,
                     prompt_name: promptName,
-                    prompt_text: promptText
+                    prompt_text: processedPrompt
                 })
             });
 
@@ -662,7 +682,7 @@ class AIService {
             const allPromises = enabledPrompts.map(prompt => {
                 const requestId = `prompt-${prompt.id}`;
                 this.createOrUpdateRequestContainer(requestId, prompt.name, true);
-                return this.getPromptFeedback(content, prompt.name, prompt.prompt)
+                return this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager)
                     .then(result => ({ ...result, promptId: prompt.id, requestId }));
             });
 
@@ -1221,7 +1241,7 @@ class AIService {
             const requestId = `individual-${promptId}`;
             this.createOrUpdateRequestContainer(requestId, prompt.name, true);
             
-            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt);
+            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager);
             
             if (result.requestId || requestId) {
                 this.replaceRequestPlaceholderWithHTML(requestId, result.htmlContent, prompt.name);

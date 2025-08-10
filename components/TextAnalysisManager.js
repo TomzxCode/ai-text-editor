@@ -206,6 +206,52 @@ class TextAnalysisManager {
         };
     }
 
+    getPlaceholderContent(placeholderType, fullText = null) {
+        const currentText = fullText || this.previousText;
+        
+        switch (placeholderType) {
+            case 'text':
+                return currentText;
+            case 'sentence':
+                return this.getCurrentSentence(currentText);
+            case 'word':
+                return this.lastCompletedWord || this.getLastCompletedWord(currentText);
+            default:
+                return currentText;
+        }
+    }
+
+    getCurrentSentence(text) {
+        if (!text) return '';
+        
+        // Find the current cursor position by looking for the end of text
+        // Since we don't have cursor position here, we'll extract the current sentence
+        // by finding the sentence that contains the end of the text
+        
+        // Split text into sentences, keeping the delimiters
+        const sentenceRegex = /[.!?]+/g;
+        const sentences = [];
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = sentenceRegex.exec(text)) !== null) {
+            // Add the sentence including the delimiter
+            sentences.push(text.substring(lastIndex, match.index + match[0].length).trim());
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // Add any remaining text as the current sentence (might be incomplete)
+        if (lastIndex < text.length) {
+            const currentSentence = text.substring(lastIndex).trim();
+            if (currentSentence) {
+                sentences.push(currentSentence);
+            }
+        }
+        
+        // Return the last sentence (which would be the one currently being edited)
+        return sentences.length > 0 ? sentences[sentences.length - 1] : '';
+    }
+
     reset() {
         this.previousText = '';
         this.previousWordCount = 0;
