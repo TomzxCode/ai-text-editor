@@ -100,6 +100,9 @@ Please provide your response in whatever format best serves the analysis. Your r
                 throw new Error('LLM service not initialized');
             }
 
+            // Track call duration
+            const startTime = performance.now();
+            
             // Call LLM.js directly using resolved service and model
             const llmResponse = await this.LLM(fullPrompt, {
                 service: llmService || 'groq',
@@ -108,13 +111,16 @@ Please provide your response in whatever format best serves the analysis. Your r
                 extended: true,
             });
 
+            // Calculate duration in milliseconds
+            const duration = performance.now() - startTime;
+
             // Extract response text and usage data
             const response = llmResponse.content;
             const usage = llmResponse.usage;
 
             // Store the LLM call in local storage (without response content)
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
-            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId, llmService || 'groq', llmModel || 'llama3-8b-8192');
+            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId, llmService || 'groq', llmModel || 'llama3-8b-8192', duration);
 
             // Extract content from HTML code blocks if present
             const extractedResponse = this.extractHTMLFromCodeBlocks(response);

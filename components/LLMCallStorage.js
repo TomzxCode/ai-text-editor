@@ -3,7 +3,7 @@ class LLMCallStorage {
         this.storageKey = 'llm_call_history';
     }
 
-    storeLLMCall(promptIdentifier, usage = null, sessionId = null, provider = null, model = null) {
+    storeLLMCall(promptIdentifier, usage = null, sessionId = null, provider = null, model = null, duration = null) {
         const callData = {
             id: this.generateId(),
             promptIdentifier: promptIdentifier,
@@ -11,6 +11,7 @@ class LLMCallStorage {
             sessionId: sessionId,
             provider: provider,
             model: model,
+            duration: duration, // Duration in milliseconds
             timestamp: new Date().toISOString()
         };
 
@@ -75,6 +76,8 @@ class LLMCallStorage {
             totalTokensUsed: 0,
             totalPromptTokens: 0,
             totalCompletionTokens: 0,
+            totalDuration: 0,
+            avgDuration: 0,
             callsByPrompt: {},
             callsByDate: {},
             callsByProvider: {},
@@ -86,6 +89,10 @@ class LLMCallStorage {
                 stats.totalTokensUsed += call.usage.total_tokens || 0;
                 stats.totalPromptTokens += call.usage.input_tokens || 0;
                 stats.totalCompletionTokens += call.usage.output_tokens || 0;
+            }
+
+            if (call.duration && typeof call.duration === 'number') {
+                stats.totalDuration += call.duration;
             }
 
             stats.callsByPrompt[call.promptIdentifier] = (stats.callsByPrompt[call.promptIdentifier] || 0) + 1;
@@ -102,6 +109,11 @@ class LLMCallStorage {
             }
         });
 
+        // Calculate average duration
+        if (stats.totalCalls > 0) {
+            stats.avgDuration = stats.totalDuration / stats.totalCalls;
+        }
+
         return stats;
     }
 
@@ -112,6 +124,8 @@ class LLMCallStorage {
             totalTokensUsed: 0,
             totalPromptTokens: 0,
             totalCompletionTokens: 0,
+            totalDuration: 0,
+            avgDuration: 0,
             callsByPrompt: {},
             callsByProvider: {},
             callsByModel: {},
@@ -125,6 +139,10 @@ class LLMCallStorage {
                 stats.totalCompletionTokens += call.usage.output_tokens || 0;
             }
 
+            if (call.duration && typeof call.duration === 'number') {
+                stats.totalDuration += call.duration;
+            }
+
             stats.callsByPrompt[call.promptIdentifier] = (stats.callsByPrompt[call.promptIdentifier] || 0) + 1;
             
             if (call.provider) {
@@ -135,6 +153,11 @@ class LLMCallStorage {
                 stats.callsByModel[call.model] = (stats.callsByModel[call.model] || 0) + 1;
             }
         });
+
+        // Calculate average duration
+        if (stats.totalCalls > 0) {
+            stats.avgDuration = stats.totalDuration / stats.totalCalls;
+        }
 
         return stats;
     }

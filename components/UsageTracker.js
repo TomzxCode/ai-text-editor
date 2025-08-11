@@ -48,6 +48,14 @@ class UsageTracker {
                             <h5>Output Tokens</h5>
                             <span class="usage-stat-value" id="outputTokensValue">0</span>
                         </div>
+                        <div class="usage-stat-card">
+                            <h5>Total Time</h5>
+                            <span class="usage-stat-value" id="totalDurationValue">0s</span>
+                        </div>
+                        <div class="usage-stat-card">
+                            <h5>Avg Time</h5>
+                            <span class="usage-stat-value" id="avgDurationValue">0s</span>
+                        </div>
                     </div>
                 </div>
 
@@ -285,6 +293,8 @@ class UsageTracker {
         document.getElementById('totalTokensValue').textContent = stats.totalTokens.toLocaleString();
         document.getElementById('inputTokensValue').textContent = stats.inputTokens.toLocaleString();
         document.getElementById('outputTokensValue').textContent = stats.outputTokens.toLocaleString();
+        document.getElementById('totalDurationValue').textContent = this.formatDuration(stats.totalDuration);
+        document.getElementById('avgDurationValue').textContent = this.formatDuration(stats.avgDuration);
     }
 
     updatePromptUsage() {
@@ -329,6 +339,8 @@ class UsageTracker {
                     totalTokens: 0,
                     inputTokens: 0,
                     outputTokens: 0,
+                    totalDuration: 0,
+                    avgDuration: 0,
                     lastUsed: call.timestamp,
                     sessions: new Set()
                 };
@@ -343,9 +355,19 @@ class UsageTracker {
                 promptStats[prompt].inputTokens += call.usage.input_tokens || 0;
                 promptStats[prompt].outputTokens += call.usage.output_tokens || 0;
             }
+            if (call.duration && typeof call.duration === 'number') {
+                promptStats[prompt].totalDuration += call.duration;
+            }
             
             if (new Date(call.timestamp) > new Date(promptStats[prompt].lastUsed)) {
                 promptStats[prompt].lastUsed = call.timestamp;
+            }
+        });
+
+        // Calculate average duration for each prompt
+        Object.values(promptStats).forEach(stats => {
+            if (stats.calls > 0) {
+                stats.avgDuration = stats.totalDuration / stats.calls;
             }
         });
 
@@ -384,6 +406,14 @@ class UsageTracker {
                     <div class="usage-detail">
                         <span class="detail-label">Input/Output:</span>
                         <span class="detail-value">${stats.inputTokens.toLocaleString()} / ${stats.outputTokens.toLocaleString()}</span>
+                    </div>
+                    <div class="usage-detail">
+                        <span class="detail-label">Total Time:</span>
+                        <span class="detail-value">${this.formatDuration(stats.totalDuration)}</span>
+                    </div>
+                    <div class="usage-detail">
+                        <span class="detail-label">Avg Time:</span>
+                        <span class="detail-value">${this.formatDuration(stats.avgDuration)}</span>
                     </div>
                     <div class="usage-detail">
                         <span class="detail-label">Last Used:</span>
@@ -434,6 +464,7 @@ class UsageTracker {
                         <span class="call-stat">In: ${(call.usage.input_tokens || 0).toLocaleString()}</span>
                         <span class="call-stat">Out: ${(call.usage.output_tokens || 0).toLocaleString()}</span>
                     ` : '<span class="call-stat">No usage data</span>'}
+                    ${call.duration ? `<span class="call-stat">Time: ${this.formatDuration(call.duration)}</span>` : ''}
                     ${call.provider ? `<span class="call-provider">Provider: ${call.provider.charAt(0).toUpperCase() + call.provider.slice(1)}</span>` : ''}
                     ${call.model ? `<span class="call-model">Model: ${call.model}</span>` : ''}
                     ${call.sessionId ? `<span class="call-session" title="${call.sessionId}">Session: ${call.sessionId.slice(0, 8)}... ${this.isCurrentSession(call.sessionId) ? '(Current)' : ''}</span>` : ''}
@@ -512,20 +543,32 @@ class UsageTracker {
     }
 
     calculateStats(calls) {
-        return calls.reduce((stats, call) => {
+        const stats = calls.reduce((stats, call) => {
             stats.totalCalls++;
             if (call.usage) {
                 stats.totalTokens += call.usage.total_tokens || 0;
                 stats.inputTokens += call.usage.input_tokens || 0;
                 stats.outputTokens += call.usage.output_tokens || 0;
             }
+            if (call.duration && typeof call.duration === 'number') {
+                stats.totalDuration += call.duration;
+            }
             return stats;
         }, {
             totalCalls: 0,
             totalTokens: 0,
             inputTokens: 0,
-            outputTokens: 0
+            outputTokens: 0,
+            totalDuration: 0,
+            avgDuration: 0
         });
+
+        // Calculate average duration
+        if (stats.totalCalls > 0) {
+            stats.avgDuration = stats.totalDuration / stats.totalCalls;
+        }
+
+        return stats;
     }
 
     exportUsage() {
@@ -554,6 +597,26 @@ class UsageTracker {
             this.llmCallStorage.clearHistory();
             this.refreshData();
             window.app?.notificationManager?.showNotification('Usage history cleared', 'success');
+        }
+    }
+
+    formatDuration(durationMs) {
+        if (!durationMs || typeof durationMs !== 'number') {
+            return '0s';
+        }
+        
+        if (durationMs < 1000) {
+            return Math.round(durationMs) + 'ms';
+        } else if (durationMs < 60000) {
+            return (durationMs / 1000).toFixed(1) + 's';
+        } else if (durationMs < 3600000) {
+            const minutes = Math.floor(durationMs / 60000);
+            const seconds = Math.floor((durationMs % 60000) / 1000);
+            return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+        } else {
+            const hours = Math.floor(durationMs / 3600000);
+            const minutes = Math.floor((durationMs % 3600000) / 60000);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
         }
     }
 
