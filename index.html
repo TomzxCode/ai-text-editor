@@ -216,6 +216,24 @@
                     <p class="form-hint">Format: Ad Bh Cm Ds (e.g., "2m 30s" for 2 minutes 30 seconds, "5s" for 5 seconds)</p>
                 </div>
                 <div class="form-group">
+                    <label for="promptLlmService">LLM Service Override (Optional):</label>
+                    <select id="promptLlmService" class="setting-select">
+                        <option value="">Use global setting</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google">Google</option>
+                        <option value="groq">Groq</option>
+                        <option value="openai">OpenAI</option>
+                    </select>
+                    <p class="form-hint">Override the global LLM service setting for this prompt only</p>
+                </div>
+                <div class="form-group">
+                    <label for="promptLlmModel">Model Override (Optional):</label>
+                    <select id="promptLlmModel" class="setting-select">
+                        <option value="">Use global setting</option>
+                    </select>
+                    <p class="form-hint">Override the global model setting for this prompt only</p>
+                </div>
+                <div class="form-group">
                     <label>
                         <input type="checkbox" id="promptEnabled" checked>
                         Enabled

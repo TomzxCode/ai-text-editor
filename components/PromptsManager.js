@@ -9,11 +9,13 @@ class PromptsManager {
             const stored = localStorage.getItem(this.storageKey);
             let prompts = stored ? JSON.parse(stored) : [];
             
-            // Migrate existing prompts to have triggerTiming and customDelay if they don't have them
+            // Migrate existing prompts to have triggerTiming, customDelay, and LLM overrides if they don't have them
             prompts = prompts.map(prompt => ({
                 ...prompt,
                 triggerTiming: prompt.triggerTiming || 'custom',
-                customDelay: prompt.customDelay || (prompt.triggerTiming === 'delay' || !prompt.triggerTiming ? '1s' : '')
+                customDelay: prompt.customDelay || (prompt.triggerTiming === 'delay' || !prompt.triggerTiming ? '1s' : ''),
+                llmService: prompt.llmService || '',
+                llmModel: prompt.llmModel || ''
             }));
             
             return prompts;
@@ -38,7 +40,7 @@ class PromptsManager {
         }
     }
 
-    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s') {
+    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', llmService = '', llmModel = '') {
         if (!name || !prompt) {
             throw new Error('Name and prompt are required');
         }
@@ -54,6 +56,8 @@ class PromptsManager {
             enabled,
             triggerTiming: this.validateTriggerTiming(triggerTiming),
             customDelay: triggerTiming === 'custom' ? customDelay.trim() : '',
+            llmService: llmService.trim(),
+            llmModel: llmModel.trim(),
             createdAt: new Date().toISOString()
         };
 
@@ -141,7 +145,9 @@ class PromptsManager {
                     createdAt: p.createdAt || new Date().toISOString(),
                     enabled: p.enabled !== false,
                     triggerTiming: this.validateTriggerTiming(p.triggerTiming),
-                    customDelay: p.customDelay || ''
+                    customDelay: p.customDelay || '',
+                    llmService: p.llmService || '',
+                    llmModel: p.llmModel || ''
                 }));
             } else {
                 const existingNames = new Set(this.prompts.map(p => p.name));
@@ -153,7 +159,9 @@ class PromptsManager {
                         createdAt: new Date().toISOString(),
                         enabled: p.enabled !== false,
                         triggerTiming: this.validateTriggerTiming(p.triggerTiming),
-                        customDelay: p.customDelay || ''
+                        customDelay: p.customDelay || '',
+                        llmService: p.llmService || '',
+                        llmModel: p.llmModel || ''
                     }));
                 
                 this.prompts.push(...newPrompts);

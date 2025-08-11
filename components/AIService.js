@@ -70,13 +70,17 @@ class AIService {
         return processedPrompt;
     }
 
-    async getPromptFeedback(content, promptName, promptText, textAnalysisManager = null) {
+    async getPromptFeedback(content, promptName, promptText, textAnalysisManager = null, promptConfig = null) {
         try {
             // Process the prompt to handle placeholders
             const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
 
             // Get settings for API configuration
             const settings = window.app?.settingsManager?.getSettings() || {};
+
+            // Use prompt-specific LLM settings if available, otherwise fall back to global settings
+            const llmService = (promptConfig?.llmService && promptConfig.llmService.trim()) ? promptConfig.llmService : settings.llmService;
+            const llmModel = (promptConfig?.llmModel && promptConfig.llmModel.trim()) ? promptConfig.llmModel : settings.llmModel;
 
             // Check if API key is configured
             if (!settings.apiKey) {
@@ -93,10 +97,10 @@ Please provide your response in whatever format best serves the analysis. You ha
                 throw new Error('LLM service not initialized');
             }
 
-            // Call LLM.js directly
+            // Call LLM.js directly using resolved service and model
             const response = await this.LLM(fullPrompt, {
-                service: settings.llmService || 'groq',
-                model: settings.llmModel || 'llama3-8b-8192',
+                service: llmService || 'groq',
+                model: llmModel || 'llama3-8b-8192',
                 apiKey: settings.apiKey
             });
 
@@ -756,7 +760,7 @@ Please provide your response in whatever format best serves the analysis. You ha
             const allPromises = enabledPrompts.map(prompt => {
                 const requestId = `prompt-${prompt.id}`;
                 this.createOrUpdateRequestContainer(requestId, prompt.name, true);
-                return this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager)
+                return this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager, prompt)
                     .then(result => ({ ...result, promptId: prompt.id, requestId }));
             });
 
@@ -1315,7 +1319,7 @@ Please provide your response in whatever format best serves the analysis. You ha
             const requestId = `individual-${promptId}`;
             this.createOrUpdateRequestContainer(requestId, prompt.name, true);
 
-            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager);
+            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager, prompt);
 
             if (result.requestId || requestId) {
                 this.replaceRequestPlaceholderWithHTML(requestId, result.htmlContent, prompt.name);
