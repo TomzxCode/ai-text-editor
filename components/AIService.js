@@ -116,8 +116,11 @@ Please provide your response in whatever format best serves the analysis. Your r
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
             this.llmCallStorage.storeLLMCall(promptName, usage, sessionId, llmService || 'groq', llmModel || 'llama3-8b-8192');
 
+            // Extract content from HTML code blocks if present
+            const extractedResponse = this.extractHTMLFromCodeBlocks(response);
+            
             // Strip any <style> tags from the response
-            const cleanedResponse = this.stripStyleTags(response);
+            const cleanedResponse = this.stripStyleTags(extractedResponse);
 
             // Format response as HTML directly
             const htmlContent = `
@@ -351,6 +354,24 @@ Please provide your response in whatever format best serves the analysis. Your r
         if (typeof htmlText !== 'string') return '';
         // Remove <style>...</style> tags and their content (case insensitive)
         return htmlText.replace(/<style[^>]*>.*?<\/style>/gis, '');
+    }
+
+    extractHTMLFromCodeBlocks(text) {
+        if (typeof text !== 'string') return text;
+        
+        // Look for HTML code blocks: ```html ... ```
+        const htmlCodeBlockRegex = /```html\s*\n?([\s\S]*?)\n?```/gi;
+        const matches = text.match(htmlCodeBlockRegex);
+        
+        if (matches && matches.length > 0) {
+            // Extract content from the first HTML code block found
+            const firstMatch = matches[0];
+            const content = firstMatch.replace(/```html\s*\n?/i, '').replace(/\n?```$/, '');
+            return content.trim();
+        }
+        
+        // If no HTML code blocks found, return original text
+        return text;
     }
 
 
