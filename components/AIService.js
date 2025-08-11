@@ -93,7 +93,7 @@ class AIService {
             // Give the LLM freedom to respond in any format
             const fullPrompt = `${processedPrompt}
 
-Please provide your response in whatever format best serves the analysis. You have complete freedom to present information as you see fit - whether that's structured analysis, creative suggestions, detailed explanations, examples, or any other format that would be most helpful. Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container, no.`;
+Please provide your response in whatever format best serves the analysis. Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container.`;
 
             // Check if LLM.js is loaded
             if (!this.LLM) {
@@ -124,7 +124,6 @@ Please provide your response in whatever format best serves the analysis. You ha
                 <div class="feedback-item">
                     <h4>✨ ${this.escapeHTML(promptName)}</h4>
                     <div class="category-section">
-                        <h5>Analysis</h5>
                         <div class="analysis-content">
                             ${cleanedResponse}
                         </div>
@@ -351,7 +350,7 @@ Please provide your response in whatever format best serves the analysis. You ha
     stripStyleTags(htmlText) {
         if (typeof htmlText !== 'string') return '';
         // Remove <style>...</style> tags and their content (case insensitive)
-        return htmlText.replace(/<style[^>]*>.*?<\/style>/gi, '');
+        return htmlText.replace(/<style[^>]*>.*?<\/style>/gis, '');
     }
 
 
@@ -1379,3 +1378,9 @@ Please provide your response in whatever format best serves the analysis. You ha
         this.clearAllRequestPlaceholders();
     }
 }
+
+// class OpenRouter extends APIv1 {
+//     service = "open-router";
+//     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
+//     DEFAULT_MODEL = "openai/gpt-oss-20b";
+// }

@@ -76,6 +76,7 @@ class AITextEditor {
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
         this.promptsManager = new PromptsManager();
+        this.usageTracker = new UsageTracker();
 
         this.currentEditingPromptId = null;
         this.renderPrompts();
@@ -89,6 +90,7 @@ class AITextEditor {
         // Setup settings UI after DOM is ready
         setTimeout(() => {
             this.settingsManager.setupUI();
+            this.usageTracker.initialize();
         }, 0);
     }
 
