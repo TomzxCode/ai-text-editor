@@ -493,6 +493,9 @@ body {
     font-size: 0.9rem;
     color: #007acc;
     margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .feedback-item p {
@@ -527,6 +530,14 @@ body {
 
 .feedback-item.placeholder-message small {
     color: #555;
+}
+
+.timing-info {
+    color: #888;
+    font-size: 0.75em;
+    font-weight: normal;
+    opacity: 0.8;
+    margin-left: auto;
 }
 
 

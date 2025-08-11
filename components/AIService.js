@@ -128,10 +128,15 @@ Please provide your response in whatever format best serves the analysis. Your r
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(extractedResponse);
 
+            // Format duration for display
+            const formattedDuration = duration < 1000 ? 
+                `${Math.round(duration)}ms` : 
+                `${(duration / 1000).toFixed(1)}s`;
+
             // Format response as HTML directly
             const htmlContent = `
                 <div class="feedback-item">
-                    <h4>✨ ${this.escapeHTML(promptName)}</h4>
+                    <h4>✨ ${this.escapeHTML(promptName)} <span class="timing-info">(${formattedDuration})</span></h4>
                     <div class="category-section">
                         <div class="analysis-content">
                             ${cleanedResponse}
