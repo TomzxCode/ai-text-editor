@@ -1,7 +1,7 @@
 [project]
 name = "ai-text-editor"
 version = "1.0.0"
-description = "AI-powered text editor with Claude integration"
+description = "AI-powered text editor"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
