@@ -102,6 +102,11 @@ class EditorManager {
         this.setEditorMode(fileData.path);
         this.isModified = false;
         
+        // Reset AI feedback timers for new content
+        if (window.app?.aiService) {
+            window.app.aiService.resetTimersForNewContent();
+        }
+        
         this.onChangeCallback('fileLoaded', {
             fileName: fileData.name,
             isModified: false
@@ -120,6 +125,11 @@ class EditorManager {
         this.editor.setValue('');
         this.setEditorMode(fileName);
         this.isModified = false;
+        
+        // Reset AI feedback timers for new content
+        if (window.app?.aiService) {
+            window.app.aiService.resetTimersForNewContent();
+        }
         
         this.onChangeCallback('fileLoaded', {
             fileName: fileName,

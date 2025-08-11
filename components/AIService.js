@@ -1404,6 +1404,18 @@ Please provide your response in whatever format best serves the analysis. Your r
 
         this.clearAllRequestPlaceholders();
     }
+
+    resetTimersForNewContent() {
+        // Clear all existing timers and reset content tracking
+        this.clearTimers();
+        
+        // Reset generation flags
+        this.isGeneratingFeedback = false;
+        this.hasPendingFeedbackRequest = false;
+        
+        // Clear any existing feedback UI to prepare for new content
+        this.clearOnlyLoadingPlaceholders();
+    }
 }
 
 // class OpenRouter extends APIv1 {
