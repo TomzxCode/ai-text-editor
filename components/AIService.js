@@ -28,6 +28,30 @@ class AIService {
         }
     }
 
+    async fetchModels(service) {
+        if (!this.LLM) {
+            throw new Error('LLM service not initialized');
+        }
+
+        // Get settings for API configuration
+        const settings = window.app?.settingsManager?.getSettings() || {};
+
+        // Check if API key is configured
+        if (!settings.apiKey) {
+            throw new Error('API key required to fetch models');
+        }
+
+        // Create an LLM instance with the specified service and API key
+        const llm = new this.LLM({
+            service: service,
+            apiKey: settings.apiKey
+        });
+        const models = await llm.fetchModels();
+
+        // Return array of model names, sorted alphabetically
+        return models.map(model => model.model).sort();
+    }
+
 
     processPromptWithPlaceholders(promptText, fullText, textAnalysisManager) {
         // Find all placeholders in the format {placeholder}

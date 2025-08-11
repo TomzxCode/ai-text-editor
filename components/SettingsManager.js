@@ -74,7 +74,7 @@ class SettingsManager {
         const enableAICheckbox = document.getElementById('enableAIFeedback');
         const apiKeyInput = document.getElementById('apiKey');
         const llmServiceSelect = document.getElementById('llmService');
-        const llmModelInput = document.getElementById('llmModel');
+        const llmModelSelect = document.getElementById('llmModel');
 
         if (!fontFamilySelect || !fontSizeRange || !fontSizeValue) {
             console.error('Settings UI elements not found');
@@ -98,8 +98,8 @@ class SettingsManager {
             llmServiceSelect.value = this.settings.llmService;
         }
 
-        if (llmModelInput) {
-            llmModelInput.value = this.settings.llmModel;
+        if (llmModelSelect) {
+            llmModelSelect.value = this.settings.llmModel;
         }
 
         // Font family change handler
@@ -130,16 +130,94 @@ class SettingsManager {
 
         // LLM service select handler
         if (llmServiceSelect) {
-            llmServiceSelect.addEventListener('change', (e) => {
+            llmServiceSelect.addEventListener('change', async (e) => {
                 this.setSetting('llmService', e.target.value);
+                await this.populateModelOptions(e.target.value);
             });
         }
 
-        // LLM model input handler
-        if (llmModelInput) {
-            llmModelInput.addEventListener('input', (e) => {
+        // LLM model select handler
+        if (llmModelSelect) {
+            llmModelSelect.addEventListener('change', (e) => {
                 this.setSetting('llmModel', e.target.value);
             });
+        }
+
+        // Initial population of model options
+        this.populateModelOptions(this.settings.llmService);
+    }
+
+    async populateModelOptions(service) {
+        const llmModelSelect = document.getElementById('llmModel');
+        if (!llmModelSelect || !service) return;
+
+        // Show loading state
+        llmModelSelect.innerHTML = '<option value="">Loading models...</option>';
+        llmModelSelect.disabled = true;
+
+        try {
+            // Get AIService instance from global app
+            const aiService = window.app?.aiService;
+            if (!aiService) {
+                throw new Error('AIService not available');
+            }
+
+            // Wait for LLM.js to be initialized
+            if (!aiService.LLM) {
+                // Wait up to 5 seconds for LLM to initialize
+                let attempts = 0;
+                while (!aiService.LLM && attempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!aiService.LLM) {
+                    throw new Error('LLM service failed to initialize');
+                }
+            }
+
+            // Fetch models for the selected service
+            const models = await aiService.fetchModels(service);
+            
+            // Clear and populate dropdown
+            llmModelSelect.innerHTML = '';
+            
+            if (models.length === 0) {
+                llmModelSelect.innerHTML = '<option value="">No models available</option>';
+            } else {
+                models.forEach(modelName => {
+                    const option = document.createElement('option');
+                    option.value = modelName;
+                    option.textContent = modelName;
+                    llmModelSelect.appendChild(option);
+                });
+            }
+
+            // Set the current model if it exists in the list
+            if (models.includes(this.settings.llmModel)) {
+                llmModelSelect.value = this.settings.llmModel;
+            } else if (models.length > 0) {
+                // If current model is not in the list, select the first one
+                llmModelSelect.value = models[0];
+                this.setSetting('llmModel', models[0]);
+            }
+
+        } catch (error) {
+            console.error('Error populating model options:', error);
+            
+            // Provide specific error messages based on the error type
+            let errorMessage = 'Error loading models';
+            if (error.message.includes('API key')) {
+                errorMessage = 'API key required';
+            } else if (error.message.includes('Unauthorized')) {
+                errorMessage = 'Invalid API key';
+            } else if (error.message.includes('failed to initialize')) {
+                errorMessage = 'Service unavailable';
+            }
+            
+            llmModelSelect.innerHTML = `<option value="">${errorMessage}</option>`;
+        } finally {
+            llmModelSelect.disabled = false;
         }
     }
 

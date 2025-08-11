@@ -147,17 +147,19 @@
                             <div class="setting-group">
                                 <label for="llmService">LLM Service:</label>
                                 <select id="llmService" class="setting-select">
-                                    <option value="groq">Groq</option>
-                                    <option value="openai">OpenAI</option>
                                     <option value="anthropic">Anthropic</option>
                                     <option value="google">Google</option>
+                                    <option value="groq">Groq</option>
+                                    <option value="openai">OpenAI</option>
                                 </select>
                                 <p class="setting-description">Choose your preferred LLM provider</p>
                             </div>
                             <div class="setting-group">
                                 <label for="llmModel">Model:</label>
-                                <input type="text" id="llmModel" class="setting-input" placeholder="e.g., llama3-8b-8192">
-                                <p class="setting-description">Model name for the selected service</p>
+                                <select id="llmModel" class="setting-select">
+                                    <option value="">Loading models...</option>
+                                </select>
+                                <p class="setting-description">Model for the selected service</p>
                             </div>
                         </div>
                     </div>
