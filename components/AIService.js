@@ -16,6 +16,9 @@ class AIService {
         // Initialize LLM.js - will be available globally once the module loads
         this.LLM = null;
         this.initializeLLM();
+
+        // Initialize LLM call storage
+        this.llmCallStorage = new LLMCallStorage();
     }
 
     async initializeLLM() {
@@ -98,11 +101,19 @@ Please provide your response in whatever format best serves the analysis. You ha
             }
 
             // Call LLM.js directly using resolved service and model
-            const response = await this.LLM(fullPrompt, {
+            const llmResponse = await this.LLM(fullPrompt, {
                 service: llmService || 'groq',
                 model: llmModel || 'llama3-8b-8192',
-                apiKey: settings.apiKey
+                apiKey: settings.apiKey,
+                extended: true,
             });
+
+            // Extract response text and usage data
+            const response = llmResponse.content;
+            const usage = llmResponse.usage;
+
+            // Store the LLM call in local storage (without response content)
+            this.llmCallStorage.storeLLMCall(promptName, usage);
 
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(response);
