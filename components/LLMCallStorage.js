@@ -3,11 +3,12 @@ class LLMCallStorage {
         this.storageKey = 'llm_call_history';
     }
 
-    storeLLMCall(promptIdentifier, usage = null) {
+    storeLLMCall(promptIdentifier, usage = null, sessionId = null) {
         const callData = {
             id: this.generateId(),
             promptIdentifier: promptIdentifier,
             usage: usage,
+            sessionId: sessionId,
             timestamp: new Date().toISOString()
         };
 
@@ -38,6 +39,11 @@ class LLMCallStorage {
     getCallsByPrompt(promptIdentifier) {
         const allCalls = this.getAllCalls();
         return allCalls.filter(call => call.promptIdentifier === promptIdentifier);
+    }
+
+    getCallsBySession(sessionId) {
+        const allCalls = this.getAllCalls();
+        return allCalls.filter(call => call.sessionId === sessionId);
     }
 
     getCallsByDate(dateString) {
@@ -74,14 +80,38 @@ class LLMCallStorage {
         allCalls.forEach(call => {
             if (call.usage) {
                 stats.totalTokensUsed += call.usage.total_tokens || 0;
-                stats.totalPromptTokens += call.usage.prompt_tokens || 0;
-                stats.totalCompletionTokens += call.usage.completion_tokens || 0;
+                stats.totalPromptTokens += call.usage.input_tokens || 0;
+                stats.totalCompletionTokens += call.usage.output_tokens || 0;
             }
 
             stats.callsByPrompt[call.promptIdentifier] = (stats.callsByPrompt[call.promptIdentifier] || 0) + 1;
             
             const callDate = new Date(call.timestamp).toDateString();
             stats.callsByDate[callDate] = (stats.callsByDate[callDate] || 0) + 1;
+        });
+
+        return stats;
+    }
+
+    getUsageStatisticsBySession(sessionId) {
+        const sessionCalls = this.getCallsBySession(sessionId);
+        const stats = {
+            totalCalls: sessionCalls.length,
+            totalTokensUsed: 0,
+            totalPromptTokens: 0,
+            totalCompletionTokens: 0,
+            callsByPrompt: {},
+            sessionId: sessionId
+        };
+
+        sessionCalls.forEach(call => {
+            if (call.usage) {
+                stats.totalTokensUsed += call.usage.total_tokens || 0;
+                stats.totalPromptTokens += call.usage.input_tokens || 0;
+                stats.totalCompletionTokens += call.usage.output_tokens || 0;
+            }
+
+            stats.callsByPrompt[call.promptIdentifier] = (stats.callsByPrompt[call.promptIdentifier] || 0) + 1;
         });
 
         return stats;

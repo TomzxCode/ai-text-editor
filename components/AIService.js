@@ -113,7 +113,8 @@ Please provide your response in whatever format best serves the analysis. You ha
             const usage = llmResponse.usage;
 
             // Store the LLM call in local storage (without response content)
-            this.llmCallStorage.storeLLMCall(promptName, usage);
+            const sessionId = window.app?.sessionManager?.getCurrentSessionId();
+            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId);
 
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(response);

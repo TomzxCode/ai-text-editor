@@ -27,6 +27,10 @@ class AITextEditor {
             currentFileSpan: document.getElementById('currentFile'),
             wordCountSpan: document.getElementById('wordCount'),
             sentenceCountSpan: document.getElementById('sentenceCount'),
+            costDisplaySpan: document.getElementById('costDisplay'),
+            callsCountSpan: document.getElementById('callsCount'),
+            inputTokensSpan: document.getElementById('inputTokens'),
+            outputTokensSpan: document.getElementById('outputTokens'),
             newFileBtn: document.getElementById('newFileBtn'),
             saveFileBtn: document.getElementById('saveFileBtn'),
             menuToggle: document.getElementById('menuToggle'),
@@ -61,6 +65,7 @@ class AITextEditor {
     }
 
     initializeManagers() {
+        this.sessionManager = new SessionManager();
         this.settingsManager = new SettingsManager();
         this.textAnalysisManager = new TextAnalysisManager();
 
@@ -205,6 +210,8 @@ class AITextEditor {
                     // Individual prompt feedback is already handled by the AIService
                     // Just ensure any existing delay-triggered feedback doesn't override it
                 }
+                // Update cost display after individual prompt feedback is generated
+                this.updateTextStatisticsDisplay();
             },
             (error) => {
                 console.error('Error generating individual prompt feedback:', error);
@@ -261,6 +268,7 @@ class AITextEditor {
 
     updateTextStatisticsDisplay() {
         const stats = this.getTextStatistics();
+        const llmStats = this.getLLMStatistics();
 
         // Format word count
         const wordText = stats.wordCount === 1 ? '1 word' : `${stats.wordCount} words`;
@@ -269,6 +277,68 @@ class AITextEditor {
         // Format sentence count
         const sentenceText = stats.sentenceCount === 1 ? '1 sentence' : `${stats.sentenceCount} sentences`;
         this.elements.sentenceCountSpan.textContent = sentenceText;
+
+        // Format cost
+        const costText = `$${llmStats.cost.toFixed(2)}`;
+        this.elements.costDisplaySpan.textContent = costText;
+
+        // Format calls count
+        const callsText = llmStats.totalCalls === 1 ? '1 call' : `${llmStats.totalCalls} calls`;
+        this.elements.callsCountSpan.textContent = callsText;
+
+        // Format input tokens (abbreviated)
+        const inputText = `${this.formatTokenCount(llmStats.inputTokens)} in`;
+        this.elements.inputTokensSpan.textContent = inputText;
+
+        // Format output tokens (abbreviated)
+        const outputText = `${this.formatTokenCount(llmStats.outputTokens)} out`;
+        this.elements.outputTokensSpan.textContent = outputText;
+    }
+
+    getLLMStatistics() {
+        if (!this.aiService?.llmCallStorage || !this.sessionManager) {
+            return {
+                totalCalls: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                cost: 0
+            };
+        }
+
+        const currentSessionId = this.sessionManager.getCurrentSessionId();
+        const usageStats = this.aiService.llmCallStorage.getUsageStatisticsBySession(currentSessionId);
+        let totalCost = 0;
+
+        // Get session calls to calculate cost
+        const sessionCalls = this.aiService.llmCallStorage.getCallsBySession(currentSessionId);
+        
+        sessionCalls.forEach(call => {
+            if (call.usage) {
+                const promptTokens = call.usage.input_tokens || 0;
+                const completionTokens = call.usage.output_tokens || 0;
+                
+                // Example pricing (approximate, varies by provider):
+                // $0.0015 per 1K prompt tokens, $0.002 per 1K completion tokens
+                const promptCost = (promptTokens / 1000) * 0.0015;
+                const completionCost = (completionTokens / 1000) * 0.002;
+                
+                totalCost += promptCost + completionCost;
+            }
+        });
+
+        return {
+            totalCalls: usageStats.totalCalls || 0,
+            inputTokens: usageStats.totalPromptTokens || 0,
+            outputTokens: usageStats.totalCompletionTokens || 0,
+            cost: totalCost
+        };
+    }
+
+    formatTokenCount(tokens) {
+        if (!tokens || tokens === 0) return '0';
+        if (tokens < 1000) return tokens.toString();
+        if (tokens < 1000000) return (tokens / 1000).toFixed(1) + 'k';
+        return (tokens / 1000000).toFixed(1) + 'M';
     }
 
 
@@ -418,7 +488,11 @@ class AITextEditor {
         this.aiService.generateFeedback(
             content,
             (show) => {}, // No longer needed since we use individual placeholders
-            (feedback) => this.uiManager.displayFeedback(feedback),
+            (feedback) => {
+                this.uiManager.displayFeedback(feedback);
+                // Update cost display after feedback is generated
+                this.updateTextStatisticsDisplay();
+            },
             (error) => this.uiManager.showFeedbackError(error),
             delayTriggeredPrompts,
             settings
