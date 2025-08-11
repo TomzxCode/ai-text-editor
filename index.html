@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Text Editor</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css">
 </head>
@@ -135,6 +135,31 @@
                                 <p class="setting-description">When enabled, the editor will automatically analyze your text and provide AI-powered writing suggestions.</p>
                             </div>
                         </div>
+                        <div class="section-header">
+                            <h4>AI Configuration</h4>
+                        </div>
+                        <div class="settings-content">
+                            <div class="setting-group">
+                                <label for="apiKey">API Key:</label>
+                                <input type="password" id="apiKey" class="setting-input" placeholder="Enter your API key">
+                                <p class="setting-description">API key for your chosen LLM service (Groq, OpenAI, etc.)</p>
+                            </div>
+                            <div class="setting-group">
+                                <label for="llmService">LLM Service:</label>
+                                <select id="llmService" class="setting-select">
+                                    <option value="groq">Groq</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic</option>
+                                    <option value="google">Google</option>
+                                </select>
+                                <p class="setting-description">Choose your preferred LLM provider</p>
+                            </div>
+                            <div class="setting-group">
+                                <label for="llmModel">Model:</label>
+                                <input type="text" id="llmModel" class="setting-input" placeholder="e.g., llama3-8b-8192">
+                                <p class="setting-description">Model name for the selected service</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -215,15 +240,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
     <!-- Component scripts -->
-    <script src="/static/components/NotificationManager.js"></script>
-    <script src="/static/components/FileSystemManager.js"></script>
-    <script src="/static/components/EditorManager.js"></script>
-    <script src="/static/components/AIService.js"></script>
-    <script src="/static/components/UIManager.js"></script>
-    <script src="/static/components/PromptsManager.js"></script>
-    <script src="/static/components/SettingsManager.js"></script>
-    <script src="/static/components/TextAnalysisManager.js"></script>
+    <script src="components/NotificationManager.js"></script>
+    <script src="components/FileSystemManager.js"></script>
+    <script src="components/EditorManager.js"></script>
+    <script src="components/AIService.js"></script>
+    <script src="components/UIManager.js"></script>
+    <script src="components/PromptsManager.js"></script>
+    <script src="components/SettingsManager.js"></script>
+    <script src="components/TextAnalysisManager.js"></script>
     <!-- Main application script -->
-    <script src="/static/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

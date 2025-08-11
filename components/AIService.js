@@ -4,7 +4,7 @@ class AIService {
         this.hasPendingFeedbackRequest = false;
         this.feedbackTimer = null;
         this.activeRequests = new Map(); // Track individual request timers
-        
+
         // Individual prompt timers for different trigger types
         this.promptTimers = new Map(); // Track individual prompt timers
         this.lastTriggerContent = new Map(); // Track last content that triggered each prompt
@@ -12,6 +12,20 @@ class AIService {
         this.promptTimerInfo = new Map(); // Track timer start time and duration for countdown display
         this.countdownCallbacks = new Map(); // Track countdown update callbacks
         this.lastFeedbackTime = new Map(); // Track when feedback was last generated for each prompt
+
+        // Initialize LLM.js - will be available globally once the module loads
+        this.LLM = null;
+        this.initializeLLM();
+    }
+
+    async initializeLLM() {
+        try {
+            // Import LLM.js dynamically
+            const llmModule = await import('https://cdn.jsdelivr.net/npm/@themaximalist/llm.js@1.0.1/dist/index.mjs');
+            this.LLM = llmModule.default;
+        } catch (error) {
+            console.error('Failed to load LLM.js:', error);
+        }
     }
 
 
@@ -19,16 +33,16 @@ class AIService {
         // Find all placeholders in the format {placeholder}
         const placeholderPattern = /\{(text|sentence|word)\}/g;
         let processedPrompt = promptText;
-        
+
         // Replace each placeholder with appropriate content
         processedPrompt = processedPrompt.replace(placeholderPattern, (match, placeholderType) => {
-            const content = textAnalysisManager ? 
-                textAnalysisManager.getPlaceholderContent(placeholderType, fullText) : 
+            const content = textAnalysisManager ?
+                textAnalysisManager.getPlaceholderContent(placeholderType, fullText) :
                 (placeholderType === 'text' ? fullText : '');
-            
+
             return content || '';
         });
-        
+
         return processedPrompt;
     }
 
@@ -36,40 +50,71 @@ class AIService {
         try {
             // Process the prompt to handle placeholders
             const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
-            
-            const response = await fetch('/analyze-prompt', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    prompt_name: promptName,
-                    prompt_text: processedPrompt
-                })
-            });
 
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
+            // Get settings for API configuration
+            const settings = window.app?.settingsManager?.getSettings() || {};
+
+            // Check if API key is configured
+            if (!settings.apiKey) {
+                throw new Error('API key not configured');
             }
 
-            // Backend now returns HTML directly
-            const htmlContent = await response.text();
-            
+            // Give the LLM freedom to respond in any format
+            const fullPrompt = `${processedPrompt}
+
+Please provide your response in whatever format best serves the analysis. You have complete freedom to present information as you see fit - whether that's structured analysis, creative suggestions, detailed explanations, examples, or any other format that would be most helpful. Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container, no.`;
+
+            // Check if LLM.js is loaded
+            if (!this.LLM) {
+                throw new Error('LLM service not initialized');
+            }
+
+            // Call LLM.js directly
+            const response = await this.LLM(fullPrompt, {
+                service: settings.llmService || 'groq',
+                model: settings.llmModel || 'llama3-8b-8192',
+                apiKey: settings.apiKey
+            });
+
+            // Strip any <style> tags from the response
+            const cleanedResponse = this.stripStyleTags(response);
+
+            // Format response as HTML directly
+            const htmlContent = `
+                <div class="feedback-item">
+                    <h4>✨ ${this.escapeHTML(promptName)}</h4>
+                    <div class="category-section">
+                        <h5>Analysis</h5>
+                        <div class="analysis-content">
+                            ${cleanedResponse}
+                        </div>
+                    </div>
+                </div>
+            `;
+
             return {
                 htmlContent: htmlContent,
                 promptName: promptName,
                 responseType: 'html'
             };
         } catch (error) {
-            console.error(`Error calling prompt API for '${promptName}':`, error);
-            // Return error as HTML format too for consistency
+            console.error(`Error calling LLM API for '${promptName}':`, error);
+
+            // Handle specific error cases
+            let errorMessage = 'Unable to connect to AI service. Please check your settings and API key.';
+            if (error.message.includes('API key')) {
+                errorMessage = 'API key not configured. Please add your API key in Settings.';
+            } else if (error.message.includes('rate limit')) {
+                errorMessage = 'Rate limit exceeded. Please try again in a moment.';
+            }
+
             const errorHtml = `
                 <div class="feedback-item">
-                    <h4>❌ ${promptName} - Connection Error</h4>
+                    <h4>❌ ${promptName} - Error</h4>
                     <div class="category-section">
-                        <h5>Connection Error</h5>
+                        <h5>Error</h5>
                         <p class="feedback-high">
-                            • Unable to connect to AI service. Please check your internet connection.
+                            • ${errorMessage}
                             <span class="priority-badge high">high</span>
                         </p>
                     </div>
@@ -98,7 +143,7 @@ class AIService {
                         priority: item.content.priority || 'medium',
                         type: 'feedback'
                     };
-                
+
                 case 'citation':
                 case 'reference':
                     const citationFormatted = this.formatCitation(item.content);
@@ -110,7 +155,7 @@ class AIService {
                         htmlContent: citationFormatted.html,
                         originalContent: item.content
                     };
-                
+
                 case 'diff':
                     const diffFormatted = this.formatDiff(item.content);
                     return {
@@ -121,7 +166,7 @@ class AIService {
                         htmlContent: diffFormatted.html,
                         originalContent: item.content
                     };
-                
+
                 case 'analysis':
                 case 'insight':
                     return {
@@ -130,7 +175,7 @@ class AIService {
                         priority: 'medium',
                         type: 'analysis'
                     };
-                
+
                 default:
                     return {
                         category: item.type?.charAt(0).toUpperCase() + item.type?.slice(1) || 'Analysis',
@@ -160,7 +205,7 @@ class AIService {
 
     createCitationHTML(content) {
         const fields = [];
-        
+
         if (content.source) {
             fields.push(`
                 <div class="citation-field">
@@ -169,7 +214,7 @@ class AIService {
                 </div>
             `);
         }
-        
+
         if (content.title) {
             fields.push(`
                 <div class="citation-field">
@@ -178,7 +223,7 @@ class AIService {
                 </div>
             `);
         }
-        
+
         if (content.url) {
             fields.push(`
                 <div class="citation-field">
@@ -187,7 +232,7 @@ class AIService {
                 </div>
             `);
         }
-        
+
         if (content.relevance) {
             fields.push(`
                 <div class="citation-field">
@@ -206,7 +251,7 @@ class AIService {
 
     createDiffHTML(content) {
         let html = '<div class="diff-content">';
-        
+
         if (content.original) {
             html += `
                 <div class="diff-section">
@@ -216,7 +261,7 @@ class AIService {
                 </div>
             `;
         }
-        
+
         if (content.suggested) {
             html += `
                 <div class="diff-section">
@@ -226,7 +271,7 @@ class AIService {
                 </div>
             `;
         }
-        
+
         if (content.reason) {
             html += `
                 <div class="diff-reason">
@@ -234,7 +279,7 @@ class AIService {
                 </div>
             `;
         }
-        
+
         html += '</div>';
         return html;
     }
@@ -263,6 +308,12 @@ class AIService {
         return div.innerHTML;
     }
 
+    stripStyleTags(htmlText) {
+        if (typeof htmlText !== 'string') return '';
+        // Remove <style>...</style> tags and their content (case insensitive)
+        return htmlText.replace(/<style[^>]*>.*?<\/style>/gi, '');
+    }
+
 
     scheduleFeedback(callback, delay = 1000) {
         clearTimeout(this.feedbackTimer);
@@ -279,15 +330,15 @@ class AIService {
 
     schedulePromptFeedback(promptId, callback, triggerTiming = 'delay', content = '', customDelay = '') {
         const timerId = `prompt-${promptId}`;
-        
+
         // Check if content has changed from last processed content
         const lastContent = this.lastTriggerContent.get(promptId);
         const pendingContent = this.pendingContent.get(promptId);
-        
+
         if (lastContent === content || pendingContent === content) {
             return; // Same content already processed or scheduled
         }
-        
+
         // Track that this content is now pending
         this.pendingContent.set(promptId, content);
 
@@ -296,7 +347,7 @@ class AIService {
             clearTimeout(this.promptTimers.get(timerId));
             this.promptTimers.delete(timerId);
         }
-        
+
         // Clear existing countdown for this prompt
         this.clearCountdownInterval(promptId);
 
@@ -325,7 +376,7 @@ class AIService {
         }, delay);
 
         this.promptTimers.set(timerId, timer);
-        
+
         // Store timer info for countdown display (only for custom delays > 1 second)
         if (triggerTiming === 'custom' && delay > 1000) {
             // Check if there are existing feedback containers for this prompt
@@ -339,7 +390,7 @@ class AIService {
                         triggerTiming,
                         customDelay
                     });
-                    
+
                     // Start countdown display only if there are existing containers
                     this.startCountdownDisplay(promptId);
                 }
@@ -350,22 +401,22 @@ class AIService {
     calculateCustomDelay(promptId, customDelay) {
         const baseDelay = this.parseCustomDelay(customDelay);
         if (baseDelay === null) return 1000; // Fallback to 1 second if invalid
-        
+
         const lastFeedbackTime = this.lastFeedbackTime.get(promptId);
         if (!lastFeedbackTime) {
             // No previous feedback, use regular debounce delay (1 second)
             return 1000;
         }
-        
+
         const now = Date.now();
         const timeSinceLastFeedback = now - lastFeedbackTime;
-        
+
         // If the time since last feedback is greater than the custom delay,
         // trigger immediately after user stops typing (1 second debounce)
         if (timeSinceLastFeedback >= baseDelay) {
             return 1000;
         }
-        
+
         // Otherwise, wait for the remaining time from the last feedback generation
         const remainingDelay = baseDelay - timeSinceLastFeedback;
         return Math.max(1000, remainingDelay); // Ensure at least 1 second for debouncing
@@ -373,29 +424,29 @@ class AIService {
 
     parseCustomDelay(delayString) {
         if (!delayString) return null;
-        
+
         // Parse format: Ad Bh Cm Ds (days, hours, minutes, seconds)
         const regex = /(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?/i;
         const match = delayString.trim().match(regex);
-        
+
         if (!match || match[0] === '') return null;
-        
+
         const days = parseInt(match[1] || 0);
         const hours = parseInt(match[2] || 0);
         const minutes = parseInt(match[3] || 0);
         const seconds = parseInt(match[4] || 0);
-        
+
         // Check if at least one unit was specified
         if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
             return null;
         }
-        
+
         // Convert to milliseconds
-        const totalMs = (days * 24 * 60 * 60 * 1000) + 
-                       (hours * 60 * 60 * 1000) + 
-                       (minutes * 60 * 1000) + 
+        const totalMs = (days * 24 * 60 * 60 * 1000) +
+                       (hours * 60 * 60 * 1000) +
+                       (minutes * 60 * 1000) +
                        (seconds * 1000);
-        
+
         return totalMs > 0 ? totalMs : null;
     }
 
@@ -413,27 +464,27 @@ class AIService {
     startCountdownDisplay(promptId) {
         // Clear any existing countdown interval
         this.clearCountdownInterval(promptId);
-        
+
         const updateCountdown = () => {
             const timerInfo = this.promptTimerInfo.get(promptId);
             if (!timerInfo) return;
-            
+
             const elapsed = Date.now() - timerInfo.startTime;
             const remaining = Math.max(0, timerInfo.duration - elapsed);
-            
+
             if (remaining <= 0) {
                 this.clearCountdownInterval(promptId);
                 return;
             }
-            
+
             // Format remaining time
             const remainingSeconds = Math.ceil(remaining / 1000);
             const countdownText = this.formatCountdownTime(remainingSeconds);
-            
+
             // Update the countdown display in the UI
             this.updateCountdownDisplay(promptId, countdownText);
         };
-        
+
         // Update immediately, then every 100ms for smooth countdown
         updateCountdown();
         const interval = setInterval(updateCountdown, 100);
@@ -474,13 +525,13 @@ class AIService {
         if (!prompt) {
             return;
         }
-        
+
         const existingContainers = this.findAllFeedbackContainersByName(prompt.name);
-        
+
         if (existingContainers.length === 0) {
             return;
         }
-        
+
         // Add countdown to all containers for this prompt
         existingContainers.forEach(container => {
             // Find or create countdown element
@@ -488,7 +539,7 @@ class AIService {
             if (!countdownElement) {
                 countdownElement = document.createElement('div');
                 countdownElement.className = 'countdown-timer';
-                
+
                 // Insert after the heading
                 const heading = container.querySelector('h4');
                 if (heading) {
@@ -498,7 +549,7 @@ class AIService {
                     container.appendChild(countdownElement);
                 }
             }
-            
+
             countdownElement.textContent = `🔄 Updating in ${countdownText}`;
         });
     }
@@ -510,17 +561,17 @@ class AIService {
         if (!prompt) {
             return;
         }
-        
+
         // Find all feedback containers for this prompt
         const containers = this.findAllFeedbackContainersByName(prompt.name);
-        
+
         containers.forEach(container => {
             const countdownElement = container.querySelector('.countdown-timer');
             if (countdownElement) {
                 countdownElement.remove();
             }
         });
-        
+
         // Also remove any temporary countdown containers (legacy cleanup)
         const countdownContainer = document.getElementById(`countdown-${promptId}`);
         if (countdownContainer) {
@@ -532,20 +583,20 @@ class AIService {
         // Try to find by prompt ID in the individual request containers
         const individualContainer = document.getElementById(`placeholder-individual-${promptId}`);
         if (individualContainer) return individualContainer;
-        
+
         // Try to find any existing feedback container for this prompt
         const prompt = window.app?.promptsManager?.getPrompt?.(promptId);
         if (prompt) {
             return this.findExistingFeedbackContainerByName(prompt.name);
         }
-        
+
         return null;
     }
 
     findExistingFeedbackContainerByName(promptName) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return null;
-        
+
         // Look for a container with this prompt name in its heading
         const containers = container.querySelectorAll('.feedback-item');
         for (const cont of containers) {
@@ -560,18 +611,18 @@ class AIService {
     findAllFeedbackContainersByName(promptName) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return [];
-        
+
         // Find all containers with this prompt name in their heading
         const matchingContainers = [];
         const containers = container.querySelectorAll('.feedback-item');
-        
+
         containers.forEach(cont => {
             const heading = cont.querySelector('h4');
             if (heading && heading.textContent.includes(promptName)) {
                 matchingContainers.push(cont);
             }
         });
-        
+
         return matchingContainers;
     }
 
@@ -596,7 +647,7 @@ class AIService {
                 if (initialPlaceholder) {
                     initialPlaceholder.remove();
                 }
-                
+
                 const disabledHtml = `
                     <div class="feedback-item">
                         <h4>🔇 AI Feedback Disabled</h4>
@@ -642,10 +693,10 @@ class AIService {
             if (initialPlaceholder) {
                 initialPlaceholder.remove();
             }
-            
+
             // Only use enabled prompts
             const enabledPrompts = prompts.filter(prompt => prompt.enabled);
-            
+
             // If no prompts are enabled, show a message
             if (enabledPrompts.length === 0) {
                 const noPromptsHtml = `
@@ -673,7 +724,7 @@ class AIService {
                 });
                 return;
             }
-            
+
             // Show update indicators for existing feedback that will be refreshed
             this.showUpdateIndicatorsForExistingFeedback(enabledPrompts.map(p => p.name));
 
@@ -720,7 +771,7 @@ class AIService {
 
                 } catch (error) {
                     console.error('Error with individual prompt:', error);
-                    
+
                     // For errors, we'll handle cleanup at the end since we can't identify which request failed
                     completedCount++;
 
@@ -805,10 +856,10 @@ class AIService {
                 <span class="loading-text">Analyzing...</span>
             </p>
         `;
-        
+
         // Append at the end of the container to maintain order
         container.appendChild(placeholder);
-        
+
         // Start timer for this request
         const startTime = Date.now();
         const timerInterval = setInterval(() => {
@@ -818,33 +869,33 @@ class AIService {
                 timerElement.textContent = elapsed.toFixed(1) + 's';
             }
         }, 100);
-        
+
         this.activeRequests.set(requestId, {
             startTime,
             timerInterval,
             promptName
         });
-        
+
         return placeholder;
     }
 
     replaceRequestPlaceholderWithHTML(requestId, htmlContent, promptName) {
         const placeholder = document.getElementById(`placeholder-${requestId}`);
         if (!placeholder) return;
-        
+
         // Stop and clear the timer
         const request = this.activeRequests.get(requestId);
         if (request && request.timerInterval) {
             clearInterval(request.timerInterval);
         }
         this.activeRequests.delete(requestId);
-        
+
         // Clear any countdown display for this prompt
         if (requestId.startsWith('individual-')) {
             const promptId = requestId.replace('individual-', '');
             this.clearCountdownInterval(promptId);
         }
-        
+
         // Simply replace the entire placeholder with the HTML content
         placeholder.outerHTML = htmlContent;
     }
@@ -852,18 +903,18 @@ class AIService {
     replaceRequestPlaceholder(requestId, feedback, promptName) {
         const placeholder = document.getElementById(`placeholder-${requestId}`);
         if (!placeholder) return;
-        
+
         // Stop and clear the timer
         const request = this.activeRequests.get(requestId);
         if (request && request.timerInterval) {
             clearInterval(request.timerInterval);
         }
-        
+
         // Check if this was an existing container converted to loading state
         const wasExistingContainer = request && request.existingContainer;
-        
+
         this.activeRequests.delete(requestId);
-        
+
         // Create the new feedback content
         if (feedback && feedback.length > 0) {
             const groupedFeedback = {};
@@ -875,24 +926,24 @@ class AIService {
             });
 
             let html = '';
-            
+
             if (wasExistingContainer) {
                 // Update the existing container in place
                 placeholder.classList.remove('loading-item');
                 placeholder.id = ''; // Remove the placeholder ID
-                
+
                 // Update the heading
                 const heading = placeholder.querySelector('h4');
                 if (heading) {
                     heading.innerHTML = `✨ ${promptName}`;
                 }
-                
+
                 // Replace the content but keep the container
                 let contentHtml = '';
                 for (const [category, items] of Object.entries(groupedFeedback)) {
                     contentHtml += `<div class="category-section">
                         <h5>${category}</h5>`;
-                    
+
                     items.forEach(item => {
                         // Use specialized display for citations and diffs
                         if (item.type === 'citation') {
@@ -928,31 +979,31 @@ class AIService {
                             `;
                         }
                     });
-                    
+
                     contentHtml += `</div>`;
                 }
-                
+
                 // Remove all content except the heading and add new content
                 const elementsToRemove = placeholder.querySelectorAll('.category-section, p:not(.loading-text)');
                 elementsToRemove.forEach(el => el.remove());
-                
+
                 // Remove any loading text
                 const loadingText = placeholder.querySelector('.loading-text');
                 if (loadingText && loadingText.parentElement) {
                     loadingText.parentElement.remove();
                 }
-                
+
                 placeholder.insertAdjacentHTML('beforeend', contentHtml);
-                
+
             } else {
                 // Replace entire placeholder as before
                 html = `<div class="feedback-item">
                     <h4>✨ ${promptName}</h4>`;
-                
+
                 for (const [category, items] of Object.entries(groupedFeedback)) {
                     html += `<div class="category-section">
                         <h5>${category}</h5>`;
-                    
+
                     items.forEach(item => {
                         // Use specialized display for citations and diffs
                         if (item.type === 'citation') {
@@ -988,11 +1039,11 @@ class AIService {
                             `;
                         }
                     });
-                    
+
                     html += `</div>`;
                 }
                 html += '</div>';
-                
+
                 placeholder.outerHTML = html;
             }
         } else {
@@ -1000,16 +1051,16 @@ class AIService {
             if (wasExistingContainer) {
                 placeholder.classList.remove('loading-item');
                 placeholder.id = '';
-                
+
                 const heading = placeholder.querySelector('h4');
                 if (heading) {
                     heading.innerHTML = `✨ ${promptName}`;
                 }
-                
+
                 // Remove loading content and add no-feedback message
                 const elementsToRemove = placeholder.querySelectorAll('.category-section, p');
                 elementsToRemove.forEach(el => el.remove());
-                
+
                 placeholder.insertAdjacentHTML('beforeend', '<p>No specific feedback at this time. Your text looks good!</p>');
             } else {
                 placeholder.outerHTML = `
@@ -1027,12 +1078,12 @@ class AIService {
         if (placeholder) {
             placeholder.remove();
         }
-        
+
         const request = this.activeRequests.get(requestId);
         if (request && request.timerInterval) {
             clearInterval(request.timerInterval);
         }
-        
+
         this.activeRequests.delete(requestId);
     }
 
@@ -1052,7 +1103,7 @@ class AIService {
                 loadingRequestIds.push(requestId);
             }
         });
-        
+
         loadingRequestIds.forEach(requestId => {
             this.removeRequestPlaceholder(requestId);
         });
@@ -1061,7 +1112,7 @@ class AIService {
     showUpdateIndicatorsForExistingFeedback(promptNames) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return;
-        
+
         promptNames.forEach(promptName => {
             // Find existing feedback container for this prompt
             const existingContainer = this.findExistingFeedbackContainer(promptName);
@@ -1075,7 +1126,7 @@ class AIService {
     findExistingFeedbackContainer(promptName) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return null;
-        
+
         // Look for a container with this prompt name in its heading
         const containers = container.querySelectorAll('.feedback-item');
         for (const cont of containers) {
@@ -1093,7 +1144,7 @@ class AIService {
         if (existingIndicator) {
             existingIndicator.remove();
         }
-        
+
         // Add a subtle update indicator
         const heading = container.querySelector('h4');
         if (heading) {
@@ -1104,7 +1155,7 @@ class AIService {
             indicator.style.fontSize = '0.8em';
             indicator.style.marginLeft = '8px';
             heading.appendChild(indicator);
-            
+
             // Start a subtle animation
             let opacity = 0.3;
             let increasing = true;
@@ -1118,7 +1169,7 @@ class AIService {
                 }
                 indicator.style.opacity = opacity;
             }, 200);
-            
+
             // Store the interval so we can clear it later
             indicator.dataset.animationInterval = animateInterval;
         }
@@ -1127,10 +1178,10 @@ class AIService {
     createOrUpdateRequestContainer(requestId, promptName, isLoading = false) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return null;
-        
+
         // Check if there's already a container for this prompt
         const existingContainer = this.findExistingFeedbackContainer(promptName);
-        
+
         if (existingContainer && !isLoading) {
             // Just update the existing container
             return existingContainer;
@@ -1155,11 +1206,11 @@ class AIService {
             }
             updateIndicator.remove();
         }
-        
+
         // Add loading state to the existing container
         existingContainer.classList.add('loading-item');
         existingContainer.id = `placeholder-${requestId}`;
-        
+
         // Add a loading indicator to the heading
         const heading = existingContainer.querySelector('h4');
         if (heading) {
@@ -1167,7 +1218,7 @@ class AIService {
             const originalText = heading.textContent.replace(/^[🔄✨]\s*/, '');
             heading.innerHTML = `🔄 ${originalText} <span class="loading-timer" id="timer-${requestId}">0.0s</span>`;
         }
-        
+
         // Start timer for this request
         const startTime = Date.now();
         const timerInterval = setInterval(() => {
@@ -1177,7 +1228,7 @@ class AIService {
                 timerElement.textContent = elapsed.toFixed(1) + 's';
             }
         }, 100);
-        
+
         this.activeRequests.set(requestId, {
             startTime,
             timerInterval,
@@ -1189,10 +1240,10 @@ class AIService {
     reorderFeedbackByPromptOrder(promptNames) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return;
-        
+
         // Get all feedback items
         const feedbackItems = Array.from(container.querySelectorAll('.feedback-item'));
-        
+
         // Create a map of prompt name to DOM element
         const promptToElement = new Map();
         feedbackItems.forEach(item => {
@@ -1203,10 +1254,10 @@ class AIService {
                 promptToElement.set(promptName, item);
             }
         });
-        
+
         // Remove all items from container
         feedbackItems.forEach(item => item.remove());
-        
+
         // Re-append items in the new order based on promptNames array
         promptNames.forEach(promptName => {
             const element = promptToElement.get(promptName);
@@ -1214,7 +1265,7 @@ class AIService {
                 container.appendChild(element);
             }
         });
-        
+
         // Append any items that weren't in the promptNames list (like error messages)
         feedbackItems.forEach(item => {
             if (!container.contains(item)) {
@@ -1236,12 +1287,12 @@ class AIService {
             if (initialPlaceholder) {
                 initialPlaceholder.remove();
             }
-            
+
             const requestId = `individual-${promptId}`;
             this.createOrUpdateRequestContainer(requestId, prompt.name, true);
-            
+
             const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager);
-            
+
             if (result.requestId || requestId) {
                 this.replaceRequestPlaceholderWithHTML(requestId, result.htmlContent, prompt.name);
             }
@@ -1267,7 +1318,7 @@ class AIService {
 
     clearTimers() {
         clearTimeout(this.feedbackTimer);
-        
+
         // Clear all individual prompt timers
         this.promptTimers.forEach((timer, timerId) => {
             clearTimeout(timer);
@@ -1275,7 +1326,7 @@ class AIService {
         this.promptTimers.clear();
         this.lastTriggerContent.clear();
         this.lastFeedbackTime.clear(); // Clear last feedback times
-        
+
         // Clear all countdown intervals
         this.countdownCallbacks.forEach((interval, promptId) => {
             clearInterval(interval);
@@ -1284,7 +1335,7 @@ class AIService {
         this.countdownCallbacks.clear();
         this.promptTimerInfo.clear();
         this.pendingContent.clear();
-        
+
         this.clearAllRequestPlaceholders();
     }
 }

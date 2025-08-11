@@ -4,49 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Text Editor is a modern, web-based text editor with integrated AI assistance powered by Claude AI. It features a responsive three-panel design: file explorer, code editor, and AI feedback sidebar with tabbed interface.
+AI Text Editor is a modern, frontend-only web-based text editor with integrated AI assistance. It features a responsive three-panel design: file explorer, code editor, and AI feedback sidebar with tabbed interface.
 
 ## Development Commands
 
-### Backend (FastAPI + LiteLLM)
-```bash
-# Install dependencies
-uv sync
-
-# Run development server (production)
-uv run python backend.py
-
-# Run development server with auto-reload
-uv run uvicorn backend:app --reload --host 0.0.0.0 --port 8000
-
-# Code formatting
-uv run black .
-uv run isort .
-
-# Linting
-uv run flake8 .
-
-# Run tests (when available)
-uv run pytest
-```
-
 ### Prerequisites
-- Python 3.12+
 - Modern browser (Chrome/Edge recommended for File System Access API)
-- AI model access via LiteLLM
+- API key for your chosen LLM service (Groq, OpenAI, Anthropic, etc.)
+- Simple HTTP server for local development
 
 ## Architecture Overview
 
 ### Core Application Structure
 - **script.js** - Main AITextEditor class that orchestrates all components
-- **backend.py** - FastAPI server with LiteLLM integration for AI model access
 - **index.html** - Three-panel responsive layout with tabbed AI sidebar
 - **components/** - Modular ES6 classes for different functionality areas
+- **LLM.js** - Direct LLM API integration via CDN
 
 ### Component Architecture Pattern
 The frontend uses a manager-based component pattern where each major functionality area has its own class:
 
-- **AIService.js** - Handles all AI API calls with progressive loading and parallel execution
+- **AIService.js** - Handles direct LLM API calls via LLM.js with progressive loading and parallel execution
 - **FileSystemManager.js** - File System Access API integration with directory selection and file operations
 - **EditorManager.js** - CodeMirror wrapper with syntax highlighting and file management
 - **UIManager.js** - Handles all UI state, mobile navigation, resizable panels, and tab switching
@@ -55,18 +33,18 @@ The frontend uses a manager-based component pattern where each major functionali
 - **SettingsManager.js** - User preferences management with localStorage persistence
 - **TextAnalysisManager.js** - Text analysis with word/sentence completion tracking and callbacks
 
-### Frontend-Backend Communication
-- REST endpoint: `/analyze-prompt` - Processes text with custom prompts via LiteLLM
-- Backend uses LiteLLM for AI model integration (currently Groq/OpenAI GPT-OSS-120B)
+### Direct LLM API Integration
+- Uses LLM.js library for unified API access to multiple providers (Groq, OpenAI, Anthropic, Google)
+- API keys configured in Settings tab
 - HTML response format for flexible AI feedback display
 - Progressive feedback loading with real-time UI updates
 
 ### Key Data Flow
 1. User types in editor → TextAnalysisManager tracks word/sentence completion
 2. AIService schedules debounced analysis for enabled prompts
-3. Backend processes each request via LiteLLM API calls
+3. AIService calls LLM APIs directly via LLM.js using user's API key
 4. AI responses returned as HTML for flexible display formatting
-5. File operations go through FileSystemManager → backend → file system
+5. File operations handled directly via File System Access API
 
 ### Mobile-Responsive Design
 - Desktop: Three-panel layout with resizable sidebars
@@ -77,7 +55,7 @@ The frontend uses a manager-based component pattern where each major functionali
 ### Storage and State Management
 - File handles cached in FileSystemManager for direct file operations
 - Prompts stored in localStorage with JSON serialization
-- User settings (fonts, AI toggle) managed by SettingsManager with localStorage persistence
+- User settings (fonts, AI toggle, API keys, LLM service/model) managed by SettingsManager with localStorage persistence
 - Tab state persistence for AI sidebar navigation
 - UI state managed through event-driven component communication
 - Editor state includes modification tracking and auto-save indicators
@@ -105,14 +83,17 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Separate tab in AI sidebar for management
 
 ### Error Handling
-- Graceful degradation when LiteLLM/AI model unavailable
+- Graceful degradation when LLM API unavailable or misconfigured
 - Connection error feedback with retry suggestions
+- API key validation and error messages
 - HTML error responses with formatted display
 - AI feedback can be toggled on/off via settings
 
 ### Settings System
 - Configurable font family and size for editor
 - AI feedback toggle (enable/disable)
+- API key management for LLM services
+- LLM service and model selection (Groq, OpenAI, Anthropic, Google)
 - Settings persist in localStorage with automatic UI updates
 - Reset to defaults functionality available
 
@@ -125,11 +106,13 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Add cleanup methods for timers/listeners
 
 ### When Modifying AI Features
-- Test with and without LiteLLM/AI model available
+- Test with and without valid API keys configured
+- Test with different LLM providers (Groq, OpenAI, etc.)
 - Ensure progressive loading continues to work
 - Handle both HTML and fallback response formats
 - Maintain backward compatibility for feedback display
 - Consider rate limiting and API costs when making changes
+- Handle CORS limitations when adding new providers
 
 ### When Working with File Operations
 - Use FileSystemManager for all file operations

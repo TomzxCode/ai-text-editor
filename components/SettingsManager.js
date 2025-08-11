@@ -4,7 +4,10 @@ class SettingsManager {
         this.defaultSettings = {
             fontFamily: "'Monaco', 'Menlo', monospace",
             fontSize: 14,
-            enableAIFeedback: true
+            enableAIFeedback: true,
+            apiKey: '',
+            llmService: 'groq',
+            llmModel: 'llama3-8b-8192'
         };
         
         this.settings = this.loadSettings();
@@ -36,6 +39,10 @@ class SettingsManager {
         return this.settings[key];
     }
 
+    getSettings() {
+        return { ...this.settings };
+    }
+
     setSetting(key, value) {
         this.settings[key] = value;
         this.saveSettings();
@@ -65,6 +72,9 @@ class SettingsManager {
         const fontSizeRange = document.getElementById('fontSize');
         const fontSizeValue = document.getElementById('fontSizeValue');
         const enableAICheckbox = document.getElementById('enableAIFeedback');
+        const apiKeyInput = document.getElementById('apiKey');
+        const llmServiceSelect = document.getElementById('llmService');
+        const llmModelInput = document.getElementById('llmModel');
 
         if (!fontFamilySelect || !fontSizeRange || !fontSizeValue) {
             console.error('Settings UI elements not found');
@@ -78,6 +88,18 @@ class SettingsManager {
         
         if (enableAICheckbox) {
             enableAICheckbox.checked = this.settings.enableAIFeedback;
+        }
+
+        if (apiKeyInput) {
+            apiKeyInput.value = this.settings.apiKey;
+        }
+
+        if (llmServiceSelect) {
+            llmServiceSelect.value = this.settings.llmService;
+        }
+
+        if (llmModelInput) {
+            llmModelInput.value = this.settings.llmModel;
         }
 
         // Font family change handler
@@ -96,6 +118,27 @@ class SettingsManager {
         if (enableAICheckbox) {
             enableAICheckbox.addEventListener('change', (e) => {
                 this.setSetting('enableAIFeedback', e.target.checked);
+            });
+        }
+
+        // API key input handler
+        if (apiKeyInput) {
+            apiKeyInput.addEventListener('input', (e) => {
+                this.setSetting('apiKey', e.target.value);
+            });
+        }
+
+        // LLM service select handler
+        if (llmServiceSelect) {
+            llmServiceSelect.addEventListener('change', (e) => {
+                this.setSetting('llmService', e.target.value);
+            });
+        }
+
+        // LLM model input handler
+        if (llmModelInput) {
+            llmModelInput.addEventListener('input', (e) => {
+                this.setSetting('llmModel', e.target.value);
             });
         }
     }
