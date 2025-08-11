@@ -1767,6 +1767,14 @@ body {
     color: #4db8ff;
 }
 
+.call-provider {
+    color: #66b3ff;
+}
+
+.call-model {
+    color: #99ccff;
+}
+
 .call-session {
     color: #bbb;
 }

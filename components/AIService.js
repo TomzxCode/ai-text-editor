@@ -114,7 +114,7 @@ Please provide your response in whatever format best serves the analysis. Your r
 
             // Store the LLM call in local storage (without response content)
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
-            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId);
+            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId, llmService || 'groq', llmModel || 'llama3-8b-8192');
 
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(response);

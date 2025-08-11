@@ -70,6 +70,20 @@ class UsageTracker {
                             <!-- Populated dynamically -->
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label for="providerFilter">Provider:</label>
+                        <select id="providerFilter" class="filter-select">
+                            <option value="all">All Providers</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="modelFilter">Model:</label>
+                        <select id="modelFilter" class="filter-select">
+                            <option value="all">All Models</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
                     <div class="custom-date-range" id="customDateRange" style="display: none;">
                         <input type="date" id="startDate" class="filter-input">
                         <span>to</span>
@@ -115,6 +129,8 @@ class UsageTracker {
         
         document.getElementById('dateRangeFilter')?.addEventListener('change', (e) => this.handleDateRangeChange(e));
         document.getElementById('sessionFilter')?.addEventListener('change', () => this.refreshData());
+        document.getElementById('providerFilter')?.addEventListener('change', () => this.refreshData());
+        document.getElementById('modelFilter')?.addEventListener('change', () => this.refreshData());
         document.getElementById('applyDateRangeBtn')?.addEventListener('click', () => this.applyCustomDateRange());
         
         document.getElementById('searchCallsInput')?.addEventListener('input', (e) => this.handleSearchChange(e));
@@ -149,6 +165,8 @@ class UsageTracker {
 
     refreshData() {
         this.populateSessionFilter();
+        this.populateProviderFilter();
+        this.populateModelFilter();
         this.updateOverviewStats();
         this.updatePromptUsage();
         this.refreshCallsList();
@@ -191,6 +209,74 @@ class UsageTracker {
         });
     }
 
+    populateProviderFilter() {
+        const providerFilter = document.getElementById('providerFilter');
+        if (!providerFilter) return;
+
+        const allCalls = this.llmCallStorage.getAllCalls();
+        const providers = new Set();
+        
+        allCalls.forEach(call => {
+            if (call.provider) {
+                providers.add(call.provider);
+            }
+        });
+
+        // Keep existing options and add new providers
+        const existingOptions = Array.from(providerFilter.options).map(opt => opt.value);
+        const staticOptions = ['all'];
+
+        providers.forEach(provider => {
+            if (!existingOptions.includes(provider)) {
+                const option = document.createElement('option');
+                option.value = provider;
+                option.textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
+                providerFilter.appendChild(option);
+            }
+        });
+
+        // Remove provider options that no longer exist
+        Array.from(providerFilter.options).forEach(option => {
+            if (!staticOptions.includes(option.value) && !providers.has(option.value)) {
+                option.remove();
+            }
+        });
+    }
+
+    populateModelFilter() {
+        const modelFilter = document.getElementById('modelFilter');
+        if (!modelFilter) return;
+
+        const allCalls = this.llmCallStorage.getAllCalls();
+        const models = new Set();
+        
+        allCalls.forEach(call => {
+            if (call.model) {
+                models.add(call.model);
+            }
+        });
+
+        // Keep existing options and add new models
+        const existingOptions = Array.from(modelFilter.options).map(opt => opt.value);
+        const staticOptions = ['all'];
+
+        models.forEach(model => {
+            if (!existingOptions.includes(model)) {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelFilter.appendChild(option);
+            }
+        });
+
+        // Remove model options that no longer exist
+        Array.from(modelFilter.options).forEach(option => {
+            if (!staticOptions.includes(option.value) && !models.has(option.value)) {
+                option.remove();
+            }
+        });
+    }
+
     updateOverviewStats() {
         const calls = this.getFilteredCalls();
         const stats = this.calculateStats(calls);
@@ -204,18 +290,35 @@ class UsageTracker {
     updatePromptUsage() {
         const calls = this.getFilteredCalls();
         const sessionFilter = document.getElementById('sessionFilter')?.value || 'all';
+        const providerFilter = document.getElementById('providerFilter')?.value || 'all';
+        const modelFilter = document.getElementById('modelFilter')?.value || 'all';
         const promptStats = {};
 
-        // Update the section title based on session filter
+        // Update the section title based on active filters
         const titleElement = document.getElementById('usageDetailsTitle');
         if (titleElement) {
+            let title = 'Usage by Prompt';
+            const filters = [];
+            
             if (sessionFilter === 'current') {
-                titleElement.textContent = 'Usage by Prompt (Current Session)';
+                filters.push('Current Session');
             } else if (sessionFilter !== 'all') {
-                titleElement.textContent = `Usage by Prompt (Session ${sessionFilter.slice(0, 8)}...)`;
-            } else {
-                titleElement.textContent = 'Usage by Prompt';
+                filters.push(`Session ${sessionFilter.slice(0, 8)}...`);
             }
+            
+            if (providerFilter !== 'all') {
+                filters.push(`${providerFilter.charAt(0).toUpperCase() + providerFilter.slice(1)} Provider`);
+            }
+            
+            if (modelFilter !== 'all') {
+                filters.push(`${modelFilter} Model`);
+            }
+            
+            if (filters.length > 0) {
+                title += ` (${filters.join(', ')})`;
+            }
+            
+            titleElement.textContent = title;
         }
 
         calls.forEach(call => {
@@ -331,6 +434,8 @@ class UsageTracker {
                         <span class="call-stat">In: ${(call.usage.input_tokens || 0).toLocaleString()}</span>
                         <span class="call-stat">Out: ${(call.usage.output_tokens || 0).toLocaleString()}</span>
                     ` : '<span class="call-stat">No usage data</span>'}
+                    ${call.provider ? `<span class="call-provider">Provider: ${call.provider.charAt(0).toUpperCase() + call.provider.slice(1)}</span>` : ''}
+                    ${call.model ? `<span class="call-model">Model: ${call.model}</span>` : ''}
                     ${call.sessionId ? `<span class="call-session" title="${call.sessionId}">Session: ${call.sessionId.slice(0, 8)}... ${this.isCurrentSession(call.sessionId) ? '(Current)' : ''}</span>` : ''}
                 </div>
             `;
@@ -341,6 +446,8 @@ class UsageTracker {
     getFilteredCalls() {
         const dateRange = document.getElementById('dateRangeFilter')?.value || 'all';
         const sessionFilter = document.getElementById('sessionFilter')?.value || 'all';
+        const providerFilter = document.getElementById('providerFilter')?.value || 'all';
+        const modelFilter = document.getElementById('modelFilter')?.value || 'all';
         let calls = this.llmCallStorage.getAllCalls();
 
         // Apply date filtering
@@ -389,6 +496,16 @@ class UsageTracker {
                 // Filter by specific session ID
                 calls = calls.filter(call => call.sessionId === sessionFilter);
                 break;
+        }
+
+        // Apply provider filtering
+        if (providerFilter !== 'all') {
+            calls = calls.filter(call => call.provider === providerFilter);
+        }
+
+        // Apply model filtering
+        if (modelFilter !== 'all') {
+            calls = calls.filter(call => call.model === modelFilter);
         }
 
         return calls.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));

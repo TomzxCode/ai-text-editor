@@ -3,12 +3,14 @@ class LLMCallStorage {
         this.storageKey = 'llm_call_history';
     }
 
-    storeLLMCall(promptIdentifier, usage = null, sessionId = null) {
+    storeLLMCall(promptIdentifier, usage = null, sessionId = null, provider = null, model = null) {
         const callData = {
             id: this.generateId(),
             promptIdentifier: promptIdentifier,
             usage: usage,
             sessionId: sessionId,
+            provider: provider,
+            model: model,
             timestamp: new Date().toISOString()
         };
 
@@ -74,7 +76,9 @@ class LLMCallStorage {
             totalPromptTokens: 0,
             totalCompletionTokens: 0,
             callsByPrompt: {},
-            callsByDate: {}
+            callsByDate: {},
+            callsByProvider: {},
+            callsByModel: {}
         };
 
         allCalls.forEach(call => {
@@ -88,6 +92,14 @@ class LLMCallStorage {
             
             const callDate = new Date(call.timestamp).toDateString();
             stats.callsByDate[callDate] = (stats.callsByDate[callDate] || 0) + 1;
+            
+            if (call.provider) {
+                stats.callsByProvider[call.provider] = (stats.callsByProvider[call.provider] || 0) + 1;
+            }
+            
+            if (call.model) {
+                stats.callsByModel[call.model] = (stats.callsByModel[call.model] || 0) + 1;
+            }
         });
 
         return stats;
@@ -101,6 +113,8 @@ class LLMCallStorage {
             totalPromptTokens: 0,
             totalCompletionTokens: 0,
             callsByPrompt: {},
+            callsByProvider: {},
+            callsByModel: {},
             sessionId: sessionId
         };
 
@@ -112,6 +126,14 @@ class LLMCallStorage {
             }
 
             stats.callsByPrompt[call.promptIdentifier] = (stats.callsByPrompt[call.promptIdentifier] || 0) + 1;
+            
+            if (call.provider) {
+                stats.callsByProvider[call.provider] = (stats.callsByProvider[call.provider] || 0) + 1;
+            }
+            
+            if (call.model) {
+                stats.callsByModel[call.model] = (stats.callsByModel[call.model] || 0) + 1;
+            }
         });
 
         return stats;
