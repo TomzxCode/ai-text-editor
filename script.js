@@ -2,6 +2,9 @@ class AITextEditor {
     constructor() {
         this.fileSystemManager = new FileSystemManager();
         this.notificationManager = new NotificationManager();
+        
+        // Session-only auto-refresh state (promptId -> boolean)
+        this.autoRefreshState = new Map();
 
         if (!this.fileSystemManager.supportsFileSystemAccess) {
             this.notificationManager.error('File System Access API not supported in this browser');
@@ -200,8 +203,8 @@ class AITextEditor {
         const settings = this.settingsManager.getAllSettings();
         if (!settings.enableAIFeedback) return;
 
-        // Schedule individual feedback for each prompt that matches this trigger type
-        enabledPrompts.forEach(prompt => {
+        // Schedule individual feedback for each prompt that matches this trigger type and has auto-refresh enabled for this session
+        enabledPrompts.filter(prompt => this.isAutoRefreshEnabled(prompt.id)).forEach(prompt => {
             this.aiService.schedulePromptFeedback(
                 prompt.id,
                 (promptId) => this.generateIndividualPromptFeedback(promptId, currentText),
@@ -482,7 +485,7 @@ class AITextEditor {
         const currentText = this.editorManager.getValue();
         const customDelayPrompts = this.promptsManager.getEnabledPromptsByTrigger('custom');
         
-        customDelayPrompts.forEach(prompt => {
+        customDelayPrompts.filter(prompt => this.isAutoRefreshEnabled(prompt.id)).forEach(prompt => {
             this.aiService.schedulePromptFeedback(
                 prompt.id,
                 (promptId) => this.generateIndividualPromptFeedback(promptId, currentText),
@@ -779,6 +782,54 @@ class AITextEditor {
             this.notificationManager.success('Prompt toggled successfully');
         } catch (error) {
             this.notificationManager.error(error.message);
+        }
+    }
+
+    toggleAutoRefresh(promptId) {
+        try {
+            // Toggle session-only auto-refresh state
+            const currentState = this.autoRefreshState.get(promptId) ?? true; // default to enabled
+            const newState = !currentState;
+            this.autoRefreshState.set(promptId, newState);
+            
+            // Update all toggle buttons for this prompt ID immediately
+            this.updateAutoRefreshButtons(promptId, newState);
+            
+            this.notificationManager.success(`Auto-refresh ${newState ? 'enabled' : 'disabled'} for this session`);
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    isAutoRefreshEnabled(promptId) {
+        // Default to enabled if not explicitly set
+        return this.autoRefreshState.get(promptId) ?? true;
+    }
+
+    updateAutoRefreshButtons(promptId, enabled) {
+        // Find all auto-refresh toggle buttons for this prompt ID in the feedback area
+        const feedbackContainer = document.getElementById('feedbackContainer');
+        if (!feedbackContainer) return;
+
+        // Find all buttons with onclick that contains this promptId
+        const buttons = feedbackContainer.querySelectorAll('.auto-refresh-toggle');
+        buttons.forEach(button => {
+            // Check if this button belongs to the correct prompt
+            const onclick = button.getAttribute('onclick');
+            if (onclick && onclick.includes(`'${promptId}'`)) {
+                // Update the button appearance
+                button.innerHTML = enabled ? '🟢' : '🔴';
+                button.className = `btn-icon auto-refresh-toggle ${enabled ? 'enabled' : 'disabled'}`;
+                button.title = enabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable';
+            }
+        });
+    }
+
+    regenerateCurrentFeedback() {
+        // Trigger a fresh generation of current feedback to update toggle states
+        const currentText = this.editorManager.getValue();
+        if (currentText && currentText.trim().length > 0) {
+            this.generateAIFeedback(currentText);
         }
     }
 

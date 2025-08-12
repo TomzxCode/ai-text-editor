@@ -160,10 +160,21 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 `${Math.round(duration)}ms` :
                 `${(duration / 1000).toFixed(1)}s`;
 
+            // Get prompt ID to add auto-refresh toggle
+            const prompt = window.app?.promptsManager?.getAllPrompts().find(p => p.name === promptName);
+            const promptId = prompt ? prompt.id : '';
+            const autoRefreshEnabled = promptId ? window.app.isAutoRefreshEnabled(promptId) : true;
+            
             // Format response as HTML directly
             const htmlContent = `
                 <div class="feedback-item">
-                    <h4>✨ ${this.escapeHTML(promptName)} <span class="timing-info">(${formattedDuration})</span></h4>
+                    <h4>
+                        ✨ ${this.escapeHTML(promptName)} 
+                        <span class="timing-info">(${formattedDuration})</span>
+                        ${promptId ? `<button class="btn-icon auto-refresh-toggle ${autoRefreshEnabled ? 'enabled' : 'disabled'}" onclick="window.app?.toggleAutoRefresh('${promptId}')" title="${autoRefreshEnabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable'}">
+                            ${autoRefreshEnabled ? '🟢' : '🔴'}
+                        </button>` : ''}
+                    </h4>
                     <div class="category-section">
                         <div class="analysis-content">
                             ${cleanedResponse}
@@ -188,9 +199,19 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 errorMessage = 'Rate limit exceeded. Please try again in a moment.';
             }
 
+            // Get prompt ID for error case as well
+            const prompt = window.app?.promptsManager?.getAllPrompts().find(p => p.name === promptName);
+            const promptId = prompt ? prompt.id : '';
+            const autoRefreshEnabled = promptId ? window.app.isAutoRefreshEnabled(promptId) : true;
+            
             const errorHtml = `
                 <div class="feedback-item">
-                    <h4>❌ ${promptName} - Error</h4>
+                    <h4>
+                        ❌ ${promptName} - Error
+                        ${promptId ? `<button class="btn-icon auto-refresh-toggle ${autoRefreshEnabled ? 'enabled' : 'disabled'}" onclick="window.app?.toggleAutoRefresh('${promptId}')" title="${autoRefreshEnabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable'}">
+                            ${autoRefreshEnabled ? '🟢' : '🔴'}
+                        </button>` : ''}
+                    </h4>
                     <div class="category-section">
                         <h5>Error</h5>
                         <p class="feedback-high">

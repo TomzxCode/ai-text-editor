@@ -125,6 +125,7 @@ class PromptsManager {
         return this.updatePrompt(id, { enabled: !prompt.enabled });
     }
 
+
     exportPrompts() {
         return JSON.stringify(this.prompts, null, 2);
     }
