@@ -952,6 +952,7 @@ body {
     min-width: 2.5rem;
     text-align: center;
     flex-shrink: 0;
+    margin-right: 0.25rem;
 }
 
 .loading-text {

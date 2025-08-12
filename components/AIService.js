@@ -170,7 +170,6 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 <div class="feedback-item">
                     <h4>
                         ✨ ${this.escapeHTML(promptName)} 
-                        <span class="timing-info">(${formattedDuration})</span>
                         ${promptId ? `<button class="btn-icon auto-refresh-toggle ${autoRefreshEnabled ? 'enabled' : 'disabled'}" onclick="window.app?.toggleAutoRefresh('${promptId}')" title="${autoRefreshEnabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable'}">
                             ${autoRefreshEnabled ? '🟢' : '🔴'}
                         </button>` : ''}
@@ -969,9 +968,11 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         placeholder.className = 'feedback-item loading-item';
         placeholder.id = `placeholder-${requestId}`;
         placeholder.innerHTML = `
-            <h4>🔄 ${promptName}</h4>
-            <p>
+            <h4>
+                <span>${promptName}</span>
                 <span class="loading-timer" id="timer-${requestId}">0.0s</span>
+            </h4>
+            <p>
                 <span class="loading-text">Analyzing...</span>
             </p>
         `;
@@ -1335,7 +1336,21 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         if (heading) {
             // Update the heading with loading indicator
             const originalText = heading.textContent.replace(/^[🔄✨]\s*/, '');
-            heading.innerHTML = `🔄 ${originalText} <span class="loading-timer" id="timer-${requestId}">0.0s</span>`;
+            
+            // Extract auto-refresh button if present
+            const autoRefreshButton = heading.querySelector('.auto-refresh-toggle');
+            const buttonHTML = autoRefreshButton ? autoRefreshButton.outerHTML : '';
+            
+            // Remove the button from the text extraction
+            const textWithoutButton = originalText.replace(/🟢|🔴/, '').trim();
+            
+            heading.innerHTML = `
+                <span>${textWithoutButton}</span>
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                    <span class="loading-timer" id="timer-${requestId}">0.0s</span>
+                    ${buttonHTML}
+                </div>
+            `;
         }
 
         // Start timer for this request
