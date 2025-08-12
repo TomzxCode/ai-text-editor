@@ -7,7 +7,8 @@ class SettingsManager {
             enableAIFeedback: true,
             apiKey: '',
             llmService: 'groq',
-            llmModel: 'llama3-8b-8192'
+            llmModel: 'llama3-8b-8192',
+            customBaseUrl: ''
         };
         
         this.settings = this.loadSettings();
@@ -75,6 +76,7 @@ class SettingsManager {
         const apiKeyInput = document.getElementById('apiKey');
         const llmServiceSelect = document.getElementById('llmService');
         const llmModelSelect = document.getElementById('llmModel');
+        const customBaseUrlInput = document.getElementById('customBaseUrl');
 
         if (!fontFamilySelect || !fontSizeRange || !fontSizeValue) {
             console.error('Settings UI elements not found');
@@ -100,6 +102,10 @@ class SettingsManager {
 
         if (llmModelSelect) {
             llmModelSelect.value = this.settings.llmModel;
+        }
+
+        if (customBaseUrlInput) {
+            customBaseUrlInput.value = this.settings.customBaseUrl;
         }
 
         // Font family change handler
@@ -140,6 +146,13 @@ class SettingsManager {
         if (llmModelSelect) {
             llmModelSelect.addEventListener('change', (e) => {
                 this.setSetting('llmModel', e.target.value);
+            });
+        }
+
+        // Custom base URL input handler
+        if (customBaseUrlInput) {
+            customBaseUrlInput.addEventListener('input', (e) => {
+                this.setSetting('customBaseUrl', e.target.value);
             });
         }
 

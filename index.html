@@ -155,7 +155,7 @@
                         <div class="settings-content">
                             <div class="setting-group">
                                 <label for="apiKey">API Key:</label>
-                                <input type="password" id="apiKey" class="setting-input" placeholder="Enter your API key">
+                                <input type="text" id="apiKey" class="setting-input" placeholder="Enter your API key">
                                 <p class="setting-description">API key for your chosen LLM service (Groq, OpenAI, etc.)</p>
                             </div>
                             <div class="setting-group">
@@ -175,6 +175,11 @@
                                     <option value="">Loading models...</option>
                                 </select>
                                 <p class="setting-description">Model for the selected service</p>
+                            </div>
+                            <div class="setting-group">
+                                <label for="customBaseUrl">Custom Base URL (Optional):</label>
+                                <input type="url" id="customBaseUrl" class="setting-input" placeholder="e.g., https://api.example.com/v1">
+                                <p class="setting-description">Override the default API endpoint for your LLM service. Useful for custom deployments or proxies.</p>
                             </div>
                         </div>
                     </div>

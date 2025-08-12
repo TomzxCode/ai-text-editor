@@ -45,10 +45,17 @@ class AIService {
         }
 
         // Create an LLM instance with the specified service and API key
-        const llm = new this.LLM({
+        const llmConfig = {
             service: service,
             apiKey: settings.apiKey
-        });
+        };
+        
+        // Add custom base URL if configured
+        if (settings.customBaseUrl) {
+            llmConfig.baseUrl = settings.customBaseUrl;
+        }
+        
+        const llm = new this.LLM(llmConfig);
         const models = await llm.fetchModels();
 
         // Return array of model names, sorted alphabetically
@@ -104,12 +111,19 @@ Please provide your response in whatever format best serves the analysis. Your r
             const startTime = performance.now();
             
             // Call LLM.js directly using resolved service and model
-            const llmResponse = await this.LLM(fullPrompt, {
+            const llmConfig = {
                 service: llmService || 'groq',
                 model: llmModel || 'llama3-8b-8192',
                 apiKey: settings.apiKey,
                 extended: true,
-            });
+            };
+            
+            // Add custom base URL if configured
+            if (settings.customBaseUrl) {
+                llmConfig.baseUrl = settings.customBaseUrl;
+            }
+            
+            const llmResponse = await this.LLM(fullPrompt, llmConfig);
 
             // Calculate duration in milliseconds
             const duration = performance.now() - startTime;

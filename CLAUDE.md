@@ -113,6 +113,7 @@ The app uses the modern File System Access API for direct file operations. Key b
 - Maintain backward compatibility for feedback display
 - Consider rate limiting and API costs when making changes
 - Handle CORS limitations when adding new providers
+- **IMPORTANT**: Always consult the LLM.js documentation at https://llmjs.themaximalist.com/ for correct parameter names, configuration options, and API usage patterns before making changes to LLM integration code
 
 ### When Working with File Operations
 - Use FileSystemManager for all file operations
