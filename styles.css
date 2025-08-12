@@ -714,6 +714,17 @@ body {
     position: relative;
 }
 
+.feedback-item ul,
+.feedback-item ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.feedback-item li {
+    margin: 0.25rem 0;
+    line-height: 1.4;
+}
+
 .feedback-item.error {
     background-color: #441111;
     border: 1px solid #cc4444;
