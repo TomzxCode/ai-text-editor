@@ -128,6 +128,42 @@ class UsageTracker {
                 </div>
             </div>
         `;
+
+        // Initialize searchable dropdowns after HTML is created
+        this.initializeSearchableFilters();
+    }
+
+    initializeSearchableFilters() {
+        // Initialize all filter dropdowns as searchable
+        window.searchableDropdown.init('dateRangeFilter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search date ranges...',
+            placeholder: false
+        });
+
+        window.searchableDropdown.init('sessionFilter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search sessions...',
+            placeholder: false
+        });
+
+        window.searchableDropdown.init('providerFilter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search providers...',
+            placeholder: false
+        });
+
+        window.searchableDropdown.init('modelFilter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search models...',
+            placeholder: false
+        });
+
+        window.searchableDropdown.init('callsLimitSelect', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search limits...',
+            placeholder: false
+        });
     }
 
     bindEvents() {
@@ -135,18 +171,18 @@ class UsageTracker {
         document.getElementById('exportUsageBtn')?.addEventListener('click', () => this.exportUsage());
         document.getElementById('clearUsageBtn')?.addEventListener('click', () => this.clearUsage());
         
-        document.getElementById('dateRangeFilter')?.addEventListener('change', (e) => this.handleDateRangeChange(e));
-        document.getElementById('sessionFilter')?.addEventListener('change', () => this.refreshData());
-        document.getElementById('providerFilter')?.addEventListener('change', () => this.refreshData());
-        document.getElementById('modelFilter')?.addEventListener('change', () => this.refreshData());
+        window.searchableDropdown.addEventListener('dateRangeFilter', 'change', (e) => this.handleDateRangeChange(e));
+        window.searchableDropdown.addEventListener('sessionFilter', 'change', () => this.refreshData());
+        window.searchableDropdown.addEventListener('providerFilter', 'change', () => this.refreshData());
+        window.searchableDropdown.addEventListener('modelFilter', 'change', () => this.refreshData());
         document.getElementById('applyDateRangeBtn')?.addEventListener('click', () => this.applyCustomDateRange());
         
         document.getElementById('searchCallsInput')?.addEventListener('input', (e) => this.handleSearchChange(e));
-        document.getElementById('callsLimitSelect')?.addEventListener('change', () => this.refreshCallsList());
+        window.searchableDropdown.addEventListener('callsLimitSelect', 'change', () => this.refreshCallsList());
     }
 
     handleDateRangeChange(e) {
-        const value = e.target.value;
+        const value = e.detail.value;
         const customRange = document.getElementById('customDateRange');
         
         if (value === 'custom') {
@@ -181,9 +217,6 @@ class UsageTracker {
     }
 
     populateSessionFilter() {
-        const sessionFilter = document.getElementById('sessionFilter');
-        if (!sessionFilter) return;
-
         const allCalls = this.llmCallStorage.getAllCalls();
         const sessions = new Set();
         
@@ -196,31 +229,23 @@ class UsageTracker {
         // Get current session ID from SessionManager
         const currentSessionId = window.app?.sessionManager?.getCurrentSessionId();
 
-        // Keep existing options and add new sessions
-        const existingOptions = Array.from(sessionFilter.options).map(opt => opt.value);
-        const staticOptions = ['all', 'current'];
+        // Create choices array
+        const sessionChoices = [
+            { value: 'all', label: 'All Sessions' },
+            { value: 'current', label: 'Current Session' }
+        ];
 
         sessions.forEach(sessionId => {
-            if (!existingOptions.includes(sessionId)) {
-                const option = document.createElement('option');
-                option.value = sessionId;
-                option.textContent = `Session ${sessionId.slice(0, 8)}...`;
-                sessionFilter.appendChild(option);
-            }
+            sessionChoices.push({
+                value: sessionId,
+                label: `Session ${sessionId.slice(0, 8)}...`
+            });
         });
 
-        // Remove session options that no longer exist
-        Array.from(sessionFilter.options).forEach(option => {
-            if (!staticOptions.includes(option.value) && !sessions.has(option.value)) {
-                option.remove();
-            }
-        });
+        window.searchableDropdown.setChoices('sessionFilter', sessionChoices);
     }
 
     populateProviderFilter() {
-        const providerFilter = document.getElementById('providerFilter');
-        if (!providerFilter) return;
-
         const allCalls = this.llmCallStorage.getAllCalls();
         const providers = new Set();
         
@@ -230,31 +255,22 @@ class UsageTracker {
             }
         });
 
-        // Keep existing options and add new providers
-        const existingOptions = Array.from(providerFilter.options).map(opt => opt.value);
-        const staticOptions = ['all'];
+        // Create choices array
+        const providerChoices = [
+            { value: 'all', label: 'All Providers' }
+        ];
 
         providers.forEach(provider => {
-            if (!existingOptions.includes(provider)) {
-                const option = document.createElement('option');
-                option.value = provider;
-                option.textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
-                providerFilter.appendChild(option);
-            }
+            providerChoices.push({
+                value: provider,
+                label: provider.charAt(0).toUpperCase() + provider.slice(1)
+            });
         });
 
-        // Remove provider options that no longer exist
-        Array.from(providerFilter.options).forEach(option => {
-            if (!staticOptions.includes(option.value) && !providers.has(option.value)) {
-                option.remove();
-            }
-        });
+        window.searchableDropdown.setChoices('providerFilter', providerChoices);
     }
 
     populateModelFilter() {
-        const modelFilter = document.getElementById('modelFilter');
-        if (!modelFilter) return;
-
         const allCalls = this.llmCallStorage.getAllCalls();
         const models = new Set();
         
@@ -264,25 +280,19 @@ class UsageTracker {
             }
         });
 
-        // Keep existing options and add new models
-        const existingOptions = Array.from(modelFilter.options).map(opt => opt.value);
-        const staticOptions = ['all'];
+        // Create choices array
+        const modelChoices = [
+            { value: 'all', label: 'All Models' }
+        ];
 
         models.forEach(model => {
-            if (!existingOptions.includes(model)) {
-                const option = document.createElement('option');
-                option.value = model;
-                option.textContent = model;
-                modelFilter.appendChild(option);
-            }
+            modelChoices.push({
+                value: model,
+                label: model
+            });
         });
 
-        // Remove model options that no longer exist
-        Array.from(modelFilter.options).forEach(option => {
-            if (!staticOptions.includes(option.value) && !models.has(option.value)) {
-                option.remove();
-            }
-        });
+        window.searchableDropdown.setChoices('modelFilter', modelChoices);
     }
 
     updateOverviewStats() {
@@ -299,9 +309,9 @@ class UsageTracker {
 
     updatePromptUsage() {
         const calls = this.getFilteredCalls();
-        const sessionFilter = document.getElementById('sessionFilter')?.value || 'all';
-        const providerFilter = document.getElementById('providerFilter')?.value || 'all';
-        const modelFilter = document.getElementById('modelFilter')?.value || 'all';
+        const sessionFilter = window.searchableDropdown.getValue('sessionFilter') || 'all';
+        const providerFilter = window.searchableDropdown.getValue('providerFilter') || 'all';
+        const modelFilter = window.searchableDropdown.getValue('modelFilter') || 'all';
         const promptStats = {};
 
         // Update the section title based on active filters
@@ -428,7 +438,7 @@ class UsageTracker {
 
     refreshCallsList(searchTerm = '') {
         const calls = this.getFilteredCalls();
-        const limit = document.getElementById('callsLimitSelect')?.value || '50';
+        const limit = window.searchableDropdown.getValue('callsLimitSelect') || '50';
         
         let filteredCalls = calls;
         if (searchTerm) {
@@ -475,10 +485,10 @@ class UsageTracker {
     }
 
     getFilteredCalls() {
-        const dateRange = document.getElementById('dateRangeFilter')?.value || 'all';
-        const sessionFilter = document.getElementById('sessionFilter')?.value || 'all';
-        const providerFilter = document.getElementById('providerFilter')?.value || 'all';
-        const modelFilter = document.getElementById('modelFilter')?.value || 'all';
+        const dateRange = window.searchableDropdown.getValue('dateRangeFilter') || 'all';
+        const sessionFilter = window.searchableDropdown.getValue('sessionFilter') || 'all';
+        const providerFilter = window.searchableDropdown.getValue('providerFilter') || 'all';
+        const modelFilter = window.searchableDropdown.getValue('modelFilter') || 'all';
         let calls = this.llmCallStorage.getAllCalls();
 
         // Apply date filtering

@@ -83,8 +83,27 @@ class SettingsManager {
             return;
         }
 
+        // Initialize searchable dropdowns
+        const fontFamilyInstance = window.searchableDropdown.init('fontFamily', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search fonts...',
+            placeholder: false
+        });
+
+        const llmServiceInstance = window.searchableDropdown.init('llmService', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search services...',
+            placeholder: false
+        });
+
+        const llmModelInstance = window.searchableDropdown.init('llmModel', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search models...',
+            placeholder: false
+        });
+
         // Set initial values
-        fontFamilySelect.value = this.settings.fontFamily;
+        window.searchableDropdown.setValue('fontFamily', this.settings.fontFamily);
         fontSizeRange.value = this.settings.fontSize;
         fontSizeValue.textContent = `${this.settings.fontSize}px`;
         
@@ -97,11 +116,11 @@ class SettingsManager {
         }
 
         if (llmServiceSelect) {
-            llmServiceSelect.value = this.settings.llmService;
+            window.searchableDropdown.setValue('llmService', this.settings.llmService);
         }
 
         if (llmModelSelect) {
-            llmModelSelect.value = this.settings.llmModel;
+            window.searchableDropdown.setValue('llmModel', this.settings.llmModel);
         }
 
         if (customBaseUrlInput) {
@@ -109,8 +128,8 @@ class SettingsManager {
         }
 
         // Font family change handler
-        fontFamilySelect.addEventListener('change', (e) => {
-            this.setSetting('fontFamily', e.target.value);
+        window.searchableDropdown.addEventListener('fontFamily', 'change', (e) => {
+            this.setSetting('fontFamily', e.detail.value);
         });
 
         // Font size change handler
@@ -135,19 +154,15 @@ class SettingsManager {
         }
 
         // LLM service select handler
-        if (llmServiceSelect) {
-            llmServiceSelect.addEventListener('change', async (e) => {
-                this.setSetting('llmService', e.target.value);
-                await this.populateModelOptions(e.target.value);
-            });
-        }
+        window.searchableDropdown.addEventListener('llmService', 'change', async (e) => {
+            this.setSetting('llmService', e.detail.value);
+            await this.populateModelOptions(e.detail.value);
+        });
 
         // LLM model select handler
-        if (llmModelSelect) {
-            llmModelSelect.addEventListener('change', (e) => {
-                this.setSetting('llmModel', e.target.value);
-            });
-        }
+        window.searchableDropdown.addEventListener('llmModel', 'change', (e) => {
+            this.setSetting('llmModel', e.detail.value);
+        });
 
         // Custom base URL input handler
         if (customBaseUrlInput) {
@@ -161,12 +176,13 @@ class SettingsManager {
     }
 
     async populateModelOptions(service) {
-        const llmModelSelect = document.getElementById('llmModel');
-        if (!llmModelSelect || !service) return;
+        if (!service) return;
 
         // Show loading state
-        llmModelSelect.innerHTML = '<option value="">Loading models...</option>';
-        llmModelSelect.disabled = true;
+        window.searchableDropdown.disable('llmModel');
+        window.searchableDropdown.setChoices('llmModel', [
+            { value: '', label: 'Loading models...' }
+        ]);
 
         try {
             // Get AIService instance from global app
@@ -193,25 +209,24 @@ class SettingsManager {
             const models = await aiService.fetchModels(service);
             
             // Clear and populate dropdown
-            llmModelSelect.innerHTML = '';
-            
             if (models.length === 0) {
-                llmModelSelect.innerHTML = '<option value="">No models available</option>';
+                window.searchableDropdown.setChoices('llmModel', [
+                    { value: '', label: 'No models available' }
+                ]);
             } else {
-                models.forEach(modelName => {
-                    const option = document.createElement('option');
-                    option.value = modelName;
-                    option.textContent = modelName;
-                    llmModelSelect.appendChild(option);
-                });
+                const modelChoices = models.map(modelName => ({
+                    value: modelName,
+                    label: modelName
+                }));
+                window.searchableDropdown.setChoices('llmModel', modelChoices);
             }
 
             // Set the current model if it exists in the list
             if (models.includes(this.settings.llmModel)) {
-                llmModelSelect.value = this.settings.llmModel;
+                window.searchableDropdown.setValue('llmModel', this.settings.llmModel);
             } else if (models.length > 0) {
                 // If current model is not in the list, select the first one
-                llmModelSelect.value = models[0];
+                window.searchableDropdown.setValue('llmModel', models[0]);
                 this.setSetting('llmModel', models[0]);
             }
 
@@ -228,15 +243,23 @@ class SettingsManager {
                 errorMessage = 'Service unavailable';
             }
             
-            llmModelSelect.innerHTML = `<option value="">${errorMessage}</option>`;
+            window.searchableDropdown.setChoices('llmModel', [
+                { value: '', label: errorMessage }
+            ]);
         } finally {
-            llmModelSelect.disabled = false;
+            window.searchableDropdown.enable('llmModel');
         }
     }
 
     resetToDefaults() {
         this.settings = { ...this.defaultSettings };
         this.saveSettings();
+        
+        // Reset searchable dropdowns
+        window.searchableDropdown.setValue('fontFamily', this.settings.fontFamily);
+        window.searchableDropdown.setValue('llmService', this.settings.llmService);
+        window.searchableDropdown.setValue('llmModel', this.settings.llmModel);
+        
         this.setupUI(); // Refresh UI
         
         // Notify all callbacks

@@ -429,6 +429,91 @@ body {
     outline-offset: 2px;
 }
 
+/* Choices.js Dark Theme Customization */
+.choices {
+    position: relative;
+    margin-bottom: 0;
+}
+
+.choices__inner {
+    background-color: #333 !important;
+    border: 1px solid #555 !important;
+    border-radius: 4px !important;
+    color: #fff !important;
+    min-height: 44px;
+    padding: 0.5rem !important;
+}
+
+.choices__list--single .choices__item {
+    color: #fff !important;
+    background-color: transparent !important;
+}
+
+.choices__placeholder {
+    color: #aaa !important;
+    opacity: 1 !important;
+}
+
+.choices__list--dropdown {
+    background-color: #333 !important;
+    border: 1px solid #555 !important;
+    border-top: 0 !important;
+    border-radius: 0 0 4px 4px !important;
+    color: #fff !important;
+    z-index: 1000;
+}
+
+.choices__list--dropdown .choices__item {
+    color: #fff !important;
+    background-color: #333 !important;
+}
+
+.choices__list--dropdown .choices__item--selectable:hover {
+    background-color: #444 !important;
+    color: #fff !important;
+}
+
+.choices__list--dropdown .choices__item--highlighted {
+    background-color: #007acc !important;
+    color: #fff !important;
+}
+
+.choices__input {
+    color: #fff !important;
+    background-color: transparent !important;
+}
+
+.choices__input:focus {
+    outline: none !important;
+}
+
+.choices.is-focused .choices__inner {
+    border-color: #007acc !important;
+}
+
+.choices.is-open .choices__inner {
+    border-radius: 4px 4px 0 0 !important;
+}
+
+.choices__button {
+    background-color: transparent !important;
+    border: 0 !important;
+    color: #fff !important;
+    opacity: 0.7;
+}
+
+.choices__button:hover {
+    opacity: 1;
+}
+
+/* Filter select styles for Usage Tracker */
+.filter-select.choices .choices__inner {
+    background-color: #1a1a1a !important;
+    border: 1px solid #555 !important;
+    padding: 0.4rem 0.6rem !important;
+    min-height: auto;
+}
+
 .font-size-controls {
     display: flex;
     align-items: center;

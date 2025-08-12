@@ -78,6 +78,9 @@ class AITextEditor {
         this.promptsManager = new PromptsManager();
         this.usageTracker = new UsageTracker();
 
+        // Initialize prompt searchable dropdowns
+        this.initializePromptDropdowns();
+
         this.currentEditingPromptId = null;
         this.renderPrompts();
 
@@ -92,6 +95,22 @@ class AITextEditor {
             this.settingsManager.setupUI();
             this.usageTracker.initialize();
         }, 0);
+    }
+
+    initializePromptDropdowns() {
+        // Initialize prompt LLM service dropdown
+        window.searchableDropdown.init('promptLlmService', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search services...',
+            placeholder: false
+        });
+
+        // Initialize prompt LLM model dropdown
+        window.searchableDropdown.init('promptLlmModel', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search models...',
+            placeholder: false
+        });
     }
 
     setupEventListeners() {
@@ -128,7 +147,7 @@ class AITextEditor {
             this.toggleCustomDelayField();
         });
 
-        this.elements.promptLlmService.addEventListener('change', () => {
+        window.searchableDropdown.addEventListener('promptLlmService', 'change', (e) => {
             this.updatePromptLlmModels();
         });
 
@@ -554,8 +573,8 @@ class AITextEditor {
                 this.elements.promptText.value = prompt.prompt;
                 this.elements.promptTriggerTiming.value = prompt.triggerTiming || 'custom';
                 this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
-                this.elements.promptLlmService.value = prompt.llmService || '';
-                this.elements.promptLlmModel.value = prompt.llmModel || '';
+                window.searchableDropdown.setValue('promptLlmService', prompt.llmService || '');
+                window.searchableDropdown.setValue('promptLlmModel', prompt.llmModel || '');
                 this.elements.promptEnabled.checked = prompt.enabled;
             }
         } else {
@@ -564,8 +583,8 @@ class AITextEditor {
             this.elements.promptText.value = '';
             this.elements.promptTriggerTiming.value = 'custom';
             this.elements.promptCustomDelay.value = '1s';
-            this.elements.promptLlmService.value = '';
-            this.elements.promptLlmModel.value = '';
+            window.searchableDropdown.setValue('promptLlmService', '');
+            window.searchableDropdown.setValue('promptLlmModel', '');
             this.elements.promptEnabled.checked = true;
         }
 
@@ -594,8 +613,8 @@ class AITextEditor {
         const prompt = this.elements.promptText.value.trim();
         const triggerTiming = this.elements.promptTriggerTiming.value;
         const customDelay = this.elements.promptCustomDelay.value.trim();
-        const llmService = this.elements.promptLlmService.value.trim();
-        const llmModel = this.elements.promptLlmModel.value.trim();
+        const llmService = window.searchableDropdown.getValue('promptLlmService') || '';
+        const llmModel = window.searchableDropdown.getValue('promptLlmModel') || '';
         const enabled = this.elements.promptEnabled.checked;
 
         if (!name) {
@@ -656,43 +675,49 @@ class AITextEditor {
         
         if (!llmServiceSelect || !llmModelSelect) return;
 
-        const selectedService = llmServiceSelect.value;
+        const selectedService = window.searchableDropdown.getValue('promptLlmService');
         
         // Clear and reset model options
-        llmModelSelect.innerHTML = '<option value="">Use global setting</option>';
+        window.searchableDropdown.setChoices('promptLlmModel', [
+            { value: '', label: 'Use global setting' }
+        ]);
         
         if (!selectedService) {
-            llmModelSelect.disabled = false;
+            window.searchableDropdown.enable('promptLlmModel');
             return;
         }
 
         // Show loading state
-        llmModelSelect.innerHTML = '<option value="">Loading models...</option>';
-        llmModelSelect.disabled = true;
+        window.searchableDropdown.disable('promptLlmModel');
+        window.searchableDropdown.setChoices('promptLlmModel', [
+            { value: '', label: 'Loading models...' }
+        ]);
 
         try {
             // Get models for the selected service
             const models = await this.aiService.fetchModels(selectedService);
             
             // Clear and populate dropdown
-            llmModelSelect.innerHTML = '<option value="">Use global setting</option>';
+            const modelChoices = [{ value: '', label: 'Use global setting' }];
             
             if (models.length === 0) {
-                llmModelSelect.innerHTML += '<option value="" disabled>No models available</option>';
+                modelChoices.push({ value: '', label: 'No models available', disabled: true });
             } else {
                 models.forEach(modelName => {
-                    const option = document.createElement('option');
-                    option.value = modelName;
-                    option.textContent = modelName;
-                    llmModelSelect.appendChild(option);
+                    modelChoices.push({
+                        value: modelName,
+                        label: modelName
+                    });
                 });
             }
+            
+            window.searchableDropdown.setChoices('promptLlmModel', modelChoices);
 
             // If we're editing a prompt and it has a specific model, try to select it
             if (this.currentEditingPromptId) {
                 const prompt = this.promptsManager.getPrompt(this.currentEditingPromptId);
                 if (prompt && prompt.llmModel && models.includes(prompt.llmModel)) {
-                    llmModelSelect.value = prompt.llmModel;
+                    window.searchableDropdown.setValue('promptLlmModel', prompt.llmModel);
                 }
             }
 
@@ -706,9 +731,12 @@ class AITextEditor {
                 errorMessage = 'Invalid API key';
             }
             
-            llmModelSelect.innerHTML = `<option value="">Use global setting</option><option value="" disabled>${errorMessage}</option>`;
+            window.searchableDropdown.setChoices('promptLlmModel', [
+                { value: '', label: 'Use global setting' },
+                { value: '', label: errorMessage, disabled: true }
+            ]);
         } finally {
-            llmModelSelect.disabled = false;
+            window.searchableDropdown.enable('promptLlmModel');
         }
     }
 
