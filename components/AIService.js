@@ -38,11 +38,15 @@ class AIService {
 
         // Get settings for API configuration
         const settings = window.app?.settingsManager?.getSettings() || {};
+        const settingsManager = window.app?.settingsManager;
 
         // Check if API key is configured
         if (!settings.apiKey) {
             throw new Error('API key required to fetch models');
         }
+
+        // Get service configuration (including custom services)
+        const serviceConfig = settingsManager ? settingsManager.getServiceConfig(service) : null;
 
         // Create an LLM instance with the specified service and API key
         const llmConfig = {
@@ -50,8 +54,10 @@ class AIService {
             apiKey: settings.apiKey
         };
         
-        // Add custom base URL if configured
-        if (settings.customBaseUrl) {
+        // Add base URL from custom service or global setting
+        if (serviceConfig && serviceConfig.baseUrl) {
+            llmConfig.baseUrl = serviceConfig.baseUrl;
+        } else if (settings.customBaseUrl) {
             llmConfig.baseUrl = settings.customBaseUrl;
         }
         
@@ -110,16 +116,23 @@ Please provide your response in whatever format best serves the analysis. Your r
             // Track call duration
             const startTime = performance.now();
             
+            // Get service configuration (including custom services)
+            const settingsManager = window.app?.settingsManager;
+            const actualService = llmService || 'groq';
+            const serviceConfig = settingsManager ? settingsManager.getServiceConfig(actualService) : null;
+
             // Call LLM.js directly using resolved service and model
             const llmConfig = {
-                service: llmService || 'groq',
+                service: actualService,
                 model: llmModel || 'llama3-8b-8192',
                 apiKey: settings.apiKey,
                 extended: true,
             };
             
-            // Add custom base URL if configured
-            if (settings.customBaseUrl) {
+            // Add base URL from custom service or global setting
+            if (serviceConfig && serviceConfig.baseUrl) {
+                llmConfig.baseUrl = serviceConfig.baseUrl;
+            } else if (settings.customBaseUrl) {
                 llmConfig.baseUrl = settings.customBaseUrl;
             }
             

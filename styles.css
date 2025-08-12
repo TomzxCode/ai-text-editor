@@ -514,6 +514,130 @@ body {
     min-height: auto;
 }
 
+/* Custom LLM Services Styles */
+.custom-services-list {
+    margin-bottom: 1rem;
+}
+
+.custom-service-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.custom-service-info {
+    flex: 1;
+}
+
+.custom-service-name {
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 0.25rem;
+}
+
+.custom-service-details {
+    font-size: 0.85rem;
+    color: #ccc;
+    display: flex;
+    gap: 1rem;
+}
+
+.custom-service-key {
+    font-family: monospace;
+    background-color: #1a1a1a;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+}
+
+.custom-service-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.custom-service-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.input-group small {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 0.25rem;
+}
+
+.custom-service-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+    border: 1px solid #dc3545;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.section-header h4 {
+    margin: 0;
+    color: #fff;
+}
+
+.btn-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #555;
+    background-color: #333;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background-color: #007acc;
+    border-color: #007acc;
+}
+
 .font-size-controls {
     display: flex;
     align-items: center;

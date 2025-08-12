@@ -8,8 +8,18 @@ class SettingsManager {
             apiKey: '',
             llmService: 'groq',
             llmModel: 'llama3-8b-8192',
-            customBaseUrl: ''
+            customBaseUrl: '',
+            customServices: []
         };
+
+        // Built-in services that are always available
+        this.builtInServices = [
+            { value: 'anthropic', label: 'Anthropic' },
+            { value: 'google', label: 'Google' },
+            { value: 'groq', label: 'Groq' },
+            { value: 'ollama', label: 'Ollama' },
+            { value: 'openai', label: 'OpenAI' }
+        ];
         
         this.settings = this.loadSettings();
         this.onChangeCallbacks = [];
@@ -171,6 +181,12 @@ class SettingsManager {
             });
         }
 
+        // Initialize custom services UI
+        this.setupCustomServicesUI();
+
+        // Initialize service dropdowns with all services (built-in + custom)
+        this.updateServiceDropdowns();
+
         // Initial population of model options
         this.populateModelOptions(this.settings.llmService);
     }
@@ -266,5 +282,245 @@ class SettingsManager {
         Object.keys(this.settings).forEach(key => {
             this.notifyChange(key, this.settings[key]);
         });
+    }
+
+    // Custom service management methods
+    getAllServices() {
+        return [...this.builtInServices, ...this.settings.customServices];
+    }
+
+    addCustomService(name, serviceKey, baseUrl = '') {
+        const customService = {
+            value: serviceKey,
+            label: name,
+            baseUrl: baseUrl,
+            isCustom: true
+        };
+
+        // Check if service already exists
+        const allServices = this.getAllServices();
+        if (allServices.find(service => service.value === serviceKey)) {
+            throw new Error('Service with this key already exists');
+        }
+
+        this.settings.customServices.push(customService);
+        this.saveSettings();
+        this.notifyChange('customServices', this.settings.customServices);
+        
+        // Update the dropdowns
+        this.updateServiceDropdowns();
+        
+        // Re-render the services list
+        this.renderCustomServicesList();
+        
+        return customService;
+    }
+
+    removeCustomService(serviceKey) {
+        const index = this.settings.customServices.findIndex(service => service.value === serviceKey);
+        if (index === -1) {
+            throw new Error('Custom service not found');
+        }
+
+        this.settings.customServices.splice(index, 1);
+        this.saveSettings();
+        this.notifyChange('customServices', this.settings.customServices);
+        
+        // Update the dropdowns
+        this.updateServiceDropdowns();
+    }
+
+    getServiceConfig(serviceKey) {
+        const allServices = this.getAllServices();
+        return allServices.find(service => service.value === serviceKey);
+    }
+
+    updateServiceDropdowns() {
+        const allServices = this.getAllServices();
+        const serviceChoices = allServices.map(service => ({
+            value: service.value,
+            label: service.label
+        }));
+
+        // Update main settings dropdown
+        window.searchableDropdown.setChoices('llmService', serviceChoices);
+        
+        // Update prompt override dropdown if it exists
+        const promptServiceChoices = [
+            { value: '', label: 'Use global setting' },
+            ...serviceChoices
+        ];
+        window.searchableDropdown.setChoices('promptLlmService', promptServiceChoices);
+    }
+
+    setupCustomServicesUI() {
+        const addBtn = document.getElementById('addCustomServiceBtn');
+        const serviceForm = document.getElementById('customServiceForm');
+        const saveBtn = document.getElementById('saveCustomServiceBtn');
+        const cancelBtn = document.getElementById('cancelCustomServiceBtn');
+
+        if (!addBtn || !serviceForm || !saveBtn || !cancelBtn) return;
+
+        // Show/hide form handlers
+        addBtn.addEventListener('click', () => {
+            this.showCustomServiceForm();
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            this.hideCustomServiceForm();
+        });
+
+        // Save custom service
+        saveBtn.addEventListener('click', () => {
+            this.saveCustomService();
+        });
+
+        // Auto-generate service key from name
+        const nameInput = document.getElementById('customServiceName');
+        const keyInput = document.getElementById('customServiceKey');
+        
+        if (nameInput && keyInput) {
+            nameInput.addEventListener('input', (e) => {
+                // Only auto-generate if key field is empty
+                if (!keyInput.value) {
+                    const name = e.target.value;
+                    // Convert to lowercase, replace spaces/special chars with hyphens
+                    const autoKey = name
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                    keyInput.value = autoKey;
+                }
+            });
+        }
+
+        // Keyboard shortcuts for form
+        document.getElementById('customServiceForm').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                this.saveCustomService();
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                this.hideCustomServiceForm();
+                e.preventDefault();
+            }
+        });
+
+        // Initial render of custom services list
+        this.renderCustomServicesList();
+    }
+
+    showCustomServiceForm() {
+        const form = document.getElementById('customServiceForm');
+        if (form) {
+            form.style.display = 'block';
+            document.getElementById('customServiceName').focus();
+        }
+    }
+
+    hideCustomServiceForm() {
+        const form = document.getElementById('customServiceForm');
+        if (form) {
+            form.style.display = 'none';
+            // Clear form fields
+            document.getElementById('customServiceName').value = '';
+            document.getElementById('customServiceKey').value = '';
+            document.getElementById('customServiceUrl').value = '';
+        }
+    }
+
+    saveCustomService() {
+        const name = document.getElementById('customServiceName').value.trim();
+        const key = document.getElementById('customServiceKey').value.trim();
+        const url = document.getElementById('customServiceUrl').value.trim();
+
+        // Validation
+        if (!name) {
+            alert('Please enter a service name');
+            return;
+        }
+
+        if (!key) {
+            alert('Please enter a service key');
+            return;
+        }
+
+        // Validate key format
+        if (!/^[a-z0-9-]+$/.test(key)) {
+            alert('Service key can only contain lowercase letters, numbers, and hyphens');
+            return;
+        }
+
+        try {
+            this.addCustomService(name, key, url);
+            this.hideCustomServiceForm();
+            
+            // Show success message
+            if (window.app?.notificationManager) {
+                window.app.notificationManager.success(`Custom service "${name}" added successfully`);
+            }
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    renderCustomServicesList() {
+        const container = document.getElementById('customServicesList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (this.settings.customServices.length === 0) {
+            container.innerHTML = '<p class="no-data">No custom services configured.</p>';
+            return;
+        }
+
+        this.settings.customServices.forEach(service => {
+            const serviceItem = document.createElement('div');
+            serviceItem.className = 'custom-service-item';
+            
+            serviceItem.innerHTML = `
+                <div class="custom-service-info">
+                    <div class="custom-service-name">${this.escapeHTML(service.label)}</div>
+                    <div class="custom-service-details">
+                        <span>Key: <code class="custom-service-key">${this.escapeHTML(service.value)}</code></span>
+                        ${service.baseUrl ? `<span>URL: ${this.escapeHTML(service.baseUrl)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="custom-service-actions">
+                    <button class="btn-danger" data-service-key="${this.escapeHTML(service.value)}" title="Remove Service">×</button>
+                </div>
+            `;
+
+            // Add delete handler
+            const deleteBtn = serviceItem.querySelector('.btn-danger');
+            deleteBtn.addEventListener('click', () => {
+                this.deleteCustomService(service.value, service.label);
+            });
+
+            container.appendChild(serviceItem);
+        });
+    }
+
+    deleteCustomService(serviceKey, serviceName) {
+        if (confirm(`Are you sure you want to remove the custom service "${serviceName}"?`)) {
+            try {
+                this.removeCustomService(serviceKey);
+                this.renderCustomServicesList();
+                
+                // Show success message
+                if (window.app?.notificationManager) {
+                    window.app.notificationManager.success(`Custom service "${serviceName}" removed`);
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    }
+
+    escapeHTML(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
