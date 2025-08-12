@@ -415,6 +415,7 @@ body {
 }
 
 .setting-select {
+    width: 100%;
     padding: 0.5rem;
     background-color: #333;
     border: 1px solid #555;
@@ -433,6 +434,7 @@ body {
 .choices {
     position: relative;
     margin-bottom: 0;
+    width: 100%;
 }
 
 .choices__inner {

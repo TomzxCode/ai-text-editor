@@ -53,14 +53,14 @@ class AIService {
             service: service,
             apiKey: settings.apiKey
         };
-        
+
         // Add base URL from custom service or global setting
         if (serviceConfig && serviceConfig.baseUrl) {
             llmConfig.baseUrl = serviceConfig.baseUrl;
         } else if (settings.customBaseUrl) {
             llmConfig.baseUrl = settings.customBaseUrl;
         }
-        
+
         const llm = new this.LLM(llmConfig);
         const models = await llm.fetchModels();
 
@@ -106,7 +106,7 @@ class AIService {
             // Give the LLM freedom to respond in any format
             const fullPrompt = `${processedPrompt}
 
-Please provide your response in whatever format best serves the analysis. Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container.`;
+Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container.`;
 
             // Check if LLM.js is loaded
             if (!this.LLM) {
@@ -115,7 +115,7 @@ Please provide your response in whatever format best serves the analysis. Your r
 
             // Track call duration
             const startTime = performance.now();
-            
+
             // Get service configuration (including custom services)
             const settingsManager = window.app?.settingsManager;
             const actualService = llmService || 'groq';
@@ -128,14 +128,14 @@ Please provide your response in whatever format best serves the analysis. Your r
                 apiKey: settings.apiKey,
                 extended: true,
             };
-            
+
             // Add base URL from custom service or global setting
             if (serviceConfig && serviceConfig.baseUrl) {
                 llmConfig.baseUrl = serviceConfig.baseUrl;
             } else if (settings.customBaseUrl) {
                 llmConfig.baseUrl = settings.customBaseUrl;
             }
-            
+
             const llmResponse = await this.LLM(fullPrompt, llmConfig);
 
             // Calculate duration in milliseconds
@@ -151,13 +151,13 @@ Please provide your response in whatever format best serves the analysis. Your r
 
             // Extract content from HTML code blocks if present
             const extractedResponse = this.extractHTMLFromCodeBlocks(response);
-            
+
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(extractedResponse);
 
             // Format duration for display
-            const formattedDuration = duration < 1000 ? 
-                `${Math.round(duration)}ms` : 
+            const formattedDuration = duration < 1000 ?
+                `${Math.round(duration)}ms` :
                 `${(duration / 1000).toFixed(1)}s`;
 
             // Format response as HTML directly
@@ -396,18 +396,18 @@ Please provide your response in whatever format best serves the analysis. Your r
 
     extractHTMLFromCodeBlocks(text) {
         if (typeof text !== 'string') return text;
-        
+
         // Look for HTML code blocks: ```html ... ```
         const htmlCodeBlockRegex = /```html\s*\n?([\s\S]*?)\n?```/gi;
         const matches = text.match(htmlCodeBlockRegex);
-        
+
         if (matches && matches.length > 0) {
             // Extract content from the first HTML code block found
             const firstMatch = matches[0];
             const content = firstMatch.replace(/```html\s*\n?/i, '').replace(/\n?```$/, '');
             return content.trim();
         }
-        
+
         // If no HTML code blocks found, return original text
         return text;
     }
@@ -1440,11 +1440,11 @@ Please provide your response in whatever format best serves the analysis. Your r
     resetTimersForNewContent() {
         // Clear all existing timers and reset content tracking
         this.clearTimers();
-        
+
         // Reset generation flags
         this.isGeneratingFeedback = false;
         this.hasPendingFeedbackRequest = false;
-        
+
         // Clear any existing feedback UI to prepare for new content
         this.clearOnlyLoadingPlaceholders();
     }
