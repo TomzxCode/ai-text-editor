@@ -29,26 +29,16 @@ class EditorManager {
             }
         });
 
-        this.editor.on('change', () => {
+        this.editor.on('change', (cm, change) => {
             this.handleEditorChange();
-        });
-
-        this.editor.on('inputRead', (cm, change) => {
-            // Trigger AI feedback for various input types
+            
+            // Trigger AI feedback for user input changes
             if (change.origin === '+input' || 
                 change.origin === 'paste' || 
                 change.origin === '+delete' ||
                 (change.origin && change.origin.indexOf('paste') !== -1)) {
                 this.onChangeCallback('input');
             }
-        });
-
-        // Add paste event listener to ensure paste operations trigger AI feedback
-        this.editor.on('paste', () => {
-            // Use setTimeout to ensure the paste content is processed first
-            setTimeout(() => {
-                this.onChangeCallback('input');
-            }, 0);
         });
 
         // Apply initial font settings
