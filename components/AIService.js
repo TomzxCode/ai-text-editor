@@ -40,10 +40,6 @@ class AIService {
         const settings = window.app?.settingsManager?.getSettings() || {};
         const settingsManager = window.app?.settingsManager;
 
-        // Check if API key is configured
-        if (!settings.apiKey) {
-            throw new Error('API key required to fetch models');
-        }
 
         // Get service configuration (including custom services)
         const serviceConfig = settingsManager ? settingsManager.getServiceConfig(service) : null;
@@ -98,10 +94,6 @@ class AIService {
             const llmService = (promptConfig?.llmService && promptConfig.llmService.trim()) ? promptConfig.llmService : settings.llmService;
             const llmModel = (promptConfig?.llmModel && promptConfig.llmModel.trim()) ? promptConfig.llmModel : settings.llmModel;
 
-            // Check if API key is configured
-            if (!settings.apiKey) {
-                throw new Error('API key not configured');
-            }
 
             // Give the LLM freedom to respond in any format
             const fullPrompt = `${processedPrompt}
