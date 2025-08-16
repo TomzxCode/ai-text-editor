@@ -22,9 +22,6 @@ const urlsToCache = [
   'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/choices.js/10.2.0/choices.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/choices.js/10.2.0/choices.min.js',
   'https://llmjs.themaximalist.com/js/llm.js'
