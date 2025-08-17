@@ -92,6 +92,7 @@
                 <div class="tab-nav">
                     <button class="tab-btn" id="feedbackTab" data-tab="feedback">Feedback</button>
                     <button class="tab-btn" id="promptsTab" data-tab="prompts">Prompts</button>
+                    <button class="tab-btn" id="historyTab" data-tab="history">History</button>
                     <button class="tab-btn" id="usageTab" data-tab="usage">Usage</button>
                     <button class="tab-btn" id="settingsTab" data-tab="settings">Settings</button>
                 </div>
@@ -119,6 +120,11 @@
                             <p class="no-prompts">No prompts yet. Click + to add one.</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- History Tab Content -->
+                <div class="tab-content" id="historyTabContent">
+                    <!-- Content will be populated by HistoryManager.js -->
                 </div>
 
                 <!-- Usage Tab Content -->
@@ -279,22 +285,12 @@
                     <p class="form-hint">Format: Ad Bh Cm Ds (e.g., "2m 30s" for 2 minutes 30 seconds, "5s" for 5 seconds)</p>
                 </div>
                 <div class="form-group">
-                    <label for="promptLlmService">LLM Service Override (Optional):</label>
-                    <select id="promptLlmService" class="setting-select">
-                        <option value="">Use global setting</option>
-                        <option value="anthropic">Anthropic</option>
-                        <option value="google">Google</option>
-                        <option value="groq">Groq</option>
-                        <option value="openai">OpenAI</option>
-                    </select>
-                    <p class="form-hint">Override the global LLM service setting for this prompt only</p>
-                </div>
-                <div class="form-group">
-                    <label for="promptLlmModel">Model Override (Optional):</label>
-                    <select id="promptLlmModel" class="setting-select">
-                        <option value="">Use global setting</option>
-                    </select>
-                    <p class="form-hint">Override the global model setting for this prompt only</p>
+                    <label>Provider Selection:</label>
+                    <div id="providersList" class="providers-list">
+                        <!-- Dynamic provider selection will be populated here -->
+                    </div>
+                    <button type="button" class="btn-secondary" id="addProviderBtn">+ Add Provider</button>
+                    <p class="form-hint">Select multiple providers+models to run in parallel. Results will be shown together. Leave empty to use global settings.</p>
                 </div>
                 <div class="form-group">
                     <label>
@@ -328,6 +324,7 @@
     <script src="components/EditorManager.js"></script>
     <script src="components/LLMCallStorage.js"></script>
     <script src="components/UsageTracker.js"></script>
+    <script src="components/HistoryManager.js"></script>
     <script src="components/AIService.js"></script>
     <script src="components/UIManager.js"></script>
     <script src="components/PromptsManager.js"></script>

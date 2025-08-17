@@ -147,3 +147,7 @@ Thumbs.db
 # Custom
 debug*.py
 tmp/
+
+node_modules
+out
+*.vsix

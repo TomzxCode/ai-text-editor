@@ -137,15 +137,28 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const response = llmResponse.content;
             const usage = llmResponse.usage;
 
-            // Store the LLM call in local storage (without response content)
-            const sessionId = window.app?.sessionManager?.getCurrentSessionId();
-            this.llmCallStorage.storeLLMCall(promptName, usage, sessionId, llmService || 'groq', llmModel || 'llama3-8b-8192', duration);
-
             // Extract content from HTML code blocks if present
             const extractedResponse = this.extractHTMLFromCodeBlocks(response);
 
             // Strip any <style> tags from the response
             const cleanedResponse = this.stripStyleTags(extractedResponse);
+
+            // Store the LLM call with complete feedback content
+            const sessionId = window.app?.sessionManager?.getCurrentSessionId();
+            const currentFile = window.app?.editorManager?.getCurrentFile();
+            const filePath = currentFile ? currentFile.path : null;
+            
+            this.llmCallStorage.storeLLMCall(
+                promptName, 
+                usage, 
+                sessionId, 
+                llmService || 'groq', 
+                llmModel || 'llama3-8b-8192', 
+                duration,
+                filePath,
+                cleanedResponse,
+                'html'
+            ).catch(console.error);
 
             // Format duration for display
             const formattedDuration = duration < 1000 ?
@@ -218,6 +231,24 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                     </div>
                 </div>
             `;
+            
+            // Store error in history as well
+            const sessionId = window.app?.sessionManager?.getCurrentSessionId();
+            const currentFile = window.app?.editorManager?.getCurrentFile();
+            const filePath = currentFile ? currentFile.path : null;
+            
+            this.llmCallStorage.storeLLMCall(
+                promptName, 
+                null, // no usage data for errors
+                sessionId, 
+                llmService || 'groq', 
+                llmModel || 'llama3-8b-8192', 
+                0, // no duration for errors
+                filePath,
+                errorHtml,
+                'error'
+            ).catch(console.error);
+            
             return {
                 htmlContent: errorHtml,
                 promptName: promptName,

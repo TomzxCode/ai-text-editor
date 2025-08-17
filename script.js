@@ -58,8 +58,8 @@ class AITextEditor {
             promptTriggerTiming: document.getElementById('promptTriggerTiming'),
             promptCustomDelay: document.getElementById('promptCustomDelay'),
             customDelayGroup: document.getElementById('customDelayGroup'),
-            promptLlmService: document.getElementById('promptLlmService'),
-            promptLlmModel: document.getElementById('promptLlmModel'),
+            providersList: document.getElementById('providersList'),
+            addProviderBtn: document.getElementById('addProviderBtn'),
             promptEnabled: document.getElementById('promptEnabled'),
             savePromptBtn: document.getElementById('savePromptBtn'),
             cancelPromptBtn: document.getElementById('cancelPromptBtn'),
@@ -80,9 +80,10 @@ class AITextEditor {
         this.aiService = new AIService();
         this.promptsManager = new PromptsManager();
         this.usageTracker = new UsageTracker();
+        this.historyManager = new HistoryManager();
 
-        // Initialize prompt searchable dropdowns
-        this.initializePromptDropdowns();
+        // Initialize provider management
+        this.initializeProviderManagement();
 
         this.currentEditingPromptId = null;
         this.renderPrompts();
@@ -91,29 +92,25 @@ class AITextEditor {
         this.setupTextAnalysisCallbacks();
 
         // Initialize text statistics display
-        this.updateTextStatisticsDisplay();
+        this.updateTextStatisticsDisplay().catch(console.error);
 
         // Setup settings UI after DOM is ready
-        setTimeout(() => {
+        setTimeout(async () => {
             this.settingsManager.setupUI();
-            this.usageTracker.initialize();
+            await this.usageTracker.initialize();
+            await this.historyManager.initialize();
         }, 0);
     }
 
-    initializePromptDropdowns() {
-        // Initialize prompt LLM service dropdown
-        window.searchableDropdown.init('promptLlmService', {
-            searchEnabled: true,
-            searchPlaceholderValue: 'Search services...',
-            placeholder: false
+    initializeProviderManagement() {
+        // Add event listener for add provider button
+        this.elements.addProviderBtn.addEventListener('click', () => {
+            this.addProviderRow();
         });
-
-        // Initialize prompt LLM model dropdown
-        window.searchableDropdown.init('promptLlmModel', {
-            searchEnabled: true,
-            searchPlaceholderValue: 'Search models...',
-            placeholder: false
-        });
+        
+        // Initialize with empty state
+        this.currentProviders = [];
+        this.updateProvidersDisplay();
     }
 
     setupEventListeners() {
@@ -150,9 +147,6 @@ class AITextEditor {
             this.toggleCustomDelayField();
         });
 
-        window.searchableDropdown.addEventListener('promptLlmService', 'change', (e) => {
-            this.updatePromptLlmModels();
-        });
 
         // Track mousedown to distinguish between clicks and text selection
         let modalMouseDownTarget = null;
@@ -235,7 +229,7 @@ class AITextEditor {
                     // Just ensure any existing delay-triggered feedback doesn't override it
                 }
                 // Update cost display after individual prompt feedback is generated
-                this.updateTextStatisticsDisplay();
+                this.updateTextStatisticsDisplay().catch(console.error);
             },
             (error) => {
                 console.error('Error generating individual prompt feedback:', error);
@@ -263,7 +257,7 @@ class AITextEditor {
                 // Reset text analysis for new file
                 this.textAnalysisManager.reset();
                 // Update statistics display for new file
-                this.updateTextStatisticsDisplay();
+                this.updateTextStatisticsDisplay().catch(console.error);
                 break;
         }
     }
@@ -279,7 +273,7 @@ class AITextEditor {
         this.textAnalysisManager.analyzeText(currentText);
 
         // Update text statistics display
-        this.updateTextStatisticsDisplay();
+        this.updateTextStatisticsDisplay().catch(console.error);
 
         // Schedule AI feedback as before
         this.scheduleAIFeedback();
@@ -290,9 +284,9 @@ class AITextEditor {
         return this.textAnalysisManager.getStatistics(currentText);
     }
 
-    updateTextStatisticsDisplay() {
+    async updateTextStatisticsDisplay() {
         const stats = this.getTextStatistics();
-        const llmStats = this.getLLMStatistics();
+        const llmStats = await this.getLLMStatistics();
 
         // Format word count
         const wordText = stats.wordCount === 1 ? '1 word' : `${stats.wordCount} words`;
@@ -319,7 +313,7 @@ class AITextEditor {
         this.elements.outputTokensSpan.textContent = outputText;
     }
 
-    getLLMStatistics() {
+    async getLLMStatistics() {
         if (!this.aiService?.llmCallStorage || !this.sessionManager) {
             return {
                 totalCalls: 0,
@@ -330,11 +324,11 @@ class AITextEditor {
         }
 
         const currentSessionId = this.sessionManager.getCurrentSessionId();
-        const usageStats = this.aiService.llmCallStorage.getUsageStatisticsBySession(currentSessionId);
+        const usageStats = await this.aiService.llmCallStorage.getUsageStatisticsBySession(currentSessionId);
         let totalCost = 0;
 
         // Get session calls to calculate cost
-        const sessionCalls = this.aiService.llmCallStorage.getCallsBySession(currentSessionId);
+        const sessionCalls = await this.aiService.llmCallStorage.getCallsBySession(currentSessionId);
         
         sessionCalls.forEach(call => {
             if (call.usage) {
@@ -515,7 +509,7 @@ class AITextEditor {
             (feedback) => {
                 this.uiManager.displayFeedback(feedback);
                 // Update cost display after feedback is generated
-                this.updateTextStatisticsDisplay();
+                this.updateTextStatisticsDisplay().catch(console.error);
             },
             (error) => this.uiManager.showFeedbackError(error),
             delayTriggeredPrompts,
@@ -576,8 +570,7 @@ class AITextEditor {
                 this.elements.promptText.value = prompt.prompt;
                 this.elements.promptTriggerTiming.value = prompt.triggerTiming || 'custom';
                 this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
-                window.searchableDropdown.setValue('promptLlmService', prompt.llmService || '');
-                window.searchableDropdown.setValue('promptLlmModel', prompt.llmModel || '');
+                this.currentProviders = prompt.providers ? [...prompt.providers] : [];
                 this.elements.promptEnabled.checked = prompt.enabled;
             }
         } else {
@@ -586,14 +579,13 @@ class AITextEditor {
             this.elements.promptText.value = '';
             this.elements.promptTriggerTiming.value = 'custom';
             this.elements.promptCustomDelay.value = '1s';
-            window.searchableDropdown.setValue('promptLlmService', '');
-            window.searchableDropdown.setValue('promptLlmModel', '');
+            this.currentProviders = [];
             this.elements.promptEnabled.checked = true;
         }
 
         this.elements.promptModal.style.display = 'flex';
         this.toggleCustomDelayField(); // Show/hide custom delay field based on selection
-        this.updatePromptLlmModels(); // Populate models for the selected service
+        this.updateProvidersDisplay(); // Populate provider list
         this.elements.promptName.focus();
     }
 
@@ -616,8 +608,7 @@ class AITextEditor {
         const prompt = this.elements.promptText.value.trim();
         const triggerTiming = this.elements.promptTriggerTiming.value;
         const customDelay = this.elements.promptCustomDelay.value.trim();
-        const llmService = window.searchableDropdown.getValue('promptLlmService') || '';
-        const llmModel = window.searchableDropdown.getValue('promptLlmModel') || '';
+        const providers = this.currentProviders.filter(p => p.service && p.model);
         const enabled = this.elements.promptEnabled.checked;
 
         if (!name) {
@@ -655,13 +646,12 @@ class AITextEditor {
                     prompt,
                     triggerTiming,
                     customDelay: triggerTiming === 'custom' ? customDelay : '',
-                    llmService,
-                    llmModel,
+                    providers,
                     enabled
                 });
                 this.notificationManager.success('Prompt updated successfully');
             } else {
-                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, llmService, llmModel);
+                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, providers);
                 this.notificationManager.success('Prompt added successfully');
             }
 
@@ -672,74 +662,136 @@ class AITextEditor {
         }
     }
 
-    async updatePromptLlmModels() {
-        const llmServiceSelect = this.elements.promptLlmService;
-        const llmModelSelect = this.elements.promptLlmModel;
-        
-        if (!llmServiceSelect || !llmModelSelect) return;
+    addProviderRow(service = '', model = '') {
+        const providerIndex = this.currentProviders.length;
+        this.currentProviders.push({ service, model });
+        this.updateProvidersDisplay();
+    }
 
-        const selectedService = window.searchableDropdown.getValue('promptLlmService');
+    removeProviderRow(index) {
+        this.currentProviders.splice(index, 1);
+        this.updateProvidersDisplay();
+    }
+
+    updateProvidersDisplay() {
+        const container = this.elements.providersList;
+        container.innerHTML = '';
+
+        if (this.currentProviders.length === 0) {
+            container.innerHTML = `
+                <div class="empty-providers-message">
+                    No providers selected. Global settings will be used.
+                </div>
+            `;
+            return;
+        }
+
+        this.currentProviders.forEach((provider, index) => {
+            const providerRow = document.createElement('div');
+            providerRow.className = 'provider-item';
+            
+            const serviceId = `provider-service-${index}`;
+            const modelId = `provider-model-${index}`;
+            
+            providerRow.innerHTML = `
+                <div class="provider-selects">
+                    <select id="${serviceId}" class="provider-service setting-select">
+                        <option value="">Select service...</option>
+                    </select>
+                    <select id="${modelId}" class="provider-model setting-select">
+                        <option value="">Select model...</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-provider-btn" onclick="window.app.removeProviderRow(${index})">×</button>
+            `;
+            
+            container.appendChild(providerRow);
+
+            // Initialize searchable dropdowns for this row
+            const serviceDropdown = window.searchableDropdown.init(serviceId, {
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search services...',
+                placeholder: false
+            });
+
+            const modelDropdown = window.searchableDropdown.init(modelId, {
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search models...',
+                placeholder: false
+            });
+
+            // Populate service options
+            const allServices = this.settingsManager.getAllServices();
+            const serviceChoices = [
+                { value: '', label: 'Select service...' },
+                ...allServices.map(service => ({
+                    value: service.value,
+                    label: service.label
+                }))
+            ];
+            window.searchableDropdown.setChoices(serviceId, serviceChoices);
+
+            // Set current values if they exist
+            if (provider.service) {
+                window.searchableDropdown.setValue(serviceId, provider.service);
+                this.updateProviderModels(index, provider.service, provider.model);
+            }
+
+            // Add change handler for service selection
+            window.searchableDropdown.addEventListener(serviceId, 'change', (e) => {
+                this.currentProviders[index].service = e.detail.value;
+                this.currentProviders[index].model = ''; // Reset model when service changes
+                this.updateProviderModels(index, e.detail.value);
+            });
+
+            // Add change handler for model selection
+            window.searchableDropdown.addEventListener(modelId, 'change', (e) => {
+                this.currentProviders[index].model = e.detail.value;
+            });
+        });
+    }
+
+    async updateProviderModels(providerIndex, service, selectedModel = '') {
+        const modelId = `provider-model-${providerIndex}`;
         
-        // Clear and reset model options
-        window.searchableDropdown.setChoices('promptLlmModel', [
-            { value: '', label: 'Use global setting' }
-        ]);
-        
-        if (!selectedService) {
-            window.searchableDropdown.enable('promptLlmModel');
+        if (!service) {
+            window.searchableDropdown.setChoices(modelId, [
+                { value: '', label: 'Select model...' }
+            ]);
             return;
         }
 
         // Show loading state
-        window.searchableDropdown.disable('promptLlmModel');
-        window.searchableDropdown.setChoices('promptLlmModel', [
+        window.searchableDropdown.disable(modelId);
+        window.searchableDropdown.setChoices(modelId, [
             { value: '', label: 'Loading models...' }
         ]);
 
         try {
-            // Get models for the selected service
-            const models = await this.aiService.fetchModels(selectedService);
+            const models = await this.aiService.fetchModels(service);
             
-            // Clear and populate dropdown
-            const modelChoices = [{ value: '', label: 'Use global setting' }];
+            const modelChoices = [
+                { value: '', label: 'Select model...' },
+                ...models.map(modelName => ({
+                    value: modelName,
+                    label: modelName
+                }))
+            ];
             
-            if (models.length === 0) {
-                modelChoices.push({ value: '', label: 'No models available', disabled: true });
-            } else {
-                models.forEach(modelName => {
-                    modelChoices.push({
-                        value: modelName,
-                        label: modelName
-                    });
-                });
-            }
-            
-            window.searchableDropdown.setChoices('promptLlmModel', modelChoices);
+            window.searchableDropdown.setChoices(modelId, modelChoices);
 
-            // If we're editing a prompt and it has a specific model, try to select it
-            if (this.currentEditingPromptId) {
-                const prompt = this.promptsManager.getPrompt(this.currentEditingPromptId);
-                if (prompt && prompt.llmModel && models.includes(prompt.llmModel)) {
-                    window.searchableDropdown.setValue('promptLlmModel', prompt.llmModel);
-                }
+            // Set selected model if provided
+            if (selectedModel && models.includes(selectedModel)) {
+                window.searchableDropdown.setValue(modelId, selectedModel);
             }
 
         } catch (error) {
-            console.error('Error populating prompt model options:', error);
-            
-            let errorMessage = 'Error loading models';
-            if (error.message.includes('API key')) {
-                errorMessage = 'API key required';
-            } else if (error.message.includes('Unauthorized')) {
-                errorMessage = 'Invalid API key';
-            }
-            
-            window.searchableDropdown.setChoices('promptLlmModel', [
-                { value: '', label: 'Use global setting' },
-                { value: '', label: errorMessage, disabled: true }
+            console.error('Error fetching models for provider:', error);
+            window.searchableDropdown.setChoices(modelId, [
+                { value: '', label: 'Error loading models' }
             ]);
         } finally {
-            window.searchableDropdown.enable('promptLlmModel');
+            window.searchableDropdown.enable(modelId);
         }
     }
 

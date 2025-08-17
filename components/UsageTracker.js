@@ -5,14 +5,47 @@ class UsageTracker {
         this.autoRefreshEnabled = true;
     }
 
-    initialize() {
+    async initialize() {
         this.setupUI();
         this.bindEvents();
-        this.refreshData();
         
-        if (this.autoRefreshEnabled) {
-            this.startAutoRefresh();
+        try {
+            // Show loading state
+            this.showLoadingState();
+            
+            // Wait for LLMCallStorage to be fully initialized before loading data
+            await this.llmCallStorage.waitForInitialization();
+            await this.refreshData();
+            
+            if (this.autoRefreshEnabled) {
+                this.startAutoRefresh();
+            }
+        } catch (error) {
+            console.error('Error initializing UsageTracker:', error);
+            this.showErrorState('Failed to initialize usage tracking');
         }
+    }
+
+    showLoadingState() {
+        // Set loading text for overview stats
+        document.getElementById('totalCallsValue').textContent = 'Loading...';
+        document.getElementById('totalTokensValue').textContent = 'Loading...';
+        document.getElementById('inputTokensValue').textContent = 'Loading...';
+        document.getElementById('outputTokensValue').textContent = 'Loading...';
+        document.getElementById('totalDurationValue').textContent = 'Loading...';
+        document.getElementById('avgDurationValue').textContent = 'Loading...';
+    }
+
+    showErrorState(message) {
+        // Set error text for overview stats
+        document.getElementById('totalCallsValue').textContent = 'Error';
+        document.getElementById('totalTokensValue').textContent = 'Error';
+        document.getElementById('inputTokensValue').textContent = 'Error';
+        document.getElementById('outputTokensValue').textContent = 'Error';
+        document.getElementById('totalDurationValue').textContent = 'Error';
+        document.getElementById('avgDurationValue').textContent = 'Error';
+        
+        console.error('UsageTracker error:', message);
     }
 
     setupUI() {
@@ -167,18 +200,18 @@ class UsageTracker {
     }
 
     bindEvents() {
-        document.getElementById('refreshUsageBtn')?.addEventListener('click', () => this.refreshData());
-        document.getElementById('exportUsageBtn')?.addEventListener('click', () => this.exportUsage());
-        document.getElementById('clearUsageBtn')?.addEventListener('click', () => this.clearUsage());
+        document.getElementById('refreshUsageBtn')?.addEventListener('click', async () => await this.refreshData());
+        document.getElementById('exportUsageBtn')?.addEventListener('click', async () => await this.exportUsage());
+        document.getElementById('clearUsageBtn')?.addEventListener('click', async () => await this.clearUsage());
         
         window.searchableDropdown.addEventListener('dateRangeFilter', 'change', (e) => this.handleDateRangeChange(e));
-        window.searchableDropdown.addEventListener('sessionFilter', 'change', () => this.refreshData());
-        window.searchableDropdown.addEventListener('providerFilter', 'change', () => this.refreshData());
-        window.searchableDropdown.addEventListener('modelFilter', 'change', () => this.refreshData());
-        document.getElementById('applyDateRangeBtn')?.addEventListener('click', () => this.applyCustomDateRange());
+        window.searchableDropdown.addEventListener('sessionFilter', 'change', async () => await this.refreshData());
+        window.searchableDropdown.addEventListener('providerFilter', 'change', async () => await this.refreshData());
+        window.searchableDropdown.addEventListener('modelFilter', 'change', async () => await this.refreshData());
+        document.getElementById('applyDateRangeBtn')?.addEventListener('click', async () => await this.applyCustomDateRange());
         
         document.getElementById('searchCallsInput')?.addEventListener('input', (e) => this.handleSearchChange(e));
-        window.searchableDropdown.addEventListener('callsLimitSelect', 'change', () => this.refreshCallsList());
+        window.searchableDropdown.addEventListener('callsLimitSelect', 'change', async () => await this.refreshCallsList());
     }
 
     handleDateRangeChange(e) {
@@ -189,37 +222,46 @@ class UsageTracker {
             customRange.style.display = 'flex';
         } else {
             customRange.style.display = 'none';
-            this.refreshData();
+            this.refreshData().catch(console.error);
         }
     }
 
-    applyCustomDateRange() {
+    async applyCustomDateRange() {
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
         
         if (startDate && endDate) {
-            this.refreshData();
+            await this.refreshData();
         }
     }
 
     handleSearchChange(e) {
         const searchTerm = e.target.value.toLowerCase();
-        this.refreshCallsList(searchTerm);
+        this.refreshCallsList(searchTerm).catch(console.error);
     }
 
-    refreshData() {
-        this.populateSessionFilter();
-        this.populateProviderFilter();
-        this.populateModelFilter();
-        this.updateOverviewStats();
-        this.updatePromptUsage();
-        this.refreshCallsList();
+    async refreshData() {
+        await this.populateSessionFilter();
+        await this.populateProviderFilter();
+        await this.populateModelFilter();
+        await this.updateOverviewStats();
+        await this.updatePromptUsage();
+        await this.refreshCallsList();
     }
 
-    populateSessionFilter() {
-        const allCalls = this.llmCallStorage.getAllCalls();
+    async populateSessionFilter() {
+        // Use the enhanced storage statistics for more efficient data retrieval
+        const stats = await this.llmCallStorage.getUsageStatistics();
         const sessions = new Set();
         
+        // Extract sessions from the aggregated stats
+        Object.keys(stats.callsByDate || {}).forEach(date => {
+            // Get calls for each date to extract session IDs
+            // This is a simplified approach - we could enhance LLMCallStorage to provide session stats directly
+        });
+        
+        // For now, fall back to getting all calls to extract sessions
+        const allCalls = await this.llmCallStorage.getAllCalls();
         allCalls.forEach(call => {
             if (call.sessionId) {
                 sessions.add(call.sessionId);
@@ -245,15 +287,10 @@ class UsageTracker {
         window.searchableDropdown.setChoices('sessionFilter', sessionChoices);
     }
 
-    populateProviderFilter() {
-        const allCalls = this.llmCallStorage.getAllCalls();
-        const providers = new Set();
-        
-        allCalls.forEach(call => {
-            if (call.provider) {
-                providers.add(call.provider);
-            }
-        });
+    async populateProviderFilter() {
+        // Use the enhanced storage statistics for more efficient data retrieval
+        const stats = await this.llmCallStorage.getUsageStatistics();
+        const providers = Object.keys(stats.callsByProvider || {});
 
         // Create choices array
         const providerChoices = [
@@ -270,15 +307,10 @@ class UsageTracker {
         window.searchableDropdown.setChoices('providerFilter', providerChoices);
     }
 
-    populateModelFilter() {
-        const allCalls = this.llmCallStorage.getAllCalls();
-        const models = new Set();
-        
-        allCalls.forEach(call => {
-            if (call.model) {
-                models.add(call.model);
-            }
-        });
+    async populateModelFilter() {
+        // Use the enhanced storage statistics for more efficient data retrieval
+        const stats = await this.llmCallStorage.getUsageStatistics();
+        const models = Object.keys(stats.callsByModel || {});
 
         // Create choices array
         const modelChoices = [
@@ -295,8 +327,9 @@ class UsageTracker {
         window.searchableDropdown.setChoices('modelFilter', modelChoices);
     }
 
-    updateOverviewStats() {
-        const calls = this.getFilteredCalls();
+    async updateOverviewStats() {
+        // Use filtered calls to calculate stats that match the current filters
+        const calls = await this.getFilteredCalls();
         const stats = this.calculateStats(calls);
 
         document.getElementById('totalCallsValue').textContent = stats.totalCalls;
@@ -307,8 +340,8 @@ class UsageTracker {
         document.getElementById('avgDurationValue').textContent = this.formatDuration(stats.avgDuration);
     }
 
-    updatePromptUsage() {
-        const calls = this.getFilteredCalls();
+    async updatePromptUsage() {
+        const calls = await this.getFilteredCalls();
         const sessionFilter = window.searchableDropdown.getValue('sessionFilter') || 'all';
         const providerFilter = window.searchableDropdown.getValue('providerFilter') || 'all';
         const modelFilter = window.searchableDropdown.getValue('modelFilter') || 'all';
@@ -436,8 +469,8 @@ class UsageTracker {
         });
     }
 
-    refreshCallsList(searchTerm = '') {
-        const calls = this.getFilteredCalls();
+    async refreshCallsList(searchTerm = '') {
+        const calls = await this.getFilteredCalls();
         const limit = window.searchableDropdown.getValue('callsLimitSelect') || '50';
         
         let filteredCalls = calls;
@@ -484,12 +517,12 @@ class UsageTracker {
         });
     }
 
-    getFilteredCalls() {
+    async getFilteredCalls() {
         const dateRange = window.searchableDropdown.getValue('dateRangeFilter') || 'all';
         const sessionFilter = window.searchableDropdown.getValue('sessionFilter') || 'all';
         const providerFilter = window.searchableDropdown.getValue('providerFilter') || 'all';
         const modelFilter = window.searchableDropdown.getValue('modelFilter') || 'all';
-        let calls = this.llmCallStorage.getAllCalls();
+        let calls = await this.llmCallStorage.getAllCalls();
 
         // Apply date filtering
         switch (dateRange) {
@@ -581,9 +614,9 @@ class UsageTracker {
         return stats;
     }
 
-    exportUsage() {
+    async exportUsage() {
         try {
-            const exportData = this.llmCallStorage.exportHistory();
+            const exportData = await this.llmCallStorage.exportHistory();
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             
@@ -602,10 +635,10 @@ class UsageTracker {
         }
     }
 
-    clearUsage() {
+    async clearUsage() {
         if (confirm('Are you sure you want to clear all usage history? This action cannot be undone.')) {
-            this.llmCallStorage.clearHistory();
-            this.refreshData();
+            await this.llmCallStorage.clearHistory();
+            await this.refreshData();
             window.app?.notificationManager?.showNotification('Usage history cleared', 'success');
         }
     }
@@ -674,7 +707,7 @@ class UsageTracker {
         this.refreshInterval = setInterval(() => {
             const usageTab = document.getElementById('usageTabContent');
             if (usageTab && !usageTab.classList.contains('hidden')) {
-                this.refreshData();
+                this.refreshData().catch(console.error);
             }
         }, 30000);
     }
