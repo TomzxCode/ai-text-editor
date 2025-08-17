@@ -66,11 +66,28 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .explorer-header h3 {
     font-size: 1rem;
     font-weight: 600;
+}
+
+.btn-compact {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.btn-compact:hover {
+    background-color: #005a9e;
 }
 
 .close-panel {
@@ -82,9 +99,6 @@ body {
     display: none;
 }
 
-.directory-selector {
-    padding: 1rem;
-}
 
 .file-search {
     padding: 0 1rem 1rem 1rem;
