@@ -1255,7 +1255,7 @@ body {
     background-color: #2a2a2a;
     border: 1px solid #444;
     border-radius: 4px;
-    padding: 0.75rem;
+    padding: 0.5rem;
     margin-bottom: 0.5rem;
     position: relative;
     cursor: move;
@@ -1284,13 +1284,15 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.1rem;
+    min-height: auto;
+    padding: 0.1rem;
 }
 
 .drag-handle {
     color: #666;
-    font-size: 16px;
-    margin-right: 8px;
+    font-size: 12px;
+    margin-right: 6px;
     cursor: grab;
     user-select: none;
     line-height: 1;
@@ -1307,7 +1309,8 @@ body {
 .prompt-name {
     font-weight: 500;
     color: #fff;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    line-height: 1.2;
 }
 
 .prompt-actions {
@@ -1320,9 +1323,9 @@ body {
     border: none;
     color: #666;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.15rem;
     border-radius: 3px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     transition: all 0.2s;
 }
 
@@ -2399,7 +2402,7 @@ body {
 }
 
 .file-header,
-.prompt-header {
+.prompt-group .prompt-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2410,7 +2413,7 @@ body {
 }
 
 .file-header:hover,
-.prompt-header:hover {
+.prompt-group .prompt-header:hover {
     background-color: #383838;
 }
 
@@ -2491,7 +2494,7 @@ body {
     }
     
     .file-header,
-    .prompt-header {
+    .prompt-group .prompt-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
