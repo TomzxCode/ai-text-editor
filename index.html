@@ -304,6 +304,27 @@
         </div>
     </div>
 
+    <!-- Custom Prompt Modal -->
+    <div class="modal-overlay" id="customPromptModal" style="display: none;">
+        <div class="modal custom-prompt-modal">
+            <div class="modal-header">
+                <h3>Custom AI Prompt</h3>
+                <button class="modal-close" id="closeCustomPromptModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="customPromptText">Enter your custom prompt:</label>
+                    <textarea id="customPromptText" placeholder="e.g., Translate this text to Spanish, or Fix grammar and spelling..." rows="3" maxlength="500"></textarea>
+                    <p class="form-hint">The selected text will be automatically included with your prompt.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelCustomPromptBtn">Cancel</button>
+                <button class="btn-primary" id="submitCustomPromptBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
@@ -328,6 +349,7 @@
     <script src="components/PromptsManager.js"></script>
     <script src="components/SettingsManager.js"></script>
     <script src="components/TextAnalysisManager.js"></script>
+    <script src="components/ContextMenuManager.js"></script>
     <!-- Main application script -->
     <script src="script.js"></script>
 

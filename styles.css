@@ -2497,3 +2497,227 @@ body {
         gap: 0.5rem;
     }
 }
+
+/* AI Context Menu Styles */
+.magic-wand {
+    position: absolute;
+    z-index: 1000;
+    cursor: pointer;
+    font-size: 16px;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 4px 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    user-select: none;
+    transition: all 0.2s ease;
+    color: #ffffff;
+}
+
+.magic-wand:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.ai-context-menu {
+    position: fixed;
+    z-index: 1001;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    min-width: 160px;
+    max-width: 200px;
+    overflow: hidden;
+    user-select: none;
+}
+
+.ai-context-menu.hidden {
+    display: none;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #444;
+    color: #ffffff;
+}
+
+.context-menu-item:last-child {
+    border-bottom: none;
+}
+
+.context-menu-item:hover {
+    background-color: #3a3a3a;
+    color: #4db8ff;
+}
+
+.context-menu-item:active {
+    background-color: #404040;
+}
+
+.menu-icon {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.menu-label {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+}
+
+/* Special styling for custom option */
+.context-menu-item[data-option="custom"] {
+    background-color: #1a2332;
+    border-color: #2c3e50;
+}
+
+.context-menu-item[data-option="custom"]:hover {
+    background-color: #253445;
+    color: #6bb6ff;
+}
+
+/* Dark theme compatibility for context menu */
+@media (prefers-color-scheme: dark) {
+    .magic-wand {
+        background: #2d2d2d;
+        border-color: #444;
+        color: #ffffff;
+    }
+    
+    .ai-context-menu {
+        background: #2d2d2d;
+        border-color: #444;
+    }
+    
+    .context-menu-item {
+        color: #ffffff;
+        border-bottom-color: #444;
+    }
+    
+    .context-menu-item:hover {
+        background-color: #3a3a3a;
+        color: #4db8ff;
+    }
+    
+    .context-menu-item:active {
+        background-color: #404040;
+    }
+    
+    .context-menu-item[data-option="custom"] {
+        background-color: #1a2332;
+        border-color: #2c3e50;
+    }
+    
+    .context-menu-item[data-option="custom"]:hover {
+        background-color: #253445;
+        color: #6bb6ff;
+    }
+}
+
+/* Animation for context menu appearance */
+.ai-context-menu {
+    animation: contextMenuSlideIn 0.15s ease-out;
+    transform-origin: top left;
+}
+
+@keyframes contextMenuSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .ai-context-menu {
+        min-width: 150px;
+        max-width: 180px;
+    }
+    
+    .context-menu-item {
+        padding: 10px 14px;
+    }
+    
+    .menu-icon {
+        font-size: 16px;
+        width: 18px;
+    }
+    
+    .menu-label {
+        font-size: 14px;
+    }
+    
+    .magic-wand {
+        font-size: 18px;
+        padding: 6px 8px;
+    }
+}
+
+/* Custom Prompt Modal Styles */
+.custom-prompt-modal {
+    max-width: 500px;
+    width: 90%;
+}
+
+.custom-prompt-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.custom-prompt-modal textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    border: 1px solid #444;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.custom-prompt-modal textarea:focus {
+    outline: none;
+    border-color: #4db8ff;
+    box-shadow: 0 0 0 2px rgba(77, 184, 255, 0.2);
+}
+
+.custom-prompt-modal textarea::placeholder {
+    color: #888;
+}
+
+.custom-prompt-modal .form-hint {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #bbb;
+    font-style: italic;
+}
+
+/* Mobile adjustments for custom prompt modal */
+@media (max-width: 768px) {
+    .custom-prompt-modal {
+        width: 95%;
+        margin: 1rem auto;
+    }
+    
+    .custom-prompt-modal .modal-body {
+        padding: 1rem;
+    }
+    
+    .custom-prompt-modal textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}

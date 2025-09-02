@@ -78,6 +78,7 @@ class AITextEditor {
 
         this.uiManager = new UIManager(this.elements);
         this.aiService = new AIService();
+        this.contextMenuManager = new ContextMenuManager(this.editorManager, this.aiService);
         this.promptsManager = new PromptsManager();
         this.usageTracker = new UsageTracker();
         this.historyManager = new HistoryManager();
@@ -1015,6 +1016,18 @@ class AITextEditor {
             }
         } catch (error) {
             this.notificationManager.error('Failed to reorder prompt: ' + error.message);
+        }
+    }
+
+    cleanup() {
+        // Clean up context menu manager
+        if (this.contextMenuManager) {
+            this.contextMenuManager.destroy();
+        }
+        
+        // Clean up other resources
+        if (this.aiService) {
+            this.aiService.clearTimers();
         }
     }
 
