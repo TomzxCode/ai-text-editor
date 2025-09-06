@@ -4,6 +4,8 @@ class UIManager {
         this.currentMobilePanel = 'editor';
         this.isResizing = false;
         this.currentResizer = null;
+        this.snapThreshold = 50; // pixels from edge to snap to hidden
+        this.minWidth = 200; // minimum width before snapping
         
         this.setupEventListeners();
         this.setupMobileNavigation();
@@ -19,6 +21,22 @@ class UIManager {
             this.closePanel('aiSidebar');
         });
 
+        // Setup pull tab event listeners
+        const leftPullTab = document.getElementById('leftPullTab');
+        const rightPullTab = document.getElementById('rightPullTab');
+        
+        if (leftPullTab) {
+            leftPullTab.addEventListener('mousedown', (e) => {
+                this.startPullTab(e, 'left');
+            });
+        }
+        
+        if (rightPullTab) {
+            rightPullTab.addEventListener('mousedown', (e) => {
+                this.startPullTab(e, 'right');
+            });
+        }
+
         this.elements.fileSearchInput.addEventListener('input', (e) => {
             this.handleFileSearch(e.target.value);
         });
@@ -33,6 +51,9 @@ class UIManager {
         document.addEventListener('keydown', (e) => {
             this.handleKeyboardShortcuts(e);
         });
+        
+        // Initialize sidebar state
+        this.restoreSidebarStates();
     }
 
     setupTabNavigation() {
@@ -184,13 +205,29 @@ class UIManager {
         const rect = mainContent.getBoundingClientRect();
 
         if (this.currentResizer === 'left') {
-            const newWidth = Math.max(200, Math.min(500, e.clientX - rect.left));
-            this.elements.fileExplorer.style.width = newWidth + 'px';
-            localStorage.setItem('fileExplorerWidth', newWidth.toString());
+            const newWidth = e.clientX - rect.left;
+            
+            if (newWidth < this.snapThreshold) {
+                // Snap to hidden
+                this.hideSidebar('left');
+            } else {
+                const clampedWidth = Math.max(this.minWidth, Math.min(500, newWidth));
+                this.elements.fileExplorer.style.width = clampedWidth + 'px';
+                localStorage.setItem('fileExplorerWidth', clampedWidth.toString());
+                this.showSidebar('left');
+            }
         } else if (this.currentResizer === 'right') {
-            const newWidth = Math.max(250, Math.min(600, rect.right - e.clientX));
-            this.elements.aiSidebar.style.width = newWidth + 'px';
-            localStorage.setItem('aiSidebarWidth', newWidth.toString());
+            const newWidth = rect.right - e.clientX;
+            
+            if (newWidth < this.snapThreshold) {
+                // Snap to hidden
+                this.hideSidebar('right');
+            } else {
+                const clampedWidth = Math.max(250, Math.min(600, newWidth));
+                this.elements.aiSidebar.style.width = clampedWidth + 'px';
+                localStorage.setItem('aiSidebarWidth', clampedWidth.toString());
+                this.showSidebar('right');
+            }
         }
     }
 
@@ -521,5 +558,77 @@ class UIManager {
             'AI Analysis': '🤖'
         };
         return icons[category] || '📋';
+    }
+
+    hideSidebar(side) {
+        const leftPullTab = document.getElementById('leftPullTab');
+        const rightPullTab = document.getElementById('rightPullTab');
+        
+        if (side === 'left') {
+            this.elements.fileExplorer.classList.add('hidden');
+            this.elements.leftResize.classList.add('hidden');
+            leftPullTab.classList.remove('hidden');
+            localStorage.setItem('leftSidebarVisible', 'false');
+        } else if (side === 'right') {
+            this.elements.aiSidebar.classList.add('hidden');
+            this.elements.rightResize.classList.add('hidden');
+            rightPullTab.classList.remove('hidden');
+            localStorage.setItem('rightSidebarVisible', 'false');
+        }
+    }
+
+    showSidebar(side) {
+        const leftPullTab = document.getElementById('leftPullTab');
+        const rightPullTab = document.getElementById('rightPullTab');
+        
+        if (side === 'left') {
+            this.elements.fileExplorer.classList.remove('hidden');
+            this.elements.leftResize.classList.remove('hidden');
+            leftPullTab.classList.add('hidden');
+            localStorage.setItem('leftSidebarVisible', 'true');
+        } else if (side === 'right') {
+            this.elements.aiSidebar.classList.remove('hidden');
+            this.elements.rightResize.classList.remove('hidden');
+            rightPullTab.classList.add('hidden');
+            localStorage.setItem('rightSidebarVisible', 'true');
+        }
+    }
+
+    startPullTab(e, side) {
+        this.isResizing = true;
+        this.currentResizer = side;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+        
+        // Show sidebar immediately when starting to pull
+        this.showSidebar(side);
+        
+        // Set initial width for smooth transition
+        if (side === 'left') {
+            const savedWidth = localStorage.getItem('fileExplorerWidth') || '250';
+            this.elements.fileExplorer.style.width = savedWidth + 'px';
+        } else if (side === 'right') {
+            const savedWidth = localStorage.getItem('aiSidebarWidth') || '300';
+            this.elements.aiSidebar.style.width = savedWidth + 'px';
+        }
+    }
+
+    restoreSidebarStates() {
+        const leftVisible = localStorage.getItem('leftSidebarVisible');
+        const rightVisible = localStorage.getItem('rightSidebarVisible');
+        
+        // Default to visible if no preference is stored
+        if (leftVisible === 'false') {
+            this.hideSidebar('left');
+        } else {
+            this.showSidebar('left');
+        }
+
+        if (rightVisible === 'false') {
+            this.hideSidebar('right');
+        } else {
+            this.showSidebar('right');
+        }
     }
 }

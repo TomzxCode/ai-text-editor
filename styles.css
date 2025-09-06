@@ -56,7 +56,7 @@ body {
     border-right: 1px solid #444;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, width 0.3s ease, opacity 0.3s ease;
 }
 
 .explorer-header {
@@ -306,6 +306,65 @@ body {
     cursor: not-allowed;
 }
 
+/* Sidebar Pull Tabs */
+.sidebar-pull-tab {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 60px;
+    background-color: #444;
+    border: 1px solid #666;
+    cursor: col-resize;
+    z-index: 300;
+    transition: background-color 0.2s, width 0.2s;
+    border-radius: 0 4px 4px 0;
+}
+
+.left-pull-tab {
+    left: 0;
+    border-left: none;
+}
+
+.right-pull-tab {
+    right: 0;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+}
+
+.sidebar-pull-tab:hover {
+    background-color: #007acc;
+    width: 12px;
+}
+
+.sidebar-pull-tab.hidden {
+    display: none;
+}
+
+/* Hidden Sidebar States */
+.file-explorer.hidden {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.ai-sidebar.hidden {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.left-resize.hidden,
+.right-resize.hidden {
+    display: none;
+}
+
 .editor-container {
     flex: 1;
     position: relative;
@@ -341,7 +400,7 @@ body {
     border-left: 1px solid #444;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, width 0.3s ease, opacity 0.3s ease;
 }
 
 .sidebar-header {
@@ -1006,6 +1065,9 @@ body {
         font-size: 1.1rem;
     }
 
+    .sidebar-pull-tab {
+        display: none;
+    }
 
     .main-content {
         position: relative;
