@@ -431,10 +431,7 @@ class AITextEditor {
             return;
         }
 
-        const fileName = prompt('Enter file name:');
-        if (!fileName) return;
-
-        this.editorManager.createNewFile(fileName);
+        this.editorManager.createNewFile('Untitled');
         this.elements.saveFileBtn.disabled = false;
     }
 
@@ -449,7 +446,16 @@ class AITextEditor {
                 await this.fileSystemManager.saveFile(currentFile.handle, content);
                 this.notificationManager.success('File saved successfully');
             } else if (currentFile.isNew) {
-                await this.fileSystemManager.createNewFile(currentFile.name, content);
+                let fileName = currentFile.name;
+                
+                if (fileName === 'Untitled') {
+                    fileName = prompt('Enter file name:');
+                    if (!fileName) return;
+                    
+                    this.editorManager.updateCurrentFileName(fileName);
+                }
+                
+                await this.fileSystemManager.createNewFile(fileName, content);
                 this.renderFileTree();
                 this.notificationManager.success('File created successfully');
             } else {

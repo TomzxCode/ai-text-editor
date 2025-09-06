@@ -187,4 +187,17 @@ class EditorManager {
     hasCurrentFile() {
         return this.currentFile !== null;
     }
+
+    updateCurrentFileName(newFileName) {
+        if (this.currentFile) {
+            this.currentFile.name = newFileName;
+            this.currentFile.path = newFileName;
+            this.setEditorMode(newFileName);
+            
+            this.onChangeCallback('contentChange', {
+                isModified: this.isModified,
+                fileName: newFileName
+            });
+        }
+    }
 }
