@@ -82,6 +82,7 @@ class AITextEditor {
         this.promptsManager = new PromptsManager();
         this.usageTracker = new UsageTracker();
         this.historyManager = new HistoryManager();
+        this.inspectManager = new InspectManager();
 
         // Initialize provider management
         this.initializeProviderManagement();
@@ -183,6 +184,13 @@ class AITextEditor {
         // Setup sentence completion callback
         this.textAnalysisManager.onSentenceCompletion((data) => {
             this.handleTriggerTimingEvent('sentence');
+        });
+
+        // Setup structure change callback for inspect manager
+        this.textAnalysisManager.onStructureChange((structure) => {
+            if (this.inspectManager) {
+                this.inspectManager.updateStructure(structure);
+            }
         });
 
         // Start tracking when editor is ready
@@ -1051,4 +1059,5 @@ let app;
 document.addEventListener('DOMContentLoaded', () => {
     app = new AITextEditor();
     window.app = app; // Make app globally accessible
+    window.aiTextEditor = app; // Also make available as aiTextEditor for components
 });

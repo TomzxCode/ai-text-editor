@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentence Data Model Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 20px; }
+        .test-result { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Sentence Data Model Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Basic Text Analysis</h2>
+        <textarea id="testText1" placeholder="Enter test text here...">This is the first sentence. This is the second sentence! And this is the third sentence?</textarea>
+        <button onclick="runTest1()">Analyze Text</button>
+        <div id="result1" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Text Modification Tracking</h2>
+        <textarea id="testText2" placeholder="Original text...">Hello world. This is a test.</textarea>
+        <button onclick="runTest2()">Analyze Original</button>
+        <button onclick="modifyAndTest2()">Modify and Analyze</button>
+        <div id="result2" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Copy/Paste Detection</h2>
+        <textarea id="testText3" placeholder="Text with repeated sentences...">Hello world. This is unique. Hello world.</textarea>
+        <button onclick="runTest3()">Test Copy/Paste</button>
+        <div id="result3" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Paragraph Analysis</h2>
+        <textarea id="testText4" placeholder="Multi-paragraph text...">First paragraph sentence.
+
+Second paragraph sentence. Another sentence here.
+
+Third paragraph with multiple sentences. Final sentence.</textarea>
+        <button onclick="runTest4()">Analyze Paragraphs</button>
+        <div id="result4" class="test-result"></div>
+    </div>
+
+    <script src="components/SentenceDataModel.js"></script>
+    <script src="components/TextAnalysisManager.js"></script>
+
+    <script>
+        let testManager = new TextAnalysisManager();
+        
+        function runTest1() {
+            const text = document.getElementById('testText1').value;
+            const structure = testManager.sentenceDataModel.analyzeText(text);
+            
+            displayResult('result1', {
+                text: text,
+                structure: structure,
+                title: "Basic Text Analysis Results"
+            });
+        }
+
+        function runTest2() {
+            const text = document.getElementById('testText2').value;
+            const structure = testManager.sentenceDataModel.analyzeText(text);
+            window.originalStructure = structure;
+            
+            displayResult('result2', {
+                text: text,
+                structure: structure,
+                title: "Original Text Analysis"
+            });
+        }
+
+        function modifyAndTest2() {
+            // Modify the text
+            const textArea = document.getElementById('testText2');
+            textArea.value = "Hello world. This is a modified test. New sentence here.";
+            
+            const newStructure = testManager.sentenceDataModel.analyzeText(textArea.value);
+            
+            displayResult('result2', {
+                text: textArea.value,
+                structure: newStructure,
+                originalStructure: window.originalStructure,
+                title: "Modified Text Analysis - Compare IDs"
+            });
+        }
+
+        function runTest3() {
+            const text = document.getElementById('testText3').value;
+            const structure = testManager.sentenceDataModel.analyzeText(text);
+            
+            displayResult('result3', {
+                text: text,
+                structure: structure,
+                title: "Copy/Paste Detection - Check for duplicate sentence IDs"
+            });
+        }
+
+        function runTest4() {
+            const text = document.getElementById('testText4').value;
+            const structure = testManager.sentenceDataModel.analyzeText(text);
+            
+            displayResult('result4', {
+                text: text,
+                structure: structure,
+                title: "Paragraph Analysis"
+            });
+        }
+
+        function displayResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            let html = `<h3>${data.title}</h3>`;
+            
+            html += `<h4>Statistics:</h4>`;
+            html += `<pre>${JSON.stringify(data.structure.stats, null, 2)}</pre>`;
+            
+            html += `<h4>Sentences (${data.structure.sentences.length}):</h4>`;
+            data.structure.sentences.forEach((sentence, index) => {
+                html += `<div style="margin: 5px 0; padding: 5px; border-left: 3px solid #007acc;">`;
+                html += `<strong>ID:</strong> ${sentence.id}<br>`;
+                html += `<strong>Content:</strong> "${sentence.content}"<br>`;
+                html += `<strong>Hash:</strong> ${sentence.hash}<br>`;
+                html += `<strong>Position:</strong> ${sentence.position.start}-${sentence.position.end}<br>`;
+                html += `<strong>Word Count:</strong> ${sentence.wordCount}<br>`;
+                if (sentence.isNew) {
+                    html += `<strong style="color: green;">NEW SENTENCE</strong><br>`;
+                }
+                html += `</div>`;
+            });
+
+            html += `<h4>Words (${data.structure.words.length}):</h4>`;
+            html += `<div style="max-height: 200px; overflow-y: auto;">`;
+            data.structure.words.forEach((word, index) => {
+                html += `<span style="margin: 2px; padding: 2px 5px; background: #e9ecef; border-radius: 3px;" title="ID: ${word.id}">`;
+                html += `${word.content}`;
+                html += `</span>`;
+            });
+            html += `</div>`;
+
+            html += `<h4>Paragraphs (${data.structure.paragraphs.length}):</h4>`;
+            data.structure.paragraphs.forEach((paragraph, index) => {
+                html += `<div style="margin: 10px 0; padding: 10px; border: 1px solid #dee2e6;">`;
+                html += `<strong>ID:</strong> ${paragraph.id}<br>`;
+                html += `<strong>Content:</strong> "${paragraph.content.substring(0, 100)}..."<br>`;
+                html += `<strong>Sentences:</strong> ${paragraph.sentences.length}<br>`;
+                html += `<strong>Word Count:</strong> ${paragraph.wordCount}<br>`;
+                html += `</div>`;
+            });
+
+            if (data.originalStructure) {
+                html += `<h4>Comparison with Original:</h4>`;
+                html += `<div style="background: #fff3cd; padding: 10px;">`;
+                html += `<strong>Original sentences:</strong> ${data.originalStructure.sentences.length}<br>`;
+                html += `<strong>New sentences:</strong> ${data.structure.sentences.length}<br>`;
+                
+                // Check which sentences are the same
+                const sameCount = data.structure.sentences.filter(newSent => 
+                    data.originalStructure.sentences.some(origSent => origSent.hash === newSent.hash)
+                ).length;
+                
+                html += `<strong>Sentences with same content:</strong> ${sameCount}<br>`;
+                html += `<strong>Modified/New sentences:</strong> ${data.structure.sentences.length - sameCount}<br>`;
+                html += `</div>`;
+            }
+
+            element.innerHTML = html;
+        }
+
+        // Initialize with some test data
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Sentence Data Model Test Page Loaded');
+            console.log('TextAnalysisManager:', testManager);
+            console.log('SentenceDataModel:', testManager.sentenceDataModel);
+        });
+    </script>
+</body>
+</html>

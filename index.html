@@ -90,6 +90,7 @@
                 <div class="tab-nav">
                     <button class="tab-btn" id="feedbackTab" data-tab="feedback">Feedback</button>
                     <button class="tab-btn" id="promptsTab" data-tab="prompts">Prompts</button>
+                    <button class="tab-btn" id="inspectTab" data-tab="inspect">Inspect</button>
                     <button class="tab-btn" id="historyTab" data-tab="history">History</button>
                     <button class="tab-btn" id="usageTab" data-tab="usage">Usage</button>
                     <button class="tab-btn" id="settingsTab" data-tab="settings">Settings</button>
@@ -116,6 +117,63 @@
                         </div>
                         <div class="prompts-list" id="promptsList">
                             <p class="no-prompts">No prompts yet. Click + to add one.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inspect Tab Content -->
+                <div class="tab-content" id="inspectTabContent">
+                    <div class="inspect-section">
+                        <div class="section-header">
+                            <h4>Text Structure</h4>
+                            <button class="btn-small" id="refreshInspectBtn">⟳</button>
+                        </div>
+                        
+                        <!-- Stats Overview -->
+                        <div class="inspect-stats" id="inspectStats">
+                            <div class="stat-grid">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="sentenceCount">-</span>
+                                    <span class="stat-label">Sentences</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="wordCountInspect">-</span>
+                                    <span class="stat-label">Words</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="paragraphCount">-</span>
+                                    <span class="stat-label">Paragraphs</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="textVersion">-</span>
+                                    <span class="stat-label">Version</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- View Controls -->
+                        <div class="inspect-controls">
+                            <div class="control-group">
+                                <label class="control-label">View:</label>
+                                <select id="inspectView" class="control-select">
+                                    <option value="sentences">Sentences</option>
+                                    <option value="paragraphs">Paragraphs</option>
+                                    <option value="words">Words</option>
+                                    <option value="structure" selected>Full Structure</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label">Filter:</label>
+                                <input type="text" id="inspectFilter" class="control-input" placeholder="Filter by content...">
+                            </div>
+                        </div>
+
+                        <!-- Content Display -->
+                        <div class="inspect-content" id="inspectContent">
+                            <div class="inspect-placeholder">
+                                <p>📝 Start typing in the editor to see text structure analysis</p>
+                                <p><small>This panel shows real-time breakdown of sentences, words, and paragraphs with unique identifiers.</small></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -348,7 +406,9 @@
     <script src="components/UIManager.js"></script>
     <script src="components/PromptsManager.js"></script>
     <script src="components/SettingsManager.js"></script>
+    <script src="components/SentenceDataModel.js"></script>
     <script src="components/TextAnalysisManager.js"></script>
+    <script src="components/InspectManager.js"></script>
     <script src="components/ContextMenuManager.js"></script>
     <!-- Main application script -->
     <script src="script.js"></script>

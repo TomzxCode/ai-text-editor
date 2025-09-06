@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspect System Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-editor { width: 100%; height: 200px; margin: 20px 0; padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #555; }
+        .test-output { background: #2a2a2a; padding: 20px; margin: 20px 0; border: 1px solid #555; max-height: 400px; overflow-y: auto; }
+        .sentence-item { margin: 10px 0; padding: 10px; background: #1e1e1e; border-left: 3px solid #28a745; }
+        .word-chip { display: inline-block; margin: 2px; padding: 4px 8px; background: #007acc; color: white; border-radius: 12px; font-size: 12px; cursor: pointer; }
+        .highlight { background: rgba(255, 255, 0, 0.3); }
+        button { padding: 10px 20px; margin: 5px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a99; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Inspect System Integration Test</h1>
+        
+        <h2>Test Editor</h2>
+        <textarea id="testEditor" class="test-editor" placeholder="Type some text here to test the sentence data model inspection...">This is the first sentence. This is a second sentence with more words. 
+
+This is a new paragraph with multiple sentences. Here's another sentence in the same paragraph.</textarea>
+        
+        <div>
+            <button onclick="analyzeText()">Analyze Text</button>
+            <button onclick="showSentences()">Show Sentences</button>
+            <button onclick="showWords()">Show Words</button>
+            <button onclick="showParagraphs()">Show Paragraphs</button>
+            <button onclick="clearOutput()">Clear</button>
+        </div>
+        
+        <div id="testOutput" class="test-output">
+            <p>Click "Analyze Text" to see the sentence data model in action.</p>
+        </div>
+    </div>
+
+    <script src="components/SentenceDataModel.js"></script>
+    <script src="components/TextAnalysisManager.js"></script>
+
+    <script>
+        const textAnalysisManager = new TextAnalysisManager();
+        let currentStructure = null;
+
+        function analyzeText() {
+            const text = document.getElementById('testEditor').value;
+            currentStructure = textAnalysisManager.sentenceDataModel.analyzeText(text);
+            
+            const output = document.getElementById('testOutput');
+            output.innerHTML = `
+                <h3>Analysis Complete</h3>
+                <p><strong>Stats:</strong></p>
+                <ul>
+                    <li>Sentences: ${currentStructure.stats.totalSentences}</li>
+                    <li>Words: ${currentStructure.stats.totalWords}</li>
+                    <li>Paragraphs: ${currentStructure.stats.totalParagraphs}</li>
+                    <li>Text Version: ${currentStructure.stats.textVersion}</li>
+                </ul>
+                <p>Use the other buttons to explore the structure.</p>
+            `;
+        }
+
+        function showSentences() {
+            if (!currentStructure) {
+                alert('Please analyze text first');
+                return;
+            }
+
+            let html = '<h3>Sentences</h3>';
+            currentStructure.sentences.forEach((sentence, index) => {
+                html += `
+                    <div class="sentence-item" onclick="highlightText(${sentence.position.start}, ${sentence.position.end})">
+                        <strong>Sentence ${index + 1}</strong><br>
+                        <small>ID: ${sentence.id} | Position: ${sentence.position.start}-${sentence.position.end} | Words: ${sentence.wordCount}</small><br>
+                        "${sentence.content}"
+                    </div>
+                `;
+            });
+
+            document.getElementById('testOutput').innerHTML = html;
+        }
+
+        function showWords() {
+            if (!currentStructure) {
+                alert('Please analyze text first');
+                return;
+            }
+
+            let html = '<h3>Words</h3><div>';
+            currentStructure.words.forEach((word, index) => {
+                html += `<span class="word-chip" onclick="highlightText(${word.position.start}, ${word.position.end})" title="ID: ${word.id} | Position: ${word.position.start}-${word.position.end}">${word.content}</span>`;
+            });
+            html += '</div>';
+
+            document.getElementById('testOutput').innerHTML = html;
+        }
+
+        function showParagraphs() {
+            if (!currentStructure) {
+                alert('Please analyze text first');
+                return;
+            }
+
+            let html = '<h3>Paragraphs</h3>';
+            currentStructure.paragraphs.forEach((paragraph, index) => {
+                html += `
+                    <div class="sentence-item" onclick="highlightText(${paragraph.position.start}, ${paragraph.position.end})" style="border-left-color: #ffc107;">
+                        <strong>Paragraph ${index + 1}</strong><br>
+                        <small>ID: ${paragraph.id} | Sentences: ${paragraph.sentences.length} | Words: ${paragraph.wordCount}</small><br>
+                        "${paragraph.content.substring(0, 100)}${paragraph.content.length > 100 ? '...' : ''}"
+                    </div>
+                `;
+            });
+
+            document.getElementById('testOutput').innerHTML = html;
+        }
+
+        function highlightText(start, end) {
+            const editor = document.getElementById('testEditor');
+            editor.focus();
+            editor.setSelectionRange(start, end);
+            
+            // Visual feedback
+            const text = editor.value;
+            const selectedText = text.substring(start, end);
+            console.log(`Highlighted: "${selectedText}" (${start}-${end})`);
+        }
+
+        function clearOutput() {
+            document.getElementById('testOutput').innerHTML = '<p>Output cleared.</p>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Inspect Integration Test Ready');
+            console.log('TextAnalysisManager:', textAnalysisManager);
+            console.log('SentenceDataModel:', textAnalysisManager.sentenceDataModel);
+        });
+    </script>
+</body>
+</html>

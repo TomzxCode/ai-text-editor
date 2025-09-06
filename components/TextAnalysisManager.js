@@ -14,6 +14,10 @@ class TextAnalysisManager {
         this.lastCompletedWord = '';
         this.lastCompletedSentence = '';
         this.isTrackingActive = false;
+        
+        // Sentence data model integration
+        this.sentenceDataModel = new SentenceDataModel();
+        this.structureChangeCallbacks = [];
     }
 
     startTracking() {
@@ -33,13 +37,18 @@ class TextAnalysisManager {
         const currentWordCount = currentWords.length;
         const currentSentenceCount = currentSentences.length;
 
+        // Analyze text structure with sentence data model
+        const structure = this.sentenceDataModel.analyzeText(currentText);
+        
+        // Notify structure change listeners
+        this.notifyStructureChange(structure);
 
         // Check for word completion
         if (this.hasCompletedWord(currentText, currentWordCount)) {
             const completedWord = this.getLastCompletedWord(currentText);
             if (completedWord && completedWord !== this.lastCompletedWord) {
                 this.lastCompletedWord = completedWord;
-                this.notifyWordCompletion(completedWord, currentWordCount);
+                this.notifyWordCompletion(completedWord, currentWordCount, structure);
             }
         }
 
@@ -48,7 +57,8 @@ class TextAnalysisManager {
             const completedSentence = this.getLastCompletedSentence(currentText);
             if (completedSentence && completedSentence !== this.lastCompletedSentence) {
                 this.lastCompletedSentence = completedSentence;
-                this.notifySentenceCompletion(completedSentence, currentSentenceCount);
+                const sentenceData = this.findSentenceDataByContent(completedSentence, structure);
+                this.notifySentenceCompletion(completedSentence, currentSentenceCount, sentenceData, structure);
             }
         }
 
@@ -158,12 +168,13 @@ class TextAnalysisManager {
         }
     }
 
-    notifyWordCompletion(word, totalWordCount) {
+    notifyWordCompletion(word, totalWordCount, structure = null) {
         const data = {
             completedWord: word,
             totalWords: totalWordCount,
             timestamp: Date.now(),
-            type: 'word'
+            type: 'word',
+            structure: structure
         };
 
         this.wordCompletionCallbacks.forEach(callback => {
@@ -175,12 +186,14 @@ class TextAnalysisManager {
         });
     }
 
-    notifySentenceCompletion(sentence, totalSentenceCount) {
+    notifySentenceCompletion(sentence, totalSentenceCount, sentenceData = null, structure = null) {
         const data = {
             completedSentence: sentence,
             totalSentences: totalSentenceCount,
             timestamp: Date.now(),
-            type: 'sentence'
+            type: 'sentence',
+            sentenceData: sentenceData,
+            structure: structure
         };
 
         this.sentenceCompletionCallbacks.forEach(callback => {
@@ -192,17 +205,34 @@ class TextAnalysisManager {
         });
     }
 
+    notifyStructureChange(structure) {
+        this.structureChangeCallbacks.forEach(callback => {
+            try {
+                callback(structure);
+            } catch (error) {
+                console.error('Error in structure change callback:', error);
+            }
+        });
+    }
+
     getStatistics(text = null) {
         const textToAnalyze = text || this.previousText;
         const words = this.extractWords(textToAnalyze);
         const sentences = this.extractSentences(textToAnalyze);
+        
+        // Get enhanced statistics from sentence data model if available
+        const modelStats = this.sentenceDataModel.getStatistics();
         
         return {
             wordCount: words.length,
             sentenceCount: sentences.length,
             characterCount: textToAnalyze.length,
             characterCountNoSpaces: textToAnalyze.replace(/\s/g, '').length,
-            averageWordsPerSentence: sentences.length > 0 ? Math.round((words.length / sentences.length) * 10) / 10 : 0
+            averageWordsPerSentence: sentences.length > 0 ? Math.round((words.length / sentences.length) * 10) / 10 : 0,
+            // Enhanced statistics from data model
+            paragraphCount: modelStats.totalParagraphs,
+            averageSentencesPerParagraph: modelStats.averageSentencesPerParagraph,
+            textVersion: modelStats.textVersion
         };
     }
 
@@ -252,18 +282,78 @@ class TextAnalysisManager {
         return sentences.length > 0 ? sentences[sentences.length - 1] : '';
     }
 
+    // Helper method to find sentence data by content
+    findSentenceDataByContent(content, structure) {
+        if (!structure || !structure.sentences) return null;
+        return structure.sentences.find(sentence => sentence.content === content) || null;
+    }
+
+    // Sentence data model access methods
+    getSentenceById(id) {
+        return this.sentenceDataModel.getSentenceById(id);
+    }
+
+    getWordById(id) {
+        return this.sentenceDataModel.getWordById(id);
+    }
+
+    getParagraphById(id) {
+        return this.sentenceDataModel.getParagraphById(id);
+    }
+
+    getSentencesByParagraph(paragraphId) {
+        return this.sentenceDataModel.getSentencesByParagraph(paragraphId);
+    }
+
+    getWordsBySentence(sentenceId) {
+        return this.sentenceDataModel.getWordsBySentence(sentenceId);
+    }
+
+    findSentencesByContent(content) {
+        return this.sentenceDataModel.findSentencesByContent(content);
+    }
+
+    getCurrentStructure() {
+        return this.sentenceDataModel.getCurrentStructure();
+    }
+
+    exportStructure() {
+        return this.sentenceDataModel.exportStructure();
+    }
+
+    importStructure(data) {
+        return this.sentenceDataModel.importStructure(data);
+    }
+
+    // Structure change callback management
+    onStructureChange(callback) {
+        if (typeof callback === 'function') {
+            this.structureChangeCallbacks.push(callback);
+        }
+    }
+
+    removeStructureChangeCallback(callback) {
+        const index = this.structureChangeCallbacks.indexOf(callback);
+        if (index > -1) {
+            this.structureChangeCallbacks.splice(index, 1);
+        }
+    }
+
     reset() {
         this.previousText = '';
         this.previousWordCount = 0;
         this.previousSentenceCount = 0;
         this.lastCompletedWord = '';
         this.lastCompletedSentence = '';
+        this.sentenceDataModel.reset();
     }
 
     cleanup() {
         this.stopTracking();
         this.wordCompletionCallbacks = [];
         this.sentenceCompletionCallbacks = [];
+        this.structureChangeCallbacks = [];
+        this.sentenceDataModel.cleanup();
         this.reset();
     }
 }

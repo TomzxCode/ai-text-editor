@@ -188,6 +188,77 @@ class EditorManager {
         return this.currentFile !== null;
     }
 
+    highlightRange(start, end) {
+        if (!this.editor) return;
+
+        const doc = this.editor.getDoc();
+        const text = doc.getValue();
+        
+        // Convert character positions to line/column positions
+        const startPos = this.charPosToLineCol(text, start);
+        const endPos = this.charPosToLineCol(text, end);
+        
+        // Clear existing selections
+        doc.setSelection(startPos, endPos);
+        
+        // Scroll to selection
+        this.editor.scrollIntoView({from: startPos, to: endPos}, 100);
+        
+        // Focus the editor
+        this.editor.focus();
+        
+        // Create a temporary highlight mark that fades out
+        const mark = doc.markText(startPos, endPos, {
+            className: 'inspect-highlight',
+            inclusiveLeft: false,
+            inclusiveRight: false
+        });
+        
+        // Add temporary highlighting CSS if not already added
+        this.addHighlightStyles();
+        
+        // Remove the highlight after a few seconds
+        setTimeout(() => {
+            if (mark && mark.clear) {
+                mark.clear();
+            }
+        }, 3000);
+    }
+
+    charPosToLineCol(text, charPos) {
+        if (charPos <= 0) return {line: 0, ch: 0};
+        
+        const lines = text.substring(0, charPos).split('\n');
+        return {
+            line: lines.length - 1,
+            ch: lines[lines.length - 1].length
+        };
+    }
+
+    addHighlightStyles() {
+        if (document.getElementById('inspect-highlight-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'inspect-highlight-styles';
+        style.textContent = `
+            .inspect-highlight {
+                background-color: rgba(0, 122, 204, 0.3);
+                border-radius: 2px;
+                animation: inspectFadeOut 3s ease-out forwards;
+            }
+            
+            @keyframes inspectFadeOut {
+                0% {
+                    background-color: rgba(0, 122, 204, 0.5);
+                }
+                100% {
+                    background-color: rgba(0, 122, 204, 0.1);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     updateCurrentFileName(newFileName) {
         if (this.currentFile) {
             this.currentFile.name = newFileName;
