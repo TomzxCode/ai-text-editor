@@ -643,4 +643,71 @@ class PromptsManager {
     getEnabledPromptsByTrigger(triggerTiming) {
         return this.getEnabledPromptsByTriggerInActiveGroup(triggerTiming);
     }
+
+    // Toggle all prompts functionality
+    enableAllPromptsInActiveGroup() {
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            throw new Error('No active group');
+        }
+
+        // Enable all prompts in the active group
+        activeGroup.promptIds.forEach(promptId => {
+            if (!activeGroup.promptStates) {
+                activeGroup.promptStates = {};
+            }
+            activeGroup.promptStates[promptId] = { enabled: true };
+        });
+
+        this.saveGroups();
+        return activeGroup;
+    }
+
+    disableAllPromptsInActiveGroup() {
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            throw new Error('No active group');
+        }
+
+        // Disable all prompts in the active group
+        activeGroup.promptIds.forEach(promptId => {
+            if (!activeGroup.promptStates) {
+                activeGroup.promptStates = {};
+            }
+            activeGroup.promptStates[promptId] = { enabled: false };
+        });
+
+        this.saveGroups();
+        return activeGroup;
+    }
+
+    toggleAllPromptsInActiveGroup() {
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            throw new Error('No active group');
+        }
+
+        // Check if all prompts are currently enabled
+        const allEnabled = activeGroup.promptIds.every(promptId => 
+            activeGroup.promptStates?.[promptId]?.enabled === true
+        );
+
+        // If all are enabled, disable all; otherwise, enable all
+        if (allEnabled) {
+            return this.disableAllPromptsInActiveGroup();
+        } else {
+            return this.enableAllPromptsInActiveGroup();
+        }
+    }
+
+    areAllPromptsEnabledInActiveGroup() {
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup || activeGroup.promptIds.length === 0) {
+            return false;
+        }
+
+        return activeGroup.promptIds.every(promptId => 
+            activeGroup.promptStates?.[promptId]?.enabled === true
+        );
+    }
 }

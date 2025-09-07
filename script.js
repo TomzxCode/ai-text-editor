@@ -50,6 +50,7 @@ class AITextEditor {
             loadingOverlay: document.getElementById('loadingOverlay'),
             feedbackContainer: document.querySelector('.feedback-container'),
             addPromptBtn: document.getElementById('addPromptBtn'),
+            toggleAllPromptsBtn: document.getElementById('toggleAllPromptsBtn'),
             promptsList: document.getElementById('promptsList'),
             promptModal: document.getElementById('promptModal'),
             promptModalTitle: document.getElementById('promptModalTitle'),
@@ -154,6 +155,10 @@ class AITextEditor {
 
         this.elements.addPromptBtn.addEventListener('click', () => {
             this.showPromptModal();
+        });
+
+        this.elements.toggleAllPromptsBtn.addEventListener('click', () => {
+            this.toggleAllPrompts();
         });
 
         this.elements.savePromptBtn.addEventListener('click', () => {
@@ -659,6 +664,29 @@ class AITextEditor {
 
         // Add drag and drop event listeners
         this.setupDragAndDrop();
+
+        // Update toggle all button appearance
+        this.updateToggleAllButton();
+    }
+
+    updateToggleAllButton() {
+        const toggleButton = this.elements.toggleAllPromptsBtn;
+        const activeGroup = this.promptsManager.getActiveGroup();
+        
+        if (!toggleButton || !activeGroup || activeGroup.promptIds.length === 0) {
+            // Hide button if no group or no prompts
+            if (toggleButton) {
+                toggleButton.style.display = 'none';
+            }
+            return;
+        }
+
+        toggleButton.style.display = 'flex';
+        const allEnabled = this.promptsManager.areAllPromptsEnabledInActiveGroup();
+        
+        // Update button icon and title
+        toggleButton.textContent = allEnabled ? '●' : '○';
+        toggleButton.title = allEnabled ? 'Disable all prompts' : 'Enable all prompts';
     }
 
     showPromptModal(promptId = null) {
@@ -1140,6 +1168,17 @@ class AITextEditor {
             this.promptsManager.togglePrompt(promptId);
             this.renderPrompts();
             this.notificationManager.success('Prompt toggled successfully');
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    toggleAllPrompts() {
+        try {
+            const allEnabled = this.promptsManager.areAllPromptsEnabledInActiveGroup();
+            this.promptsManager.toggleAllPromptsInActiveGroup();
+            this.renderPrompts();
+            this.notificationManager.success(allEnabled ? 'All prompts disabled' : 'All prompts enabled');
         } catch (error) {
             this.notificationManager.error(error.message);
         }
