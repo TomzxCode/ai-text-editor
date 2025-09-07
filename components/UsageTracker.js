@@ -133,30 +133,52 @@ class UsageTracker {
                     </div>
                 </div>
 
-                <div class="usage-details">
-                    <div class="section-header">
-                        <h4 id="usageDetailsTitle">Usage by Prompt</h4>
+                <!-- Usage Subtabs -->
+                <div class="usage-subtabs">
+                    <div class="subtab-nav">
+                        <button class="subtab-btn active" id="overviewSubtab" data-subtab="overview">Overview</button>
+                        <button class="subtab-btn" id="promptsSubtab" data-subtab="prompts">By Prompt</button>
+                        <button class="subtab-btn" id="callsSubtab" data-subtab="calls">Recent Calls</button>
                     </div>
-                    <div class="prompt-usage-list" id="promptUsageList">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <div class="usage-history">
-                    <div class="section-header">
-                        <h4>Recent Calls</h4>
-                        <div class="history-controls">
-                            <input type="text" id="searchCallsInput" class="search-input" placeholder="Search calls...">
-                            <select id="callsLimitSelect" class="filter-select">
-                                <option value="50">Last 50</option>
-                                <option value="100">Last 100</option>
-                                <option value="500">Last 500</option>
-                                <option value="all">All</option>
-                            </select>
+                    
+                    <!-- Overview Subtab Content -->
+                    <div class="subtab-content active" id="overviewSubtabContent">
+                        <div class="usage-summary">
+                            <p>Usage overview and statistics are displayed above. Switch to "By Prompt" or "Recent Calls" tabs for detailed data.</p>
                         </div>
                     </div>
-                    <div class="calls-list" id="callsList">
-                        <!-- Populated dynamically -->
+                    
+                    <!-- Prompts Subtab Content -->
+                    <div class="subtab-content" id="promptsSubtabContent">
+                        <div class="usage-details">
+                            <div class="section-header">
+                                <h4 id="usageDetailsTitle">Usage by Prompt</h4>
+                            </div>
+                            <div class="prompt-usage-list" id="promptUsageList">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Calls Subtab Content -->
+                    <div class="subtab-content" id="callsSubtabContent">
+                        <div class="usage-history">
+                            <div class="section-header">
+                                <h4>Recent Calls</h4>
+                                <div class="history-controls">
+                                    <input type="text" id="searchCallsInput" class="search-input" placeholder="Search calls...">
+                                    <select id="callsLimitSelect" class="filter-select">
+                                        <option value="50">Last 50</option>
+                                        <option value="100">Last 100</option>
+                                        <option value="500">Last 500</option>
+                                        <option value="all">All</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="calls-list" id="callsList">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -212,6 +234,11 @@ class UsageTracker {
         
         document.getElementById('searchCallsInput')?.addEventListener('input', (e) => this.handleSearchChange(e));
         window.searchableDropdown.addEventListener('callsLimitSelect', 'change', async () => await this.refreshCallsList());
+
+        // Subtab navigation
+        document.getElementById('overviewSubtab')?.addEventListener('click', () => this.switchSubtab('overview'));
+        document.getElementById('promptsSubtab')?.addEventListener('click', () => this.switchSubtab('prompts'));
+        document.getElementById('callsSubtab')?.addEventListener('click', () => this.switchSubtab('calls'));
     }
 
     handleDateRangeChange(e) {
@@ -716,6 +743,31 @@ class UsageTracker {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
+        }
+    }
+
+    switchSubtab(subtabName) {
+        // Remove active class from all subtab buttons
+        document.querySelectorAll('.subtab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Remove active class from all subtab content
+        document.querySelectorAll('.subtab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Add active class to selected subtab button
+        document.getElementById(`${subtabName}Subtab`)?.classList.add('active');
+
+        // Add active class to selected subtab content
+        document.getElementById(`${subtabName}SubtabContent`)?.classList.add('active');
+
+        // Load data for the selected subtab
+        if (subtabName === 'prompts') {
+            this.updatePromptUsage().catch(console.error);
+        } else if (subtabName === 'calls') {
+            this.refreshCallsList().catch(console.error);
         }
     }
 
