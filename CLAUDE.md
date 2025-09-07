@@ -78,7 +78,7 @@ The app uses the modern File System Access API for direct file operations. Key b
 
 ### Prompts
 - User-created prompts with enable/disable toggle
-- Template system using `{text}` placeholder
+- Template system using `{text}`, `{sentence}`, `{word}`, and `{paragraph}` placeholders
 - Persistent storage with localStorage
 - Separate tab in AI sidebar for management
 

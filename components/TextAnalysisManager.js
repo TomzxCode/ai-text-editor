@@ -262,6 +262,8 @@ class TextAnalysisManager {
                 return this.getCurrentSentence(currentText);
             case 'word':
                 return this.lastCompletedWord || this.getLastCompletedWord(currentText);
+            case 'paragraph':
+                return this.getCurrentParagraph(currentText);
             default:
                 return currentText;
         }
@@ -353,6 +355,18 @@ class TextAnalysisManager {
         if (index > -1) {
             this.structureChangeCallbacks.splice(index, 1);
         }
+    }
+
+    getCurrentParagraph(text) {
+        if (!text) return '';
+        
+        // Split text into paragraphs using blank lines (one or more empty lines)
+        // This follows Markdown paragraph conventions
+        const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+        
+        // Return the last paragraph (which would be the one currently being edited)
+        // If no blank lines exist, the entire text is considered one paragraph
+        return paragraphs.length > 0 ? paragraphs[paragraphs.length - 1] : text;
     }
 
     reset() {

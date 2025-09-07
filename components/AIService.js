@@ -67,7 +67,7 @@ class AIService {
 
     processPromptWithPlaceholders(promptText, fullText, textAnalysisManager) {
         // Find all placeholders in the format {placeholder}
-        const placeholderPattern = /\{(text|sentence|word)\}/g;
+        const placeholderPattern = /\{(text|sentence|word|paragraph)\}/g;
         let processedPrompt = promptText;
 
         // Replace each placeholder with appropriate content
