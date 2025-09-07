@@ -65,7 +65,8 @@ class AITextEditor {
             promptEnabled: document.getElementById('promptEnabled'),
             savePromptBtn: document.getElementById('savePromptBtn'),
             cancelPromptBtn: document.getElementById('cancelPromptBtn'),
-            closePromptModal: document.getElementById('closePromptModal')
+            closePromptModal: document.getElementById('closePromptModal'),
+            promptPaletteBtn: document.getElementById('promptPaletteBtn')
         };
     }
 
@@ -82,6 +83,7 @@ class AITextEditor {
         this.aiService = new AIService();
         this.contextMenuManager = new ContextMenuManager(this.editorManager, this.aiService);
         this.promptsManager = new PromptsManager();
+        this.promptPaletteManager = new PromptPaletteManager(this.promptsManager, this.aiService, this.editorManager);
         this.usageTracker = new UsageTracker();
         this.historyManager = new HistoryManager();
         this.inspectManager = new InspectManager();
@@ -130,6 +132,9 @@ class AITextEditor {
             this.saveCurrentFile();
         });
 
+        this.elements.promptPaletteBtn.addEventListener('click', () => {
+            this.promptPaletteManager.showPalette();
+        });
 
         this.elements.addPromptBtn.addEventListener('click', () => {
             this.showPromptModal();

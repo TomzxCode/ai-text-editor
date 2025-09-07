@@ -71,6 +71,7 @@
                         </div>
                     </div>
                     <div class="editor-actions">
+                        <button class="btn-secondary" id="promptPaletteBtn" title="Open Prompt Palette (Ctrl+K)">⚡</button>
                         <button class="btn-secondary" id="newFileBtn">New</button>
                         <button class="btn-secondary" id="saveFileBtn" disabled>Save</button>
                     </div>
@@ -393,6 +394,21 @@
         </div>
     </div>
 
+    <!-- Prompt Palette -->
+    <div class="prompt-palette-overlay" id="promptPalette" style="display: none;">
+        <div class="prompt-palette">
+            <div class="palette-header">
+                <input type="text" id="paletteSearch" class="palette-search" placeholder="Search prompts..." autocomplete="off">
+                <div class="palette-shortcut-hint">↑↓ navigate • ⏎ execute • ctrl+1-9 quick select • esc close</div>
+            </div>
+            <div class="palette-content">
+                <div id="palettePromptList" class="palette-prompt-list">
+                    <!-- Prompts will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
@@ -420,6 +436,7 @@
     <script src="components/TextAnalysisManager.js"></script>
     <script src="components/InspectManager.js"></script>
     <script src="components/ContextMenuManager.js"></script>
+    <script src="components/PromptPaletteManager.js"></script>
     <!-- Main application script -->
     <script src="script.js"></script>
 

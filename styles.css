@@ -3076,3 +3076,232 @@ body {
         font-size: 0.8rem;
     }
 }
+
+/* Prompt Palette Styles */
+.prompt-palette-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10vh;
+    z-index: 1000;
+    animation: paletteOverlayIn 0.15s ease-out;
+}
+
+.prompt-palette {
+    background: #2d2d2d;
+    border-radius: 12px;
+    border: 1px solid #444;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    width: min(600px, 90vw);
+    max-height: 70vh;
+    animation: paletteSlideIn 0.2s ease-out;
+    overflow: hidden;
+    margin: 0 auto;
+    position: relative;
+}
+
+.palette-header {
+    padding: 1rem 1.5rem 1rem 1.5rem;
+    border-bottom: 1px solid #444;
+    background: #333;
+}
+
+.palette-search {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.palette-search:focus {
+    border-color: #007acc;
+    box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.palette-search::placeholder {
+    color: #888;
+}
+
+.palette-shortcut-hint {
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.palette-content {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.palette-prompt-list {
+    padding: 0.5rem 0;
+}
+
+.palette-prompt-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: background-color 0.2s ease;
+    gap: 0.75rem;
+}
+
+.palette-prompt-item:hover,
+.palette-prompt-item.selected {
+    background: #3d3d3d;
+}
+
+.palette-prompt-item.selected {
+    border-left: 3px solid #007acc;
+}
+
+.palette-prompt-item.disabled {
+    opacity: 0.6;
+}
+
+.palette-prompt-item.disabled .palette-prompt-name {
+    color: #aaa;
+}
+
+.palette-prompt-item.disabled .palette-prompt-preview {
+    color: #777;
+}
+
+.palette-status {
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+    opacity: 0.8;
+}
+
+.palette-status.enabled {
+    color: #4CAF50;
+}
+
+.palette-status.disabled {
+    color: #666;
+}
+
+.palette-highlight {
+    background-color: rgba(255, 235, 59, 0.3);
+    color: #fff;
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.palette-shortcut {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: #555;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.palette-prompt-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.palette-prompt-name {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.palette-prompt-preview {
+    font-size: 0.85rem;
+    color: #bbb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.palette-no-results,
+.palette-no-prompts {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: #888;
+}
+
+.palette-no-prompts p {
+    margin-bottom: 0.5rem;
+}
+
+.palette-no-prompts p:last-child {
+    margin-bottom: 0;
+}
+
+/* Animations */
+@keyframes paletteOverlayIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes paletteSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .prompt-palette-overlay {
+        padding-top: 5vh;
+    }
+    
+    .prompt-palette {
+        width: 95vw;
+        max-height: 80vh;
+    }
+    
+    .palette-header {
+        padding: 1rem;
+    }
+    
+    .palette-search {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .palette-prompt-item {
+        padding: 1rem;
+    }
+    
+    .palette-shortcut {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.9rem;
+    }
+}
