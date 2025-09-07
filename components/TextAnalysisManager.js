@@ -74,11 +74,10 @@ class TextAnalysisManager {
     }
 
     extractSentences(text) {
-        // Split by sentence-ending punctuation, filter out empty sentences
-        const sentences = text.split(this.sentencePattern)
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
-        return sentences;
+        // Count sentences by finding all sentence-ending punctuation marks
+        // followed by whitespace or end of text
+        const sentenceMatches = text.match(this.sentencePattern) || [];
+        return sentenceMatches;
     }
 
     hasCompletedWord(currentText, currentWordCount) {
@@ -99,10 +98,16 @@ class TextAnalysisManager {
     }
 
     hasCompletedSentence(currentText, currentSentenceCount) {
-        if (currentSentenceCount <= this.previousSentenceCount) return false;
+        // A sentence is completed when:
+        // 1. We have more sentences than before, AND
+        // 2. The current text ends with sentence-ending punctuation followed by space or end of text
+        
+        if (currentSentenceCount <= this.previousSentenceCount) {
+            return false;
+        }
         
         // Check if the text ends with sentence-ending punctuation followed by space or end of text
-        const endsWithSentenceBoundary = /[.!?]+(\s|$)/.test(currentText);
+        const endsWithSentenceBoundary = /[.!?]+(?:\s|$)/.test(currentText);
         
         return endsWithSentenceBoundary;
     }
@@ -126,17 +131,28 @@ class TextAnalysisManager {
     }
 
     getLastCompletedSentence(text) {
-        const sentences = this.extractSentences(text);
-        if (sentences.length === 0) return '';
+        // Find the most recent completed sentence by looking for the last
+        // sentence-ending punctuation and extracting the sentence before it
         
-        // If text ends with sentence punctuation, the last sentence is completed
-        if (/[.!?]+(\s|$)/.test(text)) {
-            return sentences[sentences.length - 1] || '';
-        }
-        
-        // If we have multiple sentences and current sentence is incomplete
-        if (sentences.length >= 2) {
-            return sentences[sentences.length - 2] || '';
+        // If text ends with sentence punctuation, extract the sentence that just ended
+        if (/[.!?]+(?:\s|$)/.test(text)) {
+            // Find the last sentence ending punctuation
+            const matches = [...text.matchAll(/[.!?]+(?:\s|$)/g)];
+            if (matches.length === 0) return '';
+            
+            const lastMatch = matches[matches.length - 1];
+            const endIndex = lastMatch.index;
+            
+            // Find the start of this sentence (after the previous sentence ending, or from beginning)
+            let startIndex = 0;
+            if (matches.length > 1) {
+                const previousMatch = matches[matches.length - 2];
+                startIndex = previousMatch.index + previousMatch[0].length;
+            }
+            
+            // Extract the sentence text (without the ending punctuation)
+            const sentence = text.substring(startIndex, endIndex).trim();
+            return sentence;
         }
         
         return '';
