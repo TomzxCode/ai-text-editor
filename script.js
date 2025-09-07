@@ -587,6 +587,7 @@ class AITextEditor {
                         <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${prompt.enabled ? 'Disable' : 'Enable'}">
                             ${prompt.enabled ? '●' : '○'}
                         </button>
+                        <button class="btn-icon" onclick="app.duplicatePrompt('${prompt.id}')" title="Duplicate">📄</button>
                         <button class="btn-icon" onclick="app.editPrompt('${prompt.id}')" title="Edit">✏️</button>
                         <button class="btn-icon danger" onclick="app.deletePrompt('${prompt.id}')" title="Delete">🗑️</button>
                     </div>
@@ -1050,6 +1051,16 @@ class AITextEditor {
             this.promptsManager.togglePrompt(promptId);
             this.renderPrompts();
             this.notificationManager.success('Prompt toggled successfully');
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    duplicatePrompt(promptId) {
+        try {
+            const duplicatedPrompt = this.promptsManager.duplicatePrompt(promptId);
+            this.renderPrompts();
+            this.notificationManager.success(`Prompt duplicated as "${duplicatedPrompt.name}"`);
         } catch (error) {
             this.notificationManager.error(error.message);
         }

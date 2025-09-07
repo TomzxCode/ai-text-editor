@@ -134,6 +134,38 @@ class PromptsManager {
         return this.prompts.filter(p => p.enabled && p.triggerTiming === 'keyboard' && p.keyboardShortcut);
     }
 
+    duplicatePrompt(id) {
+        const prompt = this.getPrompt(id);
+        if (!prompt) {
+            throw new Error('Prompt not found');
+        }
+
+        // Create a unique name for the duplicate
+        let duplicateName = `${prompt.name} (Copy)`;
+        let counter = 2;
+        while (this.prompts.find(p => p.name === duplicateName)) {
+            duplicateName = `${prompt.name} (Copy ${counter})`;
+            counter++;
+        }
+
+        const duplicatedPrompt = {
+            id: Date.now().toString(),
+            name: duplicateName,
+            prompt: prompt.prompt,
+            enabled: prompt.enabled,
+            triggerTiming: prompt.triggerTiming,
+            customDelay: prompt.customDelay,
+            keyboardShortcut: '', // Clear keyboard shortcut to avoid conflicts
+            llmService: prompt.llmService,
+            llmModel: prompt.llmModel,
+            createdAt: new Date().toISOString()
+        };
+
+        this.prompts.push(duplicatedPrompt);
+        this.savePrompts();
+        return duplicatedPrompt;
+    }
+
     togglePrompt(id) {
         const prompt = this.getPrompt(id);
         if (!prompt) {
