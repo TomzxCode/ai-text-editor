@@ -336,6 +336,7 @@
                         <option value="custom">Custom delay</option>
                         <option value="word">On each word completion</option>
                         <option value="sentence">On each sentence completion</option>
+                        <option value="keyboard">Keyboard shortcut</option>
                     </select>
                     <p class="form-hint">Choose when to trigger a new AI feedback request for this prompt.</p>
                 </div>
@@ -343,6 +344,11 @@
                     <label for="promptCustomDelay">Custom delay:</label>
                     <input type="text" id="promptCustomDelay" placeholder="e.g., 5s, 2m 30s, 1h, 1m 30s" maxlength="50">
                     <p class="form-hint">Format: Ad Bh Cm Ds (e.g., "2m 30s" for 2 minutes 30 seconds, "5s" for 5 seconds)</p>
+                </div>
+                <div class="form-group" id="keyboardShortcutGroup" style="display: none;">
+                    <label for="promptKeyboardShortcut">Keyboard shortcut:</label>
+                    <input type="text" id="promptKeyboardShortcut" placeholder="e.g., Ctrl+Shift+A, Alt+P, F5" maxlength="30" readonly>
+                    <p class="form-hint">Click in the input and press the key combination you want to use. Multiple prompts can share the same shortcut and will all trigger together. Common formats: Ctrl+Key, Alt+Key, Ctrl+Shift+Key, F1-F12.</p>
                 </div>
                 <div class="form-group">
                     <label>Provider Selection:</label>

@@ -119,6 +119,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 model: llmModel || 'llama3-8b-8192',
                 apiKey: settings.apiKey,
                 extended: true,
+                think: false,
+                reasoning_format: 'hidden',
             };
 
             // Add base URL from custom service or global setting
@@ -147,13 +149,13 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
             const currentFile = window.app?.editorManager?.getCurrentFile();
             const filePath = currentFile ? currentFile.path : null;
-            
+
             this.llmCallStorage.storeLLMCall(
-                promptName, 
-                usage, 
-                sessionId, 
-                llmService || 'groq', 
-                llmModel || 'llama3-8b-8192', 
+                promptName,
+                usage,
+                sessionId,
+                llmService || 'groq',
+                llmModel || 'llama3-8b-8192',
                 duration,
                 filePath,
                 cleanedResponse,
@@ -169,12 +171,12 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const prompt = window.app?.promptsManager?.getAllPrompts().find(p => p.name === promptName);
             const promptId = prompt ? prompt.id : '';
             const autoRefreshEnabled = promptId ? window.app.isAutoRefreshEnabled(promptId) : true;
-            
+
             // Format response as HTML directly
             const htmlContent = `
                 <div class="feedback-item">
                     <h4>
-                        ✨ ${this.escapeHTML(promptName)} 
+                        ✨ ${this.escapeHTML(promptName)}
                         ${promptId ? `<button class="btn-icon auto-refresh-toggle ${autoRefreshEnabled ? 'enabled' : 'disabled'}" onclick="window.app?.toggleAutoRefresh('${promptId}')" title="${autoRefreshEnabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable'}">
                             ${autoRefreshEnabled ? '🟢' : '🔴'}
                         </button>` : ''}
@@ -210,7 +212,7 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const prompt = window.app?.promptsManager?.getAllPrompts().find(p => p.name === promptName);
             const promptId = prompt ? prompt.id : '';
             const autoRefreshEnabled = promptId ? window.app.isAutoRefreshEnabled(promptId) : true;
-            
+
             const errorHtml = `
                 <div class="feedback-item">
                     <h4>
@@ -231,24 +233,24 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                     </div>
                 </div>
             `;
-            
+
             // Store error in history as well
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
             const currentFile = window.app?.editorManager?.getCurrentFile();
             const filePath = currentFile ? currentFile.path : null;
-            
+
             this.llmCallStorage.storeLLMCall(
-                promptName, 
+                promptName,
                 null, // no usage data for errors
-                sessionId, 
-                llmService || 'groq', 
-                llmModel || 'llama3-8b-8192', 
+                sessionId,
+                llmService || 'groq',
+                llmModel || 'llama3-8b-8192',
                 0, // no duration for errors
                 filePath,
                 errorHtml,
                 'error'
             ).catch(console.error);
-            
+
             return {
                 htmlContent: errorHtml,
                 promptName: promptName,
@@ -1365,14 +1367,14 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         if (heading) {
             // Update the heading with loading indicator
             const originalText = heading.textContent.replace(/^[🔄✨]\s*/, '');
-            
+
             // Extract auto-refresh button if present
             const autoRefreshButton = heading.querySelector('.auto-refresh-toggle');
             const buttonHTML = autoRefreshButton ? autoRefreshButton.outerHTML : '';
-            
+
             // Remove the button from the text extraction
             const textWithoutButton = originalText.replace(/🟢|🔴/, '').trim();
-            
+
             heading.innerHTML = `
                 <span>${textWithoutButton}</span>
                 <div style="display: flex; align-items: center; gap: 0.25rem;">

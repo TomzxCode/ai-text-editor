@@ -9,11 +9,12 @@ class PromptsManager {
             const stored = localStorage.getItem(this.storageKey);
             let prompts = stored ? JSON.parse(stored) : [];
             
-            // Migrate existing prompts to have triggerTiming, customDelay, and LLM overrides if they don't have them
+            // Migrate existing prompts to have triggerTiming, customDelay, keyboard shortcut, and LLM overrides if they don't have them
             prompts = prompts.map(prompt => ({
                 ...prompt,
                 triggerTiming: prompt.triggerTiming || 'custom',
                 customDelay: prompt.customDelay || (prompt.triggerTiming === 'delay' || !prompt.triggerTiming ? '1s' : ''),
+                keyboardShortcut: prompt.keyboardShortcut || '',
                 llmService: prompt.llmService || '',
                 llmModel: prompt.llmModel || ''
             }));
@@ -26,7 +27,7 @@ class PromptsManager {
     }
 
     validateTriggerTiming(timing) {
-        const validTimings = ['word', 'sentence', 'custom'];
+        const validTimings = ['word', 'sentence', 'custom', 'keyboard'];
         return validTimings.includes(timing) ? timing : 'custom';
     }
 
@@ -40,7 +41,7 @@ class PromptsManager {
         }
     }
 
-    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', llmService = '', llmModel = '') {
+    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '') {
         if (!name || !prompt) {
             throw new Error('Name and prompt are required');
         }
@@ -49,6 +50,7 @@ class PromptsManager {
             throw new Error('A prompt with this name already exists');
         }
 
+
         const newPrompt = {
             id: Date.now().toString(),
             name: name.trim(),
@@ -56,6 +58,7 @@ class PromptsManager {
             enabled,
             triggerTiming: this.validateTriggerTiming(triggerTiming),
             customDelay: triggerTiming === 'custom' ? customDelay.trim() : '',
+            keyboardShortcut: triggerTiming === 'keyboard' ? keyboardShortcut.trim() : '',
             llmService: llmService.trim(),
             llmModel: llmModel.trim(),
             createdAt: new Date().toISOString()
@@ -77,6 +80,7 @@ class PromptsManager {
                 throw new Error('A prompt with this name already exists');
             }
         }
+
 
         this.prompts[index] = {
             ...this.prompts[index],
@@ -116,6 +120,20 @@ class PromptsManager {
         return this.prompts.filter(p => p.enabled && p.triggerTiming === triggerTiming);
     }
 
+    getPromptsByKeyboardShortcut(shortcut) {
+        return this.prompts.filter(p => p.enabled && p.keyboardShortcut === shortcut && p.triggerTiming === 'keyboard');
+    }
+
+    // Legacy method for backward compatibility
+    getPromptByKeyboardShortcut(shortcut) {
+        const prompts = this.getPromptsByKeyboardShortcut(shortcut);
+        return prompts.length > 0 ? prompts[0] : null;
+    }
+
+    getKeyboardShortcutPrompts() {
+        return this.prompts.filter(p => p.enabled && p.triggerTiming === 'keyboard' && p.keyboardShortcut);
+    }
+
     togglePrompt(id) {
         const prompt = this.getPrompt(id);
         if (!prompt) {
@@ -147,6 +165,7 @@ class PromptsManager {
                     enabled: p.enabled !== false,
                     triggerTiming: this.validateTriggerTiming(p.triggerTiming),
                     customDelay: p.customDelay || '',
+                    keyboardShortcut: p.keyboardShortcut || '',
                     llmService: p.llmService || '',
                     llmModel: p.llmModel || ''
                 }));
@@ -161,6 +180,7 @@ class PromptsManager {
                         enabled: p.enabled !== false,
                         triggerTiming: this.validateTriggerTiming(p.triggerTiming),
                         customDelay: p.customDelay || '',
+                        keyboardShortcut: p.keyboardShortcut || '',
                         llmService: p.llmService || '',
                         llmModel: p.llmModel || ''
                     }));

@@ -58,6 +58,8 @@ class AITextEditor {
             promptTriggerTiming: document.getElementById('promptTriggerTiming'),
             promptCustomDelay: document.getElementById('promptCustomDelay'),
             customDelayGroup: document.getElementById('customDelayGroup'),
+            promptKeyboardShortcut: document.getElementById('promptKeyboardShortcut'),
+            keyboardShortcutGroup: document.getElementById('keyboardShortcutGroup'),
             providersList: document.getElementById('providersList'),
             addProviderBtn: document.getElementById('addProviderBtn'),
             promptEnabled: document.getElementById('promptEnabled'),
@@ -149,6 +151,20 @@ class AITextEditor {
             this.toggleCustomDelayField();
         });
 
+        // Keyboard shortcut capture
+        this.elements.promptKeyboardShortcut.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            this.captureKeyboardShortcut(e);
+        });
+
+        this.elements.promptKeyboardShortcut.addEventListener('focus', () => {
+            this.elements.promptKeyboardShortcut.placeholder = 'Press key combination...';
+        });
+
+        this.elements.promptKeyboardShortcut.addEventListener('blur', () => {
+            this.elements.promptKeyboardShortcut.placeholder = 'e.g., Ctrl+Shift+A, Alt+P, F5';
+        });
+
 
         // Track mousedown to distinguish between clicks and text selection
         let modalMouseDownTarget = null;
@@ -172,6 +188,11 @@ class AITextEditor {
                 e.preventDefault();
                 e.returnValue = '';
             }
+        });
+
+        // Global keyboard shortcut listener
+        document.addEventListener('keydown', (e) => {
+            this.handleGlobalKeyboardShortcut(e);
         });
     }
 
@@ -585,6 +606,7 @@ class AITextEditor {
                 this.elements.promptText.value = prompt.prompt;
                 this.elements.promptTriggerTiming.value = prompt.triggerTiming || 'custom';
                 this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
+                this.elements.promptKeyboardShortcut.value = prompt.keyboardShortcut || '';
                 this.currentProviders = prompt.providers ? [...prompt.providers] : [];
                 this.elements.promptEnabled.checked = prompt.enabled;
             }
@@ -594,6 +616,7 @@ class AITextEditor {
             this.elements.promptText.value = '';
             this.elements.promptTriggerTiming.value = 'custom';
             this.elements.promptCustomDelay.value = '1s';
+            this.elements.promptKeyboardShortcut.value = '';
             this.currentProviders = [];
             this.elements.promptEnabled.checked = true;
         }
@@ -608,8 +631,168 @@ class AITextEditor {
         const triggerTiming = this.elements.promptTriggerTiming.value;
         if (triggerTiming === 'custom') {
             this.elements.customDelayGroup.style.display = 'block';
+            this.elements.keyboardShortcutGroup.style.display = 'none';
+        } else if (triggerTiming === 'keyboard') {
+            this.elements.customDelayGroup.style.display = 'none';
+            this.elements.keyboardShortcutGroup.style.display = 'block';
         } else {
             this.elements.customDelayGroup.style.display = 'none';
+            this.elements.keyboardShortcutGroup.style.display = 'none';
+        }
+    }
+
+    captureKeyboardShortcut(event) {
+        const modifiers = [];
+        
+        if (event.ctrlKey) modifiers.push('Ctrl');
+        if (event.altKey) modifiers.push('Alt');
+        if (event.shiftKey) modifiers.push('Shift');
+        if (event.metaKey) modifiers.push('Meta');
+
+        let key = event.key;
+        
+        // Handle special keys
+        if (key === ' ') key = 'Space';
+        if (key === 'Control' || key === 'Alt' || key === 'Shift' || key === 'Meta') {
+            return; // Don't capture modifier keys alone
+        }
+        
+        // Build shortcut string
+        const shortcut = [...modifiers, key].join('+');
+        
+        // Update input value
+        this.elements.promptKeyboardShortcut.value = shortcut;
+    }
+
+    buildKeyboardShortcut(event) {
+        const modifiers = [];
+        
+        if (event.ctrlKey) modifiers.push('Ctrl');
+        if (event.altKey) modifiers.push('Alt');
+        if (event.shiftKey) modifiers.push('Shift');
+        if (event.metaKey) modifiers.push('Meta');
+
+        let key = event.key;
+        
+        // Handle special keys
+        if (key === ' ') key = 'Space';
+        
+        // Build shortcut string
+        return [...modifiers, key].join('+');
+    }
+
+    handleGlobalKeyboardShortcut(event) {
+        // Don't process shortcuts when typing in input fields or textareas, except for specific shortcuts
+        const activeElement = document.activeElement;
+        const isInputField = activeElement && (
+            activeElement.tagName === 'INPUT' || 
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.isContentEditable
+        );
+        
+        // Skip if we're in the keyboard shortcut input field (let it capture the shortcut)
+        if (activeElement === this.elements.promptKeyboardShortcut) {
+            return;
+        }
+        
+        // Allow some shortcuts even when in input fields (like Ctrl+S for save)
+        const isSystemShortcut = (event.ctrlKey || event.metaKey) && ['s', 'z', 'y', 'x', 'c', 'v', 'a'].includes(event.key.toLowerCase());
+        
+        if (isInputField && !isSystemShortcut) {
+            // Only process shortcuts with modifiers when in input fields
+            if (!event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
+                return;
+            }
+        }
+
+        const shortcut = this.buildKeyboardShortcut(event);
+        const prompts = this.promptsManager.getPromptsByKeyboardShortcut(shortcut);
+        
+        if (prompts.length > 0) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Trigger all prompts with this shortcut
+            this.triggerKeyboardShortcutPrompts(prompts, shortcut);
+        }
+    }
+
+    async triggerKeyboardShortcutPrompts(prompts, shortcut) {
+        try {
+            const currentText = this.editorManager.getValue();
+            if (!currentText.trim()) {
+                this.notificationManager.error('No text to analyze');
+                return;
+            }
+
+            if (prompts.length === 1) {
+                this.notificationManager.success(`Triggered: ${prompts[0].name}`);
+            } else {
+                this.notificationManager.success(`Triggered ${prompts.length} prompts with shortcut ${shortcut}`);
+            }
+            
+            // Execute all prompts in parallel
+            const promises = prompts.map(async (prompt) => {
+                try {
+                    const result = await this.aiService.getPromptFeedback(
+                        currentText, 
+                        `⌨️ ${prompt.name}`, // Add keyboard icon to indicate it was triggered by shortcut
+                        prompt.prompt, 
+                        this.textAnalysisManager, 
+                        {
+                            llmService: prompt.llmService,
+                            llmModel: prompt.llmModel
+                        }
+                    );
+                    // Display the result in the AI sidebar using the existing system
+                    this.insertFeedbackResult(result);
+                } catch (error) {
+                    console.error(`Error executing prompt "${prompt.name}":`, error);
+                    this.notificationManager.error(`Failed to execute "${prompt.name}": ${error.message}`);
+                }
+            });
+
+            // Wait for all prompts to complete
+            await Promise.allSettled(promises);
+            
+        } catch (error) {
+            console.error('Error triggering keyboard shortcut prompts:', error);
+            this.notificationManager.error(`Failed to execute prompts: ${error.message}`);
+        }
+    }
+
+    // Legacy method for single prompt (kept for compatibility)
+    async triggerKeyboardShortcutPrompt(prompt) {
+        await this.triggerKeyboardShortcutPrompts([prompt], prompt.keyboardShortcut);
+    }
+
+    insertFeedbackResult(result) {
+        // Switch to feedback tab
+        const feedbackTab = document.getElementById('feedbackTab');
+        if (feedbackTab) {
+            feedbackTab.click();
+        }
+
+        // Add feedback to the container using the existing system pattern
+        const feedbackContainer = document.getElementById('feedbackContainer');
+        if (feedbackContainer && result && result.htmlContent) {
+            // Remove placeholder if present
+            const placeholder = feedbackContainer.querySelector('.placeholder-message');
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            // Create a temporary container to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = result.htmlContent;
+
+            // Insert the parsed HTML at the top
+            while (tempDiv.firstChild) {
+                feedbackContainer.insertBefore(tempDiv.firstChild, feedbackContainer.firstChild);
+            }
+
+            // Scroll to top of feedback container
+            feedbackContainer.scrollTop = 0;
         }
     }
 
@@ -623,6 +806,7 @@ class AITextEditor {
         const prompt = this.elements.promptText.value.trim();
         const triggerTiming = this.elements.promptTriggerTiming.value;
         const customDelay = this.elements.promptCustomDelay.value.trim();
+        const keyboardShortcut = this.elements.promptKeyboardShortcut.value.trim();
         const providers = this.currentProviders.filter(p => p.service && p.model);
         const enabled = this.elements.promptEnabled.checked;
 
@@ -654,6 +838,15 @@ class AITextEditor {
             }
         }
 
+        // Validate keyboard shortcut if selected
+        if (triggerTiming === 'keyboard') {
+            if (!keyboardShortcut) {
+                this.notificationManager.error('Please set a keyboard shortcut');
+                this.elements.promptKeyboardShortcut.focus();
+                return;
+            }
+        }
+
         try {
             if (this.currentEditingPromptId) {
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
@@ -661,6 +854,7 @@ class AITextEditor {
                     prompt,
                     triggerTiming,
                     customDelay: triggerTiming === 'custom' ? customDelay : '',
+                    keyboardShortcut: triggerTiming === 'keyboard' ? keyboardShortcut : '',
                     providers,
                     enabled
                 });
@@ -668,7 +862,9 @@ class AITextEditor {
             } else {
                 const llmService = providers.length > 0 ? providers[0].service || '' : '';
                 const llmModel = providers.length > 0 ? providers[0].model || '' : '';
-                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, llmService, llmModel);
+                const customDelayValue = triggerTiming === 'custom' ? customDelay : '1s';
+                const keyboardShortcutValue = triggerTiming === 'keyboard' ? keyboardShortcut : '';
+                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, keyboardShortcutValue, llmService, llmModel);
                 this.notificationManager.success('Prompt added successfully');
             }
 
@@ -931,6 +1127,8 @@ class AITextEditor {
                 return '📖 Sentence completion';
             case 'custom':
                 return `⏱️ Delay: ${prompt.customDelay || '1s'}`;
+            case 'keyboard':
+                return `⌨️ Shortcut: ${prompt.keyboardShortcut || 'Not set'}`;
             default:
                 return '⏱️ Delay: 1s';
         }
