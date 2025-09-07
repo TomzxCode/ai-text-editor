@@ -116,8 +116,22 @@
                 <!-- Prompts Tab Content -->
                 <div class="tab-content" id="promptsTabContent">
                     <div class="prompts-section">
+                        <!-- Groups Management -->
                         <div class="section-header">
-                            <h4>Prompts</h4>
+                            <h4>Prompt Groups</h4>
+                            <button class="btn-small" id="addGroupBtn" title="Add new group">+</button>
+                        </div>
+                        <div class="group-selector">
+                            <select id="activeGroupSelect" class="group-select">
+                                <option value="">Loading groups...</option>
+                            </select>
+                            <button class="btn-small" id="editGroupBtn" title="Edit group">✎</button>
+                            <button class="btn-small" id="deleteGroupBtn" title="Delete group">🗑</button>
+                        </div>
+
+                        <!-- Prompts in Active Group -->
+                        <div class="section-header">
+                            <h4 id="promptsSectionTitle">Prompts</h4>
                             <button class="btn-small" id="addPromptBtn">+</button>
                         </div>
                         <div class="prompts-list" id="promptsList">
@@ -369,6 +383,38 @@
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelPromptBtn">Cancel</button>
                 <button class="btn-primary" id="savePromptBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Modal -->
+    <div class="modal-overlay" id="groupModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="groupModalTitle">Add Group</h3>
+                <button class="modal-close" id="closeGroupModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="groupName">Group Name:</label>
+                    <input type="text" id="groupName" placeholder="e.g., Writing Review, Code Analysis" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label>Select Prompts for this Group:</label>
+                    <div class="prompts-checkboxes" id="groupPromptsList">
+                        <!-- Dynamic prompt checkboxes will be populated here -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="groupSetActive">
+                        Set as active group
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelGroupBtn">Cancel</button>
+                <button class="btn-primary" id="saveGroupBtn">Save</button>
             </div>
         </div>
     </div>

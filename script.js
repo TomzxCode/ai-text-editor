@@ -2,7 +2,7 @@ class AITextEditor {
     constructor() {
         this.fileSystemManager = new FileSystemManager();
         this.notificationManager = new NotificationManager();
-        
+
         // Session-only auto-refresh state (promptId -> boolean)
         this.autoRefreshState = new Map();
 
@@ -66,7 +66,21 @@ class AITextEditor {
             savePromptBtn: document.getElementById('savePromptBtn'),
             cancelPromptBtn: document.getElementById('cancelPromptBtn'),
             closePromptModal: document.getElementById('closePromptModal'),
-            promptPaletteBtn: document.getElementById('promptPaletteBtn')
+            promptPaletteBtn: document.getElementById('promptPaletteBtn'),
+            // Group management elements
+            activeGroupSelect: document.getElementById('activeGroupSelect'),
+            promptsSectionTitle: document.getElementById('promptsSectionTitle'),
+            addGroupBtn: document.getElementById('addGroupBtn'),
+            editGroupBtn: document.getElementById('editGroupBtn'),
+            deleteGroupBtn: document.getElementById('deleteGroupBtn'),
+            groupModal: document.getElementById('groupModal'),
+            groupModalTitle: document.getElementById('groupModalTitle'),
+            groupName: document.getElementById('groupName'),
+            groupPromptsList: document.getElementById('groupPromptsList'),
+            groupSetActive: document.getElementById('groupSetActive'),
+            saveGroupBtn: document.getElementById('saveGroupBtn'),
+            cancelGroupBtn: document.getElementById('cancelGroupBtn'),
+            closeGroupModal: document.getElementById('closeGroupModal')
         };
     }
 
@@ -92,6 +106,8 @@ class AITextEditor {
         this.initializeProviderManagement();
 
         this.currentEditingPromptId = null;
+        this.currentEditingGroupId = null;
+        this.renderGroups();
         this.renderPrompts();
 
         // Setup text analysis callbacks
@@ -113,7 +129,7 @@ class AITextEditor {
         this.elements.addProviderBtn.addEventListener('click', () => {
             this.addProviderRow();
         });
-        
+
         // Initialize with empty state
         this.currentProviders = [];
         this.updateProvidersDisplay();
@@ -150,6 +166,41 @@ class AITextEditor {
 
         this.elements.closePromptModal.addEventListener('click', () => {
             this.hidePromptModal();
+        });
+
+        // Group management event listeners
+        this.elements.activeGroupSelect.addEventListener('change', (e) => {
+            this.switchActiveGroup(e.target.value);
+        });
+
+        this.elements.addGroupBtn.addEventListener('click', () => {
+            this.showGroupModal();
+        });
+
+        this.elements.editGroupBtn.addEventListener('click', () => {
+            const activeGroup = this.promptsManager.getActiveGroup();
+            if (activeGroup) {
+                this.showGroupModal(activeGroup.id);
+            }
+        });
+
+        this.elements.deleteGroupBtn.addEventListener('click', () => {
+            const activeGroup = this.promptsManager.getActiveGroup();
+            if (activeGroup) {
+                this.deleteGroup(activeGroup.id);
+            }
+        });
+
+        this.elements.saveGroupBtn.addEventListener('click', () => {
+            this.saveGroup();
+        });
+
+        this.elements.cancelGroupBtn.addEventListener('click', () => {
+            this.hideGroupModal();
+        });
+
+        this.elements.closeGroupModal.addEventListener('click', () => {
+            this.hideGroupModal();
         });
 
         this.elements.promptTriggerTiming.addEventListener('change', () => {
@@ -226,7 +277,7 @@ class AITextEditor {
     handleTriggerTimingEvent(triggerType) {
         const currentText = this.editorManager.getValue();
         const enabledPrompts = this.promptsManager.getEnabledPromptsByTrigger(triggerType);
-        
+
         if (enabledPrompts.length === 0) return;
 
         const settings = this.settingsManager.getAllSettings();
@@ -246,10 +297,10 @@ class AITextEditor {
 
     generateIndividualPromptFeedback(promptId, content) {
         const prompt = this.promptsManager.getPrompt(promptId);
-        if (!prompt || !prompt.enabled) return;
+        if (!prompt || !this.promptsManager.isPromptEnabledInActiveGroup(promptId)) return;
 
         const settings = this.settingsManager.getAllSettings();
-        
+
         this.aiService.generateIndividualPromptFeedback(
             content,
             promptId,
@@ -364,17 +415,17 @@ class AITextEditor {
 
         // Get session calls to calculate cost
         const sessionCalls = await this.aiService.llmCallStorage.getCallsBySession(currentSessionId);
-        
+
         sessionCalls.forEach(call => {
             if (call.usage) {
                 const promptTokens = call.usage.input_tokens || 0;
                 const completionTokens = call.usage.output_tokens || 0;
-                
+
                 // Example pricing (approximate, varies by provider):
                 // $0.0015 per 1K prompt tokens, $0.002 per 1K completion tokens
                 const promptCost = (promptTokens / 1000) * 0.0015;
                 const completionCost = (completionTokens / 1000) * 0.002;
-                
+
                 totalCost += promptCost + completionCost;
             }
         });
@@ -481,14 +532,14 @@ class AITextEditor {
                 this.notificationManager.success('File saved successfully');
             } else if (currentFile.isNew) {
                 let fileName = currentFile.name;
-                
+
                 if (fileName === 'Untitled') {
                     fileName = prompt('Enter file name:');
                     if (!fileName) return;
-                    
+
                     this.editorManager.updateCurrentFileName(fileName);
                 }
-                
+
                 await this.fileSystemManager.createNewFile(fileName, content);
                 this.renderFileTree();
                 this.notificationManager.success('File created successfully');
@@ -519,7 +570,7 @@ class AITextEditor {
         // Handle custom delay prompts individually (all delay-based prompts are now custom)
         const currentText = this.editorManager.getValue();
         const customDelayPrompts = this.promptsManager.getEnabledPromptsByTrigger('custom');
-        
+
         customDelayPrompts.filter(prompt => this.isAutoRefreshEnabled(prompt.id)).forEach(prompt => {
             this.aiService.schedulePromptFeedback(
                 prompt.id,
@@ -567,16 +618,24 @@ class AITextEditor {
 
 
     renderPrompts() {
-        const prompts = this.promptsManager.getAllPrompts();
+        const prompts = this.promptsManager.getPromptsInActiveGroup();
+        const activeGroup = this.promptsManager.getActiveGroup();
         const container = this.elements.promptsList;
+
+        // Update section title to show active group
+        if (activeGroup) {
+            this.elements.promptsSectionTitle.textContent = `Prompts in "${activeGroup.name}"`;
+        }
 
         if (prompts.length === 0) {
             container.innerHTML = '<p class="no-prompts">No prompts yet. Click + to add one.</p>';
             return;
         }
 
-        container.innerHTML = prompts.map((prompt, index) => `
-            <div class="prompt-item ${!prompt.enabled ? 'disabled' : ''}"
+        container.innerHTML = prompts.map((prompt, index) => {
+            const isEnabled = this.promptsManager.isPromptEnabledInActiveGroup(prompt.id);
+            return `
+            <div class="prompt-item ${!isEnabled ? 'disabled' : ''}"
                  data-id="${prompt.id}"
                  data-index="${index}"
                  draggable="true">
@@ -584,8 +643,8 @@ class AITextEditor {
                     <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
                     <span class="prompt-name">${this.escapeHtml(prompt.name)}</span>
                     <div class="prompt-actions">
-                        <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${prompt.enabled ? 'Disable' : 'Enable'}">
-                            ${prompt.enabled ? '●' : '○'}
+                        <button class="btn-icon" onclick="app.togglePrompt('${prompt.id}')" title="${isEnabled ? 'Disable' : 'Enable'}">
+                            ${isEnabled ? '●' : '○'}
                         </button>
                         <button class="btn-icon" onclick="app.duplicatePrompt('${prompt.id}')" title="Duplicate">📄</button>
                         <button class="btn-icon" onclick="app.editPrompt('${prompt.id}')" title="Edit">✏️</button>
@@ -595,7 +654,8 @@ class AITextEditor {
                 <div class="prompt-trigger">${this.formatTriggerType(prompt)}</div>
                 <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Add drag and drop event listeners
         this.setupDragAndDrop();
@@ -614,7 +674,7 @@ class AITextEditor {
                 this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
                 this.elements.promptKeyboardShortcut.value = prompt.keyboardShortcut || '';
                 this.currentProviders = prompt.providers ? [...prompt.providers] : [];
-                this.elements.promptEnabled.checked = prompt.enabled;
+                this.elements.promptEnabled.checked = this.promptsManager.isPromptEnabledInActiveGroup(prompt.id);
             }
         } else {
             this.elements.promptModalTitle.textContent = 'Add Prompt';
@@ -649,40 +709,40 @@ class AITextEditor {
 
     captureKeyboardShortcut(event) {
         const modifiers = [];
-        
+
         if (event.ctrlKey) modifiers.push('Ctrl');
         if (event.altKey) modifiers.push('Alt');
         if (event.shiftKey) modifiers.push('Shift');
         if (event.metaKey) modifiers.push('Meta');
 
         let key = event.key;
-        
+
         // Handle special keys
         if (key === ' ') key = 'Space';
         if (key === 'Control' || key === 'Alt' || key === 'Shift' || key === 'Meta') {
             return; // Don't capture modifier keys alone
         }
-        
+
         // Build shortcut string
         const shortcut = [...modifiers, key].join('+');
-        
+
         // Update input value
         this.elements.promptKeyboardShortcut.value = shortcut;
     }
 
     buildKeyboardShortcut(event) {
         const modifiers = [];
-        
+
         if (event.ctrlKey) modifiers.push('Ctrl');
         if (event.altKey) modifiers.push('Alt');
         if (event.shiftKey) modifiers.push('Shift');
         if (event.metaKey) modifiers.push('Meta');
 
         let key = event.key;
-        
+
         // Handle special keys
         if (key === ' ') key = 'Space';
-        
+
         // Build shortcut string
         return [...modifiers, key].join('+');
     }
@@ -691,19 +751,19 @@ class AITextEditor {
         // Don't process shortcuts when typing in input fields or textareas, except for specific shortcuts
         const activeElement = document.activeElement;
         const isInputField = activeElement && (
-            activeElement.tagName === 'INPUT' || 
+            activeElement.tagName === 'INPUT' ||
             activeElement.tagName === 'TEXTAREA' ||
             activeElement.isContentEditable
         );
-        
+
         // Skip if we're in the keyboard shortcut input field (let it capture the shortcut)
         if (activeElement === this.elements.promptKeyboardShortcut) {
             return;
         }
-        
+
         // Allow some shortcuts even when in input fields (like Ctrl+S for save)
         const isSystemShortcut = (event.ctrlKey || event.metaKey) && ['s', 'z', 'y', 'x', 'c', 'v', 'a'].includes(event.key.toLowerCase());
-        
+
         if (isInputField && !isSystemShortcut) {
             // Only process shortcuts with modifiers when in input fields
             if (!event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
@@ -713,11 +773,11 @@ class AITextEditor {
 
         const shortcut = this.buildKeyboardShortcut(event);
         const prompts = this.promptsManager.getPromptsByKeyboardShortcut(shortcut);
-        
+
         if (prompts.length > 0) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             // Trigger all prompts with this shortcut
             this.triggerKeyboardShortcutPrompts(prompts, shortcut);
         }
@@ -736,15 +796,15 @@ class AITextEditor {
             } else {
                 this.notificationManager.success(`Triggered ${prompts.length} prompts with shortcut ${shortcut}`);
             }
-            
+
             // Execute all prompts in parallel
             const promises = prompts.map(async (prompt) => {
                 try {
                     const result = await this.aiService.getPromptFeedback(
-                        currentText, 
+                        currentText,
                         `⌨️ ${prompt.name}`, // Add keyboard icon to indicate it was triggered by shortcut
-                        prompt.prompt, 
-                        this.textAnalysisManager, 
+                        prompt.prompt,
+                        this.textAnalysisManager,
                         {
                             llmService: prompt.llmService,
                             llmModel: prompt.llmModel
@@ -760,7 +820,7 @@ class AITextEditor {
 
             // Wait for all prompts to complete
             await Promise.allSettled(promises);
-            
+
         } catch (error) {
             console.error('Error triggering keyboard shortcut prompts:', error);
             this.notificationManager.error(`Failed to execute prompts: ${error.message}`);
@@ -835,7 +895,7 @@ class AITextEditor {
                 this.elements.promptCustomDelay.focus();
                 return;
             }
-            
+
             const delayMs = this.parseDelayString(customDelay);
             if (delayMs === null) {
                 this.notificationManager.error('Invalid delay format. Use format like "5s", "2m 30s", "1h"');
@@ -854,7 +914,10 @@ class AITextEditor {
         }
 
         try {
+            let promptId;
+            
             if (this.currentEditingPromptId) {
+                // Update existing prompt
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
                     name,
                     prompt,
@@ -864,14 +927,40 @@ class AITextEditor {
                     providers,
                     enabled
                 });
+                promptId = this.currentEditingPromptId;
                 this.notificationManager.success('Prompt updated successfully');
             } else {
+            	// Add new prompt (without global enabled state)
                 const llmService = providers.length > 0 ? providers[0].service || '' : '';
                 const llmModel = providers.length > 0 ? providers[0].model || '' : '';
                 const customDelayValue = triggerTiming === 'custom' ? customDelay : '1s';
                 const keyboardShortcutValue = triggerTiming === 'keyboard' ? keyboardShortcut : '';
-                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, keyboardShortcutValue, llmService, llmModel);
-                this.notificationManager.success('Prompt added successfully');
+                
+                const newPrompt = this.promptsManager.addPrompt(
+                    name, 
+                    prompt, 
+                    enabled, 
+                    triggerTiming, 
+                    customDelayValue, 
+                    keyboardShortcutValue, 
+                    llmService, 
+                    llmModel
+                );
+                promptId = newPrompt.id;
+
+                // Add the new prompt to the active group
+                const activeGroup = this.promptsManager.getActiveGroup();
+                if (activeGroup) {
+                    this.promptsManager.addPromptToGroup(activeGroup.id, promptId);
+                }
+
+     			this.notificationManager.success('Prompt added successfully');
+            }
+            
+            // Set the enabled state for this prompt in the active group
+            const activeGroup = this.promptsManager.getActiveGroup();
+            if (activeGroup) {
+                this.promptsManager.setPromptEnabledInGroup(activeGroup.id, promptId, enabled);
             }
 
             this.renderPrompts();
@@ -908,10 +997,10 @@ class AITextEditor {
         this.currentProviders.forEach((provider, index) => {
             const providerRow = document.createElement('div');
             providerRow.className = 'provider-item';
-            
+
             const serviceId = `provider-service-${index}`;
             const modelId = `provider-model-${index}`;
-            
+
             providerRow.innerHTML = `
                 <div class="provider-selects">
                     <select id="${serviceId}" class="provider-service setting-select">
@@ -923,7 +1012,7 @@ class AITextEditor {
                 </div>
                 <button type="button" class="remove-provider-btn" onclick="window.app.removeProviderRow(${index})">×</button>
             `;
-            
+
             container.appendChild(providerRow);
 
             // Initialize searchable dropdowns for this row
@@ -972,7 +1061,7 @@ class AITextEditor {
 
     async updateProviderModels(providerIndex, service, selectedModel = '') {
         const modelId = `provider-model-${providerIndex}`;
-        
+
         if (!service) {
             window.searchableDropdown.setChoices(modelId, [
                 { value: '', label: 'Select model...' }
@@ -988,7 +1077,7 @@ class AITextEditor {
 
         try {
             const models = await this.aiService.fetchModels(service);
-            
+
             const modelChoices = [
                 { value: '', label: 'Select model...' },
                 ...models.map(modelName => ({
@@ -996,7 +1085,7 @@ class AITextEditor {
                     label: modelName
                 }))
             ];
-            
+
             window.searchableDropdown.setChoices(modelId, modelChoices);
 
             // Set selected model if provided
@@ -1016,29 +1105,29 @@ class AITextEditor {
 
     parseDelayString(delayString) {
         if (!delayString) return null;
-        
+
         // Parse format: Ad Bh Cm Ds (days, hours, minutes, seconds)
         const regex = /(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?/i;
         const match = delayString.trim().match(regex);
-        
+
         if (!match || match[0] === '') return null;
-        
+
         const days = parseInt(match[1] || 0);
         const hours = parseInt(match[2] || 0);
         const minutes = parseInt(match[3] || 0);
         const seconds = parseInt(match[4] || 0);
-        
+
         // Check if at least one unit was specified
         if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
             return null;
         }
-        
+
         // Convert to milliseconds
-        const totalMs = (days * 24 * 60 * 60 * 1000) + 
-                       (hours * 60 * 60 * 1000) + 
-                       (minutes * 60 * 1000) + 
+        const totalMs = (days * 24 * 60 * 60 * 1000) +
+                       (hours * 60 * 60 * 1000) +
+                       (minutes * 60 * 1000) +
                        (seconds * 1000);
-        
+
         return totalMs > 0 ? totalMs : null;
     }
 
@@ -1072,10 +1161,10 @@ class AITextEditor {
             const currentState = this.autoRefreshState.get(promptId) ?? true; // default to enabled
             const newState = !currentState;
             this.autoRefreshState.set(promptId, newState);
-            
+
             // Update all toggle buttons for this prompt ID immediately
             this.updateAutoRefreshButtons(promptId, newState);
-            
+
             this.notificationManager.success(`Auto-refresh ${newState ? 'enabled' : 'disabled'} for this session`);
         } catch (error) {
             this.notificationManager.error(error.message);
@@ -1249,12 +1338,159 @@ class AITextEditor {
         }
     }
 
+    // Group Management Methods
+    renderGroups() {
+        const groups = this.promptsManager.getAllGroups();
+        const activeGroup = this.promptsManager.getActiveGroup();
+        const select = this.elements.activeGroupSelect;
+
+        // Clear existing options
+        select.innerHTML = '';
+
+        // Add groups as options
+        groups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.id;
+            option.textContent = group.name;
+            option.selected = group.isActive;
+            select.appendChild(option);
+        });
+
+        // Update button states
+        this.elements.editGroupBtn.disabled = !activeGroup;
+        this.elements.deleteGroupBtn.disabled = !activeGroup || groups.length <= 1;
+    }
+
+    switchActiveGroup(groupId) {
+        if (!groupId) return;
+
+        try {
+            this.promptsManager.setActiveGroup(groupId);
+            this.renderGroups();
+            this.renderPrompts();
+            this.notificationManager.success('Active group changed');
+
+            // Clear existing feedback since we're switching contexts
+            this.aiService.clearFeedback();
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    showGroupModal(groupId = null) {
+        this.currentEditingGroupId = groupId;
+
+        if (groupId) {
+            // Edit existing group
+            const group = this.promptsManager.getGroup(groupId);
+            if (group) {
+                this.elements.groupModalTitle.textContent = 'Edit Group';
+                this.elements.groupName.value = group.name;
+                this.elements.groupSetActive.checked = group.isActive;
+
+                // Populate prompt checkboxes
+                this.renderGroupPromptsList(group.promptIds);
+            }
+        } else {
+            // Create new group
+            this.elements.groupModalTitle.textContent = 'Add Group';
+            this.elements.groupName.value = '';
+            this.elements.groupSetActive.checked = false;
+
+            // Populate prompt checkboxes with none selected
+            this.renderGroupPromptsList([]);
+        }
+
+        this.elements.groupModal.style.display = 'flex';
+        this.elements.groupName.focus();
+    }
+
+    renderGroupPromptsList(selectedPromptIds = []) {
+        const allPrompts = this.promptsManager.getAllPrompts();
+        const container = this.elements.groupPromptsList;
+
+        if (allPrompts.length === 0) {
+            container.innerHTML = '<p class="no-prompts">No prompts available. Create some prompts first.</p>';
+            return;
+        }
+
+        container.innerHTML = allPrompts.map(prompt => `
+            <div class="checkbox-item">
+                <label>
+                    <input type="checkbox" value="${prompt.id}" ${selectedPromptIds.includes(prompt.id) ? 'checked' : ''}>
+                    <span class="checkbox-label">${this.escapeHtml(prompt.name)}</span>
+                </label>
+            </div>
+        `).join('');
+    }
+
+    hideGroupModal() {
+        this.elements.groupModal.style.display = 'none';
+        this.currentEditingGroupId = null;
+    }
+
+    saveGroup() {
+        const name = this.elements.groupName.value.trim();
+        const setActive = this.elements.groupSetActive.checked;
+
+        if (!name) {
+            this.notificationManager.error('Please enter a name for the group');
+            this.elements.groupName.focus();
+            return;
+        }
+
+        // Get selected prompt IDs
+        const checkboxes = this.elements.groupPromptsList.querySelectorAll('input[type="checkbox"]:checked');
+        const promptIds = Array.from(checkboxes).map(cb => cb.value);
+
+        try {
+            if (this.currentEditingGroupId) {
+                // Update existing group
+                this.promptsManager.updateGroup(this.currentEditingGroupId, {
+                    name,
+                    promptIds,
+                    isActive: setActive
+                });
+                this.notificationManager.success('Group updated successfully');
+            } else {
+                // Create new group
+                this.promptsManager.createGroup(name, promptIds, setActive);
+                this.notificationManager.success('Group created successfully');
+            }
+
+            this.renderGroups();
+            this.renderPrompts();
+            this.hideGroupModal();
+        } catch (error) {
+            this.notificationManager.error(error.message);
+        }
+    }
+
+    deleteGroup(groupId) {
+        const group = this.promptsManager.getGroup(groupId);
+        if (!group) return;
+
+        if (confirm(`Are you sure you want to delete the group "${group.name}"?`)) {
+            try {
+                this.promptsManager.deleteGroup(groupId);
+                this.renderGroups();
+                this.renderPrompts();
+                this.notificationManager.success('Group deleted successfully');
+
+                // Clear existing feedback since group context changed
+                this.aiService.clearFeedback();
+            } catch (error) {
+                this.notificationManager.error(error.message);
+            }
+        }
+    }
+
     cleanup() {
         // Clean up context menu manager
         if (this.contextMenuManager) {
             this.contextMenuManager.destroy();
         }
-        
+
         // Clean up other resources
         if (this.aiService) {
             this.aiService.clearTimers();

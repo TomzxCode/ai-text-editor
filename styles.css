@@ -1342,6 +1342,98 @@ body {
     border-bottom: 2px solid #007acc;
 }
 
+/* Group Management Styles */
+.group-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #2a2a2a;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+.group-select {
+    flex: 1;
+    background: #333;
+    color: #ccc;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    min-width: 0;
+}
+
+.group-select:focus {
+    outline: none;
+    border-color: #007acc;
+    background: #3a3a3a;
+}
+
+.group-select option {
+    background: #333;
+    color: #ccc;
+}
+
+/* Group Modal Styles */
+.prompts-checkboxes {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.5rem;
+    background: #2a2a2a;
+    margin-top: 0.5rem;
+}
+
+.checkbox-item {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #444;
+    transition: background-color 0.2s;
+}
+
+.checkbox-item:last-child {
+    border-bottom: none;
+}
+
+.checkbox-item:hover {
+    background-color: #333;
+}
+
+.checkbox-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.9rem;
+    margin: 0;
+    user-select: none;
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin-right: 0.75rem;
+    accent-color: #007acc;
+    scale: 1.1;
+}
+
+.checkbox-label {
+    flex: 1;
+    line-height: 1.4;
+}
+
+/* Update existing button styles for group management */
+.btn-small:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #555;
+}
+
+.btn-small:disabled:hover {
+    background: #555;
+    transform: none;
+}
+
 .prompt-header {
     display: flex;
     justify-content: space-between;

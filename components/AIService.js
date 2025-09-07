@@ -1515,6 +1515,34 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         // Clear any existing feedback UI to prepare for new content
         this.clearOnlyLoadingPlaceholders();
     }
+
+    clearFeedback() {
+        // Clear all timers and pending requests
+        this.clearTimers();
+
+        // Reset generation flags
+        this.isGeneratingFeedback = false;
+        this.hasPendingFeedbackRequest = false;
+
+        // Clear the feedback UI
+        const container = document.getElementById('feedbackContainer');
+        if (container) {
+            // Remove all feedback items
+            const feedbackItems = container.querySelectorAll('.feedback-item');
+            feedbackItems.forEach(item => item.remove());
+
+            // Show the initial placeholder
+            const placeholder = document.createElement('div');
+            placeholder.className = 'feedback-item placeholder-message';
+            placeholder.id = 'initialPlaceholder';
+            placeholder.innerHTML = `
+                <h4>🤖 AI Assistant</h4>
+                <p>Open a file or start typing to get AI-powered writing suggestions.</p>
+                <p><small>The AI will analyze your text and provide feedback for style, grammar, structure, and more.</small></p>
+            `;
+            container.appendChild(placeholder);
+        }
+    }
 }
 
 // class OpenRouter extends APIv1 {
