@@ -666,7 +666,9 @@ class AITextEditor {
                 });
                 this.notificationManager.success('Prompt updated successfully');
             } else {
-                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, providers);
+                const llmService = providers.length > 0 ? providers[0].service || '' : '';
+                const llmModel = providers.length > 0 ? providers[0].model || '' : '';
+                this.promptsManager.addPrompt(name, prompt, enabled, triggerTiming, customDelay, llmService, llmModel);
                 this.notificationManager.success('Prompt added successfully');
             }
 
