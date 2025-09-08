@@ -162,10 +162,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 'html'
             ).catch(console.error);
 
-            // Format duration for display
-            const formattedDuration = duration < 1000 ?
-                `${Math.round(duration)}ms` :
-                `${(duration / 1000).toFixed(1)}s`;
+            // Format duration for display (always in seconds with 3 decimals)
+            const formattedDuration = `${(duration / 1000).toFixed(3)}s`;
 
             // Get prompt ID to add auto-refresh toggle
             const prompt = window.app?.promptsManager?.getAllPrompts().find(p => p.name === promptName);
@@ -186,7 +184,7 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                             ${cleanedResponse}
                         </div>
                         <div class="provider-info" style="color: #888; font-size: 0.8em; margin-top: 0.5em; text-align: right;">
-                            ${actualService} • ${llmModel || 'llama3-8b-8192'}
+                            ${actualService} • ${llmModel || 'llama3-8b-8192'} • ${formattedDuration}
                         </div>
                     </div>
                 </div>
@@ -228,7 +226,7 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                             <span class="priority-badge high">high</span>
                         </p>
                         <div class="provider-info" style="color: #888; font-size: 0.8em; margin-top: 0.5em; text-align: right;">
-                            ${llmService || 'groq'} • ${llmModel || 'llama3-8b-8192'}
+                            ${llmService || 'groq'} • ${llmModel || 'llama3-8b-8192'} • failed
                         </div>
                     </div>
                 </div>
