@@ -36,6 +36,7 @@ class EditorManager {
             if (change.origin === '+input' || 
                 change.origin === 'paste' || 
                 change.origin === '+delete' ||
+                change.origin === 'cut' ||
                 (change.origin && change.origin.indexOf('paste') !== -1)) {
                 this.onChangeCallback('input');
             }
