@@ -502,6 +502,7 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         switch (triggerTiming) {
             case 'word':
             case 'sentence':
+            case 'paragraph':
                 delay = 100; // Small delay to batch rapid completions
                 break;
             case 'custom':
@@ -1438,8 +1439,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
     }
 
     async generateIndividualPromptFeedback(content, promptId, prompt, onLoading, onProgressiveComplete, onError, settings = {}) {
-        // For word/sentence triggers, allow shorter content. For custom triggers, keep minimum length
-        const minLength = (prompt.triggerTiming === 'word' || prompt.triggerTiming === 'sentence') ? 1 : 10;
+        // For word/sentence/paragraph triggers, allow shorter content. For custom triggers, keep minimum length
+        const minLength = (prompt.triggerTiming === 'word' || prompt.triggerTiming === 'sentence' || prompt.triggerTiming === 'paragraph') ? 1 : 10;
         if (content.length < minLength || !settings.enableAIFeedback) return;
 
         if (this.isGeneratingFeedback) return; // Avoid conflicts with batch generation

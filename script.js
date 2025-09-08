@@ -268,6 +268,11 @@ class AITextEditor {
             this.handleTriggerTimingEvent('sentence');
         });
 
+        // Setup paragraph completion callback
+        this.textAnalysisManager.onParagraphCompletion((data) => {
+            this.handleTriggerTimingEvent('paragraph');
+        });
+
         // Setup structure change callback for inspect manager
         this.textAnalysisManager.onStructureChange((structure) => {
             if (this.inspectManager) {
@@ -1269,6 +1274,8 @@ class AITextEditor {
                 return '📝 Word completion';
             case 'sentence':
                 return '📖 Sentence completion';
+            case 'paragraph':
+                return '📄 Paragraph completion';
             case 'custom':
                 return `⏱️ Delay: ${prompt.customDelay || '1s'}`;
             case 'keyboard':

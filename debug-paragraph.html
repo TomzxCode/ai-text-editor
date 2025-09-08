@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Paragraph Completion</title>
+</head>
+<body>
+    <h1>Debug Paragraph Completion</h1>
+    <textarea id="test" rows="5" cols="50"></textarea>
+    <br><br>
+    <button onclick="runTest()">Run Manual Test</button>
+    <div id="results"></div>
+
+    <script src="components/SentenceDataModel.js"></script>
+    <script src="components/TextAnalysisManager.js"></script>
+    <script>
+        const manager = new TextAnalysisManager();
+        const textarea = document.getElementById('test');
+        const results = document.getElementById('results');
+
+        manager.onParagraphCompletion((data) => {
+            results.innerHTML += `<div style="border: 1px solid green; padding: 10px; margin: 5px;">
+                <strong>PARAGRAPH COMPLETED:</strong> "${data.completedParagraph}"<br>
+                <strong>Total:</strong> ${data.totalParagraphs}
+            </div>`;
+        });
+
+        manager.startTracking();
+
+        function runTest() {
+            results.innerHTML = '<h3>Test Results:</h3>';
+            
+            // Simulate step-by-step typing
+            console.log('\n=== MANUAL TEST START ===');
+            
+            // Step 1: Type first paragraph
+            console.log('\nStep 1: First paragraph');
+            manager.analyzeText('First paragraph.');
+            
+            // Step 2: Add blank lines - THIS SHOULD TRIGGER COMPLETION
+            console.log('\nStep 2: Add blank lines - should trigger completion');
+            manager.analyzeText('First paragraph.\n\n');
+            
+            // Step 3: Start second paragraph (should not trigger again)
+            console.log('\nStep 3: Start second paragraph with "S" - should not trigger');
+            manager.analyzeText('First paragraph.\n\nS');
+            
+            // Step 4: Add more content to second paragraph
+            console.log('\nStep 4: Continue second paragraph');
+            manager.analyzeText('First paragraph.\n\nSecond paragraph.');
+            
+            // Step 5: Complete second paragraph
+            console.log('\nStep 5: Complete second paragraph with blank lines');
+            manager.analyzeText('First paragraph.\n\nSecond paragraph.\n\n');
+            
+            console.log('\n=== MANUAL TEST END ===');
+        }
+
+        // Also test with textarea
+        textarea.addEventListener('input', (e) => {
+            manager.analyzeText(e.target.value);
+        });
+    </script>
+</body>
+</html>

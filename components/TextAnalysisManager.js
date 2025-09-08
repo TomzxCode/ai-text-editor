@@ -3,8 +3,10 @@ class TextAnalysisManager {
         this.previousText = '';
         this.previousWordCount = 0;
         this.previousSentenceCount = 0;
+        this.previousParagraphCount = 0;
         this.wordCompletionCallbacks = [];
         this.sentenceCompletionCallbacks = [];
+        this.paragraphCompletionCallbacks = [];
         
         // Regex patterns for word and sentence detection
         this.wordPattern = /\b\w+\b/g;
@@ -13,6 +15,7 @@ class TextAnalysisManager {
         // State tracking
         this.lastCompletedWord = '';
         this.lastCompletedSentence = '';
+        this.lastCompletedParagraph = '';
         this.isTrackingActive = false;
         
         // Sentence data model integration
@@ -33,9 +36,11 @@ class TextAnalysisManager {
 
         const currentWords = this.extractWords(currentText);
         const currentSentences = this.extractSentences(currentText);
+        const currentParagraphs = this.extractParagraphs(currentText);
         
         const currentWordCount = currentWords.length;
         const currentSentenceCount = currentSentences.length;
+        const currentParagraphCount = currentParagraphs.length;
 
         // Analyze text structure with sentence data model
         const structure = this.sentenceDataModel.analyzeText(currentText);
@@ -62,10 +67,20 @@ class TextAnalysisManager {
             }
         }
 
+        // Check for paragraph completion
+        if (this.hasCompletedParagraph(currentText, currentParagraphCount)) {
+            const completedParagraph = this.getLastCompletedParagraph(currentText);
+            if (completedParagraph && completedParagraph !== this.lastCompletedParagraph) {
+                this.lastCompletedParagraph = completedParagraph;
+                this.notifyParagraphCompletion(completedParagraph, currentParagraphCount, structure);
+            }
+        }
+
         // Update state
         this.previousText = currentText;
         this.previousWordCount = currentWordCount;
         this.previousSentenceCount = currentSentenceCount;
+        this.previousParagraphCount = currentParagraphCount;
     }
 
     extractWords(text) {
@@ -78,6 +93,12 @@ class TextAnalysisManager {
         // followed by whitespace or end of text
         const sentenceMatches = text.match(this.sentencePattern) || [];
         return sentenceMatches;
+    }
+
+    extractParagraphs(text) {
+        // Split text into paragraphs using blank lines (one or more empty lines)
+        const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+        return paragraphs;
     }
 
     hasCompletedWord(currentText, currentWordCount) {
@@ -110,6 +131,24 @@ class TextAnalysisManager {
         const endsWithSentenceBoundary = /[.!?]+(?:\s|$)/.test(currentText);
         
         return endsWithSentenceBoundary;
+    }
+
+    hasCompletedParagraph(currentText, currentParagraphCount) {
+        // A paragraph is completed when the user adds blank lines after content
+        // This should trigger immediately when blank lines are added, not when new content starts
+        
+        // Check if we just added blank lines (paragraph separator)
+        const currentHasBlankLines = /\n\s*\n/.test(currentText);
+        const previousHasBlankLines = /\n\s*\n/.test(this.previousText);
+        
+        // Paragraph completion happens when:
+        // 1. We now have blank lines but didn't before (just added separator)
+        // 2. We had some content before (not starting from empty)
+        if (currentHasBlankLines && !previousHasBlankLines && this.previousText.length > 0) {
+            return true;
+        }
+        
+        return false;
     }
 
     getLastCompletedWord(text) {
@@ -158,6 +197,24 @@ class TextAnalysisManager {
         return '';
     }
 
+    getLastCompletedParagraph(text) {
+        // Return the paragraph that was just completed by adding blank lines
+        // This is called when hasCompletedParagraph() returns true (when blank lines were just added)
+        
+        if (!/\n\s*\n/.test(text)) {
+            return '';
+        }
+        
+        // When blank lines are just added, the completed paragraph is the content before the blank lines
+        // Split and get the first part (before the separator)
+        const parts = text.split(/\n\s*\n/);
+        if (parts.length >= 1 && parts[0].trim().length > 0) {
+            return parts[0].trim();
+        }
+        
+        return '';
+    }
+
     onWordCompletion(callback) {
         if (typeof callback === 'function') {
             this.wordCompletionCallbacks.push(callback);
@@ -167,6 +224,12 @@ class TextAnalysisManager {
     onSentenceCompletion(callback) {
         if (typeof callback === 'function') {
             this.sentenceCompletionCallbacks.push(callback);
+        }
+    }
+
+    onParagraphCompletion(callback) {
+        if (typeof callback === 'function') {
+            this.paragraphCompletionCallbacks.push(callback);
         }
     }
 
@@ -181,6 +244,13 @@ class TextAnalysisManager {
         const index = this.sentenceCompletionCallbacks.indexOf(callback);
         if (index > -1) {
             this.sentenceCompletionCallbacks.splice(index, 1);
+        }
+    }
+
+    removeParagraphCompletionCallback(callback) {
+        const index = this.paragraphCompletionCallbacks.indexOf(callback);
+        if (index > -1) {
+            this.paragraphCompletionCallbacks.splice(index, 1);
         }
     }
 
@@ -217,6 +287,24 @@ class TextAnalysisManager {
                 callback(data);
             } catch (error) {
                 console.error('Error in sentence completion callback:', error);
+            }
+        });
+    }
+
+    notifyParagraphCompletion(paragraph, totalParagraphCount, structure = null) {
+        const data = {
+            completedParagraph: paragraph,
+            totalParagraphs: totalParagraphCount,
+            timestamp: Date.now(),
+            type: 'paragraph',
+            structure: structure
+        };
+
+        this.paragraphCompletionCallbacks.forEach(callback => {
+            try {
+                callback(data);
+            } catch (error) {
+                console.error('Error in paragraph completion callback:', error);
             }
         });
     }
@@ -373,8 +461,10 @@ class TextAnalysisManager {
         this.previousText = '';
         this.previousWordCount = 0;
         this.previousSentenceCount = 0;
+        this.previousParagraphCount = 0;
         this.lastCompletedWord = '';
         this.lastCompletedSentence = '';
+        this.lastCompletedParagraph = '';
         this.sentenceDataModel.reset();
     }
 
@@ -382,6 +472,7 @@ class TextAnalysisManager {
         this.stopTracking();
         this.wordCompletionCallbacks = [];
         this.sentenceCompletionCallbacks = [];
+        this.paragraphCompletionCallbacks = [];
         this.structureChangeCallbacks = [];
         this.sentenceDataModel.cleanup();
         this.reset();

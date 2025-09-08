@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paragraph Completion Test</title>
+</head>
+<body>
+    <h1>Paragraph Completion Test</h1>
+    <div>
+        <label for="testText">Type some text with paragraph breaks (press Enter twice to create a new paragraph):</label>
+        <br><br>
+        <textarea id="testText" rows="10" cols="60" placeholder="Type here..."></textarea>
+    </div>
+    <br>
+    <div id="output">
+        <h3>Events:</h3>
+        <div id="events"></div>
+    </div>
+
+    <script src="components/SentenceDataModel.js"></script>
+    <script src="components/TextAnalysisManager.js"></script>
+    <script>
+        // Initialize TextAnalysisManager
+        const textAnalysisManager = new TextAnalysisManager();
+        const testTextArea = document.getElementById('testText');
+        const eventsDiv = document.getElementById('events');
+
+        // Setup paragraph completion callback
+        textAnalysisManager.onParagraphCompletion((data) => {
+            const eventDiv = document.createElement('div');
+            eventDiv.style.border = '2px solid #4CAF50';
+            eventDiv.style.padding = '10px';
+            eventDiv.style.margin = '5px 0';
+            eventDiv.style.backgroundColor = '#e8f5e8';
+            eventDiv.innerHTML = `
+                <strong>✅ Paragraph Completed!</strong><br>
+                <strong>Content:</strong> "${data.completedParagraph}"<br>
+                <strong>Total Paragraphs:</strong> ${data.totalParagraphs}<br>
+                <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleTimeString()}<br>
+                <strong>Type:</strong> ${data.type}
+            `;
+            eventsDiv.insertBefore(eventDiv, eventsDiv.firstChild);
+        });
+
+        // Setup word completion callback for comparison
+        textAnalysisManager.onWordCompletion((data) => {
+            console.log('Word completed:', data.completedWord);
+        });
+
+        // Setup sentence completion callback for comparison
+        textAnalysisManager.onSentenceCompletion((data) => {
+            console.log('Sentence completed:', data.completedSentence);
+        });
+
+        // Start tracking
+        textAnalysisManager.startTracking();
+
+        // Listen for text changes
+        testTextArea.addEventListener('input', (e) => {
+            console.log('=== Text Analysis ===');
+            console.log('Current text:', JSON.stringify(e.target.value));
+            console.log('Previous text:', JSON.stringify(textAnalysisManager.previousText));
+            
+            const currentParagraphs = e.target.value.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+            const previousParagraphs = textAnalysisManager.previousText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+            console.log('Current paragraphs:', currentParagraphs);
+            console.log('Previous paragraphs:', previousParagraphs);
+            console.log('Current count:', currentParagraphs.length, 'Previous count:', previousParagraphs.length);
+            
+            textAnalysisManager.analyzeText(e.target.value);
+        });
+    </script>
+</body>
+</html>

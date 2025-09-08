@@ -30,7 +30,7 @@ class PromptsManager {
     }
 
     validateTriggerTiming(timing) {
-        const validTimings = ['word', 'sentence', 'custom', 'keyboard'];
+        const validTimings = ['word', 'sentence', 'paragraph', 'custom', 'keyboard'];
         return validTimings.includes(timing) ? timing : 'custom';
     }
 
