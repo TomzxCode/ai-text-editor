@@ -76,7 +76,29 @@ class SentenceDataModel {
             };
 
             // Parse sentences within paragraph
-            const sentences = paragraphText.split(this.sentencePattern);
+            const sentences = [];
+            let remainingText = paragraphText;
+            let lastIndex = 0;
+            
+            // Use regex to find sentence boundaries while preserving punctuation
+            let match;
+            this.sentencePattern.lastIndex = 0; // Reset regex state
+            
+            while ((match = this.sentencePattern.exec(paragraphText)) !== null) {
+                const sentenceEnd = match.index + match[0].length;
+                const sentenceText = paragraphText.substring(lastIndex, sentenceEnd);
+                sentences.push(sentenceText);
+                lastIndex = sentenceEnd;
+            }
+            
+            // Add any remaining text as the last sentence if it doesn't end with punctuation
+            if (lastIndex < paragraphText.length) {
+                const remainingSentence = paragraphText.substring(lastIndex);
+                if (remainingSentence.trim().length > 0) {
+                    sentences.push(remainingSentence);
+                }
+            }
+            
             let paragraphWordCount = 0;
             let sentenceStartInParagraph = 0;
 
