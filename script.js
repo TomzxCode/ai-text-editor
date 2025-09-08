@@ -115,7 +115,7 @@ class AITextEditor {
         this.setupTextAnalysisCallbacks();
 
         // Initialize text statistics display
-        this.updateTextStatisticsDisplay().catch(console.error);
+        this.updateTextStatisticsDisplay();
 
         // Setup settings UI after DOM is ready
         setTimeout(async () => {
@@ -325,7 +325,7 @@ class AITextEditor {
                     // Just ensure any existing delay-triggered feedback doesn't override it
                 }
                 // Update cost display after individual prompt feedback is generated
-                this.updateTextStatisticsDisplay().catch(console.error);
+                this.updateTextStatisticsDisplay();
             },
             (error) => {
                 console.error('Error generating individual prompt feedback:', error);
@@ -353,7 +353,7 @@ class AITextEditor {
                 // Reset text analysis for new file
                 this.textAnalysisManager.reset();
                 // Update statistics display for new file
-                this.updateTextStatisticsDisplay().catch(console.error);
+                this.updateTextStatisticsDisplay();
                 break;
         }
     }
@@ -369,7 +369,7 @@ class AITextEditor {
         this.textAnalysisManager.analyzeText(currentText);
 
         // Update text statistics display
-        this.updateTextStatisticsDisplay().catch(console.error);
+        this.updateTextStatisticsDisplay();
 
         // Schedule AI feedback as before
         this.scheduleAIFeedback();
@@ -380,9 +380,16 @@ class AITextEditor {
         return this.textAnalysisManager.getStatistics(currentText);
     }
 
-    async updateTextStatisticsDisplay() {
+    updateTextStatisticsDisplay() {
+        // Update text stats immediately to prevent flickering
+        this.updateTextStats();
+        
+        // Update LLM stats asynchronously without blocking
+        this.updateLLMStats().catch(console.error);
+    }
+
+    updateTextStats() {
         const stats = this.getTextStatistics();
-        const llmStats = await this.getLLMStatistics();
 
         // Format word count
         const wordText = stats.wordCount === 1 ? '1 word' : `${stats.wordCount} words`;
@@ -391,6 +398,10 @@ class AITextEditor {
         // Format sentence count
         const sentenceText = stats.sentenceCount === 1 ? '1 sentence' : `${stats.sentenceCount} sentences`;
         this.elements.sentenceCountSpan.textContent = sentenceText;
+    }
+
+    async updateLLMStats() {
+        const llmStats = await this.getLLMStatistics();
 
         // Format cost
         const costText = `$${llmStats.cost.toFixed(2)}`;
@@ -611,7 +622,7 @@ class AITextEditor {
             (feedback) => {
                 this.uiManager.displayFeedback(feedback);
                 // Update cost display after feedback is generated
-                this.updateTextStatisticsDisplay().catch(console.error);
+                this.updateTextStatisticsDisplay();
             },
             (error) => this.uiManager.showFeedbackError(error),
             delayTriggeredPrompts,
