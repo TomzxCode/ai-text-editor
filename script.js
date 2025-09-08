@@ -30,6 +30,7 @@ class AITextEditor {
             currentFileSpan: document.getElementById('currentFile'),
             wordCountSpan: document.getElementById('wordCount'),
             sentenceCountSpan: document.getElementById('sentenceCount'),
+            paragraphCountSpan: document.getElementById('paragraphCount'),
             costDisplaySpan: document.getElementById('costDisplay'),
             callsCountSpan: document.getElementById('callsCount'),
             inputTokensSpan: document.getElementById('inputTokens'),
@@ -352,6 +353,9 @@ class AITextEditor {
                 this.updateFileTitle(data.fileName, data.isModified);
                 // Reset text analysis for new file
                 this.textAnalysisManager.reset();
+                // Analyze the loaded content to initialize statistics
+                const currentText = this.editorManager.getValue();
+                this.textAnalysisManager.analyzeText(currentText);
                 // Update statistics display for new file
                 this.updateTextStatisticsDisplay();
                 break;
@@ -398,6 +402,10 @@ class AITextEditor {
         // Format sentence count
         const sentenceText = stats.sentenceCount === 1 ? '1 sentence' : `${stats.sentenceCount} sentences`;
         this.elements.sentenceCountSpan.textContent = sentenceText;
+
+        // Format paragraph count
+        const paragraphText = stats.paragraphCount === 1 ? '1 paragraph' : `${stats.paragraphCount} paragraphs`;
+        this.elements.paragraphCountSpan.textContent = paragraphText;
     }
 
     async updateLLMStats() {
