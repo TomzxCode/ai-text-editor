@@ -168,6 +168,29 @@ class PromptsManager {
 
         this.prompts.push(duplicatedPrompt);
         this.savePrompts();
+
+        // Find all groups that contain the original prompt and add the duplicate to them
+        const groupsContainingOriginal = this.groups.filter(group => 
+            group.promptIds.includes(id)
+        );
+
+        groupsContainingOriginal.forEach(group => {
+            // Add the duplicated prompt to the group
+            group.promptIds.push(duplicatedPrompt.id);
+            
+            // Set the same enabled state as the original prompt in this group
+            if (!group.promptStates) {
+                group.promptStates = {};
+            }
+            const originalEnabledState = group.promptStates[id]?.enabled !== false; // Default to true if not set
+            group.promptStates[duplicatedPrompt.id] = { enabled: originalEnabledState };
+        });
+
+        // Save groups if any were modified
+        if (groupsContainingOriginal.length > 0) {
+            this.saveGroups();
+        }
+
         return duplicatedPrompt;
     }
 
