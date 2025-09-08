@@ -1471,11 +1471,17 @@ body {
     color: #fff;
     font-size: 0.8rem;
     line-height: 1.2;
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 0.5rem;
 }
 
 .prompt-actions {
     display: flex;
     gap: 0.25rem;
+    flex-shrink: 0;
 }
 
 .btn-icon {
