@@ -78,6 +78,7 @@ class AITextEditor {
             groupModal: document.getElementById('groupModal'),
             groupModalTitle: document.getElementById('groupModalTitle'),
             groupName: document.getElementById('groupName'),
+            groupPromptsFilter: document.getElementById('groupPromptsFilter'),
             groupPromptsList: document.getElementById('groupPromptsList'),
             groupSetActive: document.getElementById('groupSetActive'),
             saveGroupBtn: document.getElementById('saveGroupBtn'),
@@ -207,6 +208,11 @@ class AITextEditor {
 
         this.elements.closeGroupModal.addEventListener('click', () => {
             this.hideGroupModal();
+        });
+
+        // Filter prompts in group modal
+        this.elements.groupPromptsFilter.addEventListener('input', (e) => {
+            this.filterGroupPrompts(e.target.value);
         });
 
         this.elements.promptTriggerTiming.addEventListener('change', () => {
@@ -1473,7 +1479,7 @@ class AITextEditor {
         this.elements.groupName.focus();
     }
 
-    renderGroupPromptsList(selectedPromptIds = []) {
+    renderGroupPromptsList(selectedPromptIds = [], filterTerm = '') {
         const allPrompts = this.promptsManager.getAllPrompts();
         const container = this.elements.groupPromptsList;
 
@@ -1482,21 +1488,58 @@ class AITextEditor {
             return;
         }
 
-        // Sort prompts alphabetically by name
-        const sortedPrompts = allPrompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        // Filter prompts based on search term (name only)
+        const filteredPrompts = filterTerm ? 
+            allPrompts.filter(prompt => 
+                prompt.name.toLowerCase().includes(filterTerm.toLowerCase())
+            ) : allPrompts;
 
-        container.innerHTML = sortedPrompts.map(prompt => `
-            <div class="checkbox-item">
-                <label>
-                    <input type="checkbox" value="${prompt.id}" ${selectedPromptIds.includes(prompt.id) ? 'checked' : ''}>
-                    <span class="checkbox-label">${this.escapeHtml(prompt.name)}</span>
-                </label>
-            </div>
-        `).join('');
+        if (filteredPrompts.length === 0 && filterTerm) {
+            container.innerHTML = '<p class="no-prompts">No prompts match your search.</p>';
+            return;
+        }
+
+        // Sort prompts alphabetically by name
+        const sortedPrompts = filteredPrompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+        container.innerHTML = sortedPrompts.map(prompt => {
+            const highlightedName = this.highlightMatch(prompt.name, filterTerm);
+            return `
+                <div class="checkbox-item">
+                    <label>
+                        <input type="checkbox" value="${prompt.id}" ${selectedPromptIds.includes(prompt.id) ? 'checked' : ''}>
+                        <span class="checkbox-label">${highlightedName}</span>
+                    </label>
+                </div>
+            `;
+        }).join('');
+    }
+
+    filterGroupPrompts(filterTerm) {
+        // Get currently selected prompt IDs to preserve selection
+        const checkboxes = this.elements.groupPromptsList.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        // Re-render with filter applied
+        this.renderGroupPromptsList(selectedIds, filterTerm);
+    }
+
+    highlightMatch(text, searchTerm) {
+        if (!searchTerm || !searchTerm.trim()) {
+            return this.escapeHtml(text);
+        }
+        
+        const escaped = this.escapeHtml(text);
+        const escapedSearchTerm = this.escapeHtml(searchTerm.trim());
+        
+        // Case-insensitive replacement with highlighting
+        const regex = new RegExp(`(${escapedSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return escaped.replace(regex, '<mark>$1</mark>');
     }
 
     hideGroupModal() {
         this.elements.groupModal.style.display = 'none';
+        this.elements.groupPromptsFilter.value = ''; // Clear filter
         this.currentEditingGroupId = null;
     }
 

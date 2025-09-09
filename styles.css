@@ -1428,6 +1428,15 @@ body {
     line-height: 1.4;
 }
 
+/* Filter highlighting */
+.checkbox-label mark {
+    background-color: #ffd54f;
+    color: #1a1a1a;
+    padding: 0.1em 0.2em;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
 /* Update existing button styles for group management */
 .btn-small:disabled {
     opacity: 0.5;
