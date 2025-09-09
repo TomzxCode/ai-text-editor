@@ -661,7 +661,10 @@ class AITextEditor {
             return;
         }
 
-        container.innerHTML = prompts.map((prompt, index) => {
+        // Sort prompts alphabetically by name
+        const sortedPrompts = prompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+        container.innerHTML = sortedPrompts.map((prompt, index) => {
             const isEnabled = this.promptsManager.isPromptEnabledInActiveGroup(prompt.id);
             return `
             <div class="prompt-item ${!isEnabled ? 'disabled' : ''}"
@@ -1479,7 +1482,10 @@ class AITextEditor {
             return;
         }
 
-        container.innerHTML = allPrompts.map(prompt => `
+        // Sort prompts alphabetically by name
+        const sortedPrompts = allPrompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+        container.innerHTML = sortedPrompts.map(prompt => `
             <div class="checkbox-item">
                 <label>
                     <input type="checkbox" value="${prompt.id}" ${selectedPromptIds.includes(prompt.id) ? 'checked' : ''}>

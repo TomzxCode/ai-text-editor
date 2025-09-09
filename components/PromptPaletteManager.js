@@ -55,7 +55,8 @@ class PromptPaletteManager {
 
         // Get all prompts (show both enabled and disabled)
         const allPrompts = this.promptsManager.getAllPrompts();
-        this.filteredPrompts = allPrompts;
+        // Sort prompts alphabetically by name
+        this.filteredPrompts = allPrompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
         // If no prompts available, show a message
         if (this.filteredPrompts.length === 0) {
@@ -231,6 +232,9 @@ class PromptPaletteManager {
                 prompt.prompt.toLowerCase().includes(term)
             );
         }
+        
+        // Sort prompts alphabetically by name
+        this.filteredPrompts.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
         
         this.selectedIndex = -1;
         this.renderPrompts(searchTerm);
