@@ -388,6 +388,99 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="section-header">
+                            <h4>Import / Export</h4>
+                        </div>
+                        <div class="settings-content">
+                            <div class="import-export-stats" id="importExportStats">
+                                <div class="stats-loading">Loading storage stats...</div>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h5>Export Data</h5>
+                                <p class="setting-description">Download all your settings, prompts, and AI history as a backup file.</p>
+                                <div class="import-export-actions">
+                                    <button class="btn-primary" id="exportDataBtn">
+                                        <span class="btn-icon">⬇️</span>
+                                        Export All Data
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h5>Import Data</h5>
+                                <p class="setting-description">Import settings, prompts, and AI history from a backup file.</p>
+                                <div class="import-export-actions">
+                                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                                    <button class="btn-secondary" id="importDataBtn">
+                                        <span class="btn-icon">⬆️</span>
+                                        Import Data
+                                    </button>
+                                </div>
+                                <div class="import-options" id="importOptions" style="display: none;">
+                                    <div class="option-group">
+                                        <label>
+                                            <input type="checkbox" id="overwriteData" checked>
+                                            Overwrite existing data
+                                        </label>
+                                        <small>If unchecked, new items will be merged with existing ones</small>
+                                    </div>
+                                    <div class="option-group">
+                                        <label>Import Selection:</label>
+                                        <div class="checkbox-group">
+                                            <label>
+                                                <input type="checkbox" id="importSettings" checked>
+                                                Settings
+                                            </label>
+                                            <label>
+                                                <input type="checkbox" id="importPrompts" checked>
+                                                Prompts & Groups
+                                            </label>
+                                            <label>
+                                                <input type="checkbox" id="importHistory" checked>
+                                                AI History
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="import-actions">
+                                        <button class="btn-primary" id="confirmImportBtn">Import Selected</button>
+                                        <button class="btn-secondary" id="cancelImportBtn">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <div class="import-export-actions">
+                                    <button class="btn-danger btn-small" id="resetAllDataBtn">
+                                        <span class="btn-icon">🗑️</span>
+                                        Reset All Data
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="setting-group cloud-storage-section" style="display: none;">
+                                <h5>Cloud Storage</h5>
+                                <p class="setting-description">Save and sync your data to cloud storage services.</p>
+                                <div class="cloud-providers">
+                                    <button class="btn-cloud" id="googleDriveBtn" disabled>
+                                        <span class="cloud-icon">📂</span>
+                                        Google Drive
+                                        <small>Coming Soon</small>
+                                    </button>
+                                    <button class="btn-cloud" id="dropboxBtn" disabled>
+                                        <span class="cloud-icon">📦</span>
+                                        Dropbox
+                                        <small>Coming Soon</small>
+                                    </button>
+                                    <button class="btn-cloud" id="oneDriveBtn" disabled>
+                                        <span class="cloud-icon">☁️</span>
+                                        OneDrive
+                                        <small>Coming Soon</small>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -568,6 +661,7 @@
     <script src="components/InspectManager.js"></script>
     <script src="components/ContextMenuManager.js"></script>
     <script src="components/PromptPaletteManager.js"></script>
+    <script src="components/ImportExportManager.js"></script>
     <!-- Main application script -->
     <script src="script.js"></script>
 

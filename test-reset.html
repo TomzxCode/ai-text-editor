@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Reset Functionality</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .danger { background: #f44336; }
+        .danger:hover { background: #d32f2f; }
+        pre {
+            background: #1a1a1a;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reset Functionality Test</h1>
+
+    <div class="test-section">
+        <h3>1. Setup Test Data</h3>
+        <button id="setupDataBtn">Create Test Data</button>
+        <pre id="setupResults"></pre>
+    </div>
+
+    <div class="test-section">
+        <h3>2. View Current Data</h3>
+        <button id="viewDataBtn">View Stored Data</button>
+        <pre id="viewResults"></pre>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Reset All Data</h3>
+        <button id="resetDataBtn" class="danger">Reset All Data</button>
+        <pre id="resetResults"></pre>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Verify Reset</h3>
+        <button id="verifyResetBtn">Verify Data Cleared</button>
+        <pre id="verifyResults"></pre>
+    </div>
+
+    <script src="components/LLMCallStorage.js"></script>
+    <script src="components/ImportExportManager.js"></script>
+    
+    <script>
+        let llmCallStorage;
+        let importExportManager;
+
+        async function initializeManagers() {
+            llmCallStorage = new LLMCallStorage();
+            await llmCallStorage.waitForInitialization();
+            
+            // Mock window.app.aiService
+            window.app = {
+                aiService: {
+                    llmCallStorage: llmCallStorage
+                }
+            };
+            
+            importExportManager = new ImportExportManager();
+            await importExportManager.initialize();
+        }
+
+        async function setupTestData() {
+            const output = document.getElementById('setupResults');
+            output.textContent = 'Setting up test data...\n';
+            
+            try {
+                // Create localStorage test data
+                localStorage.setItem('aiTextEditor_settings', JSON.stringify({
+                    fontFamily: 'Monaco',
+                    fontSize: 14,
+                    enableAIFeedback: true,
+                    apiKey: 'test-key-12345'
+                }));
+                
+                localStorage.setItem('ai_editor_prompts', JSON.stringify([
+                    {
+                        id: '1',
+                        name: 'Test Prompt 1',
+                        prompt: 'Analyze this text for grammar',
+                        enabled: true
+                    },
+                    {
+                        id: '2', 
+                        name: 'Test Prompt 2',
+                        prompt: 'Provide writing suggestions',
+                        enabled: true
+                    }
+                ]));
+                
+                localStorage.setItem('ai_editor_prompt_groups', JSON.stringify([
+                    {
+                        id: 'group1',
+                        name: 'Default Group',
+                        promptIds: ['1', '2'],
+                        isActive: true
+                    }
+                ]));
+                
+                // Create IndexedDB test data
+                await llmCallStorage.storeLLMCall('Test Prompt 1', {total_tokens: 100}, 'session1', 'groq', 'llama3', 1500, '/test/file1.txt', 'Test feedback 1', 'html');
+                await llmCallStorage.storeLLMCall('Test Prompt 2', {total_tokens: 150}, 'session1', 'groq', 'llama3', 2000, '/test/file2.txt', 'Test feedback 2', 'html');
+                
+                output.textContent += 'Test data created successfully!\n';
+                output.textContent += '- Created settings in localStorage\n';
+                output.textContent += '- Created 2 test prompts\n';
+                output.textContent += '- Created 1 prompt group\n';
+                output.textContent += '- Created 2 LLM call records\n';
+                
+            } catch (error) {
+                output.textContent += 'Error creating test data: ' + error.message;
+            }
+        }
+
+        async function viewStoredData() {
+            const output = document.getElementById('viewResults');
+            output.textContent = 'Viewing stored data...\n\n';
+            
+            try {
+                // Check localStorage
+                output.textContent += '=== LocalStorage ===\n';
+                const settings = localStorage.getItem('aiTextEditor_settings');
+                const prompts = localStorage.getItem('ai_editor_prompts');
+                const groups = localStorage.getItem('ai_editor_prompt_groups');
+                
+                output.textContent += `Settings: ${settings ? 'Present' : 'Missing'}\n`;
+                output.textContent += `Prompts: ${prompts ? JSON.parse(prompts).length + ' items' : 'Missing'}\n`;
+                output.textContent += `Groups: ${groups ? JSON.parse(groups).length + ' items' : 'Missing'}\n\n`;
+                
+                // Check IndexedDB
+                output.textContent += '=== IndexedDB ===\n';
+                const allCalls = await llmCallStorage.getAllCalls();
+                output.textContent += `LLM Calls: ${allCalls.length} records\n`;
+                
+                if (allCalls.length > 0) {
+                    output.textContent += '\nSample call:\n';
+                    output.textContent += JSON.stringify(allCalls[0], null, 2);
+                }
+                
+            } catch (error) {
+                output.textContent += 'Error viewing data: ' + error.message;
+            }
+        }
+
+        async function resetAllData() {
+            const output = document.getElementById('resetResults');
+            output.textContent = 'Resetting all data...\n';
+            
+            try {
+                const results = await importExportManager.resetAllData();
+                
+                output.textContent += 'Reset completed!\n\n';
+                output.textContent += '=== Results ===\n';
+                output.textContent += `LocalStorage: ${results.localStorage.success ? 'Success' : 'Failed'}\n`;
+                output.textContent += `  Cleared: ${results.localStorage.cleared} items\n`;
+                output.textContent += `  Errors: ${results.localStorage.errors.length}\n`;
+                
+                output.textContent += `IndexedDB: ${results.indexedDB.success ? 'Success' : 'Failed'}\n`;
+                output.textContent += `  Cleared: ${results.indexedDB.cleared} records\n`;
+                output.textContent += `  Errors: ${results.indexedDB.errors.length}\n`;
+                
+                if (results.localStorage.errors.length > 0 || results.indexedDB.errors.length > 0) {
+                    output.textContent += '\n=== Errors ===\n';
+                    [...results.localStorage.errors, ...results.indexedDB.errors].forEach(error => {
+                        output.textContent += `- ${error}\n`;
+                    });
+                }
+                
+            } catch (error) {
+                output.textContent += 'Reset failed: ' + error.message;
+            }
+        }
+
+        async function verifyReset() {
+            const output = document.getElementById('verifyResults');
+            output.textContent = 'Verifying reset...\n\n';
+            
+            try {
+                // Check localStorage
+                output.textContent += '=== LocalStorage After Reset ===\n';
+                const settings = localStorage.getItem('aiTextEditor_settings');
+                const prompts = localStorage.getItem('ai_editor_prompts');
+                const groups = localStorage.getItem('ai_editor_prompt_groups');
+                
+                output.textContent += `Settings: ${settings ? 'STILL PRESENT' : 'Cleared ✓'}\n`;
+                output.textContent += `Prompts: ${prompts ? 'STILL PRESENT' : 'Cleared ✓'}\n`;
+                output.textContent += `Groups: ${groups ? 'STILL PRESENT' : 'Cleared ✓'}\n\n`;
+                
+                // Check IndexedDB
+                output.textContent += '=== IndexedDB After Reset ===\n';
+                const allCalls = await llmCallStorage.getAllCalls();
+                output.textContent += `LLM Calls: ${allCalls.length} records ${allCalls.length === 0 ? '✓' : '❌'}\n`;
+                
+                const allCleared = !settings && !prompts && !groups && allCalls.length === 0;
+                output.textContent += `\n=== Overall Result ===\n`;
+                output.textContent += `Reset ${allCleared ? 'SUCCESSFUL ✓' : 'INCOMPLETE ❌'}\n`;
+                
+            } catch (error) {
+                output.textContent += 'Error verifying reset: ' + error.message;
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            await initializeManagers();
+            
+            document.getElementById('setupDataBtn').addEventListener('click', setupTestData);
+            document.getElementById('viewDataBtn').addEventListener('click', viewStoredData);
+            document.getElementById('resetDataBtn').addEventListener('click', resetAllData);
+            document.getElementById('verifyResetBtn').addEventListener('click', verifyReset);
+        });
+    </script>
+</body>
+</html>

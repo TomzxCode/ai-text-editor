@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "exportedAt": "2024-09-08T19:30:00.000Z",
+  "appName": "AI Text Editor",
+  "data": {
+    "localStorage": {
+      "aiTextEditor_settings": {
+        "fontFamily": "'Monaco', 'Menlo', monospace",
+        "fontSize": 14,
+        "enableAIFeedback": true,
+        "apiKey": "test-key",
+        "llmService": "groq",
+        "llmModel": "llama3-8b-8192"
+      },
+      "ai_editor_prompts": [
+        {
+          "id": "1",
+          "name": "Test Prompt",
+          "prompt": "Please analyze this text",
+          "triggerTiming": "custom",
+          "customDelay": "1s",
+          "keyboardShortcut": "",
+          "llmService": "",
+          "llmModel": "",
+          "createdAt": "2024-09-08T19:00:00.000Z"
+        }
+      ],
+      "ai_editor_prompt_groups": [
+        {
+          "id": "group1",
+          "name": "Default",
+          "promptIds": ["1"],
+          "promptStates": {
+            "1": {"enabled": true}
+          },
+          "isActive": true,
+          "createdAt": "2024-09-08T19:00:00.000Z"
+        }
+      ]
+    },
+    "indexedDB": {
+      "llm_calls": [
+        {
+          "id": "call1",
+          "promptIdentifier": "Test Prompt",
+          "usage": {
+            "total_tokens": 100,
+            "input_tokens": 50,
+            "output_tokens": 50
+          },
+          "sessionId": "session1",
+          "provider": "groq",
+          "model": "llama3-8b-8192",
+          "duration": 1500,
+          "filePath": "/test/file.txt",
+          "feedbackContent": "This is test feedback content",
+          "responseType": "html",
+          "timestamp": "2024-09-08T19:15:00.000Z"
+        }
+      ]
+    }
+  }
+}

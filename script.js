@@ -105,6 +105,7 @@ class AITextEditor {
         this.usageTracker = new UsageTracker();
         this.historyManager = new HistoryManager();
         this.inspectManager = new InspectManager();
+        this.importExportManager = new ImportExportManager();
 
         // Initialize provider management
         this.initializeProviderManagement();
@@ -125,6 +126,8 @@ class AITextEditor {
             this.settingsManager.setupUI();
             await this.usageTracker.initialize();
             await this.historyManager.initialize();
+            await this.importExportManager.initialize();
+            this.setupImportExportUI();
         }, 0);
     }
 
@@ -1598,6 +1601,349 @@ class AITextEditor {
                 this.notificationManager.error(error.message);
             }
         }
+    }
+
+    async setupImportExportUI() {
+        const exportBtn = document.getElementById('exportDataBtn');
+        const importBtn = document.getElementById('importDataBtn');
+        const importFileInput = document.getElementById('importFileInput');
+        const importOptions = document.getElementById('importOptions');
+        const confirmImportBtn = document.getElementById('confirmImportBtn');
+        const cancelImportBtn = document.getElementById('cancelImportBtn');
+        const statsContainer = document.getElementById('importExportStats');
+
+        if (!exportBtn || !importBtn || !importFileInput || !statsContainer) {
+            console.warn('Import/Export UI elements not found');
+            return;
+        }
+
+        // Load and display storage stats
+        this.updateStorageStats();
+
+        // Export functionality
+        exportBtn.addEventListener('click', async () => {
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Exporting...';
+
+            try {
+                const result = await this.importExportManager.downloadBackup();
+                if (result.success) {
+                    this.notificationManager.success(`Backup downloaded: ${result.filename}`);
+                } else {
+                    this.notificationManager.error(`Export failed: ${result.error}`);
+                }
+            } catch (error) {
+                this.notificationManager.error(`Export failed: ${error.message}`);
+            }
+
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = '<span class="btn-icon">⬇️</span>Export All Data';
+        });
+
+        // Import functionality
+        importBtn.addEventListener('click', () => {
+            importFileInput.click();
+        });
+
+        importFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                importOptions.style.display = 'block';
+            }
+        });
+
+        confirmImportBtn.addEventListener('click', async () => {
+            const file = importFileInput.files[0];
+            if (!file) return;
+
+            const overwrite = document.getElementById('overwriteData').checked;
+            const importSettings = document.getElementById('importSettings').checked;
+            const importPrompts = document.getElementById('importPrompts').checked;
+            const importHistory = document.getElementById('importHistory').checked;
+
+            const selective = [];
+            if (importSettings || importPrompts) selective.push('localStorage');
+            if (importHistory) selective.push('indexedDB');
+
+            confirmImportBtn.disabled = true;
+            confirmImportBtn.textContent = 'Importing...';
+
+            try {
+                const results = await this.importExportManager.uploadBackupFromFile(file, {
+                    overwrite,
+                    selective: selective.length > 0 ? selective : null
+                });
+
+                this.displayImportResults(results);
+                importOptions.style.display = 'none';
+                importFileInput.value = '';
+                this.updateStorageStats();
+
+            } catch (error) {
+                this.notificationManager.error(`Import failed: ${error.message}`);
+                this.displayImportResults(null, error.message);
+            }
+
+            confirmImportBtn.disabled = false;
+            confirmImportBtn.textContent = 'Import Selected';
+        });
+
+        cancelImportBtn.addEventListener('click', () => {
+            importOptions.style.display = 'none';
+            importFileInput.value = '';
+        });
+
+        // Reset all data functionality
+        const resetAllBtn = document.getElementById('resetAllDataBtn');
+        if (resetAllBtn) {
+            resetAllBtn.addEventListener('click', () => {
+                this.showResetConfirmation();
+            });
+        }
+
+        // Listen for data changes to update stats
+        window.addEventListener('dataImported', () => {
+            this.updateStorageStats();
+            // Refresh UI components that may have been affected
+            this.settingsManager.setupUI();
+            this.renderGroups();
+            this.renderPrompts();
+        });
+
+        // Listen for data reset to update stats
+        window.addEventListener('dataReset', (e) => {
+            this.updateStorageStats();
+            this.displayResetResults(e.detail.results);
+            // Refresh UI components
+            this.settingsManager.setupUI();
+            this.renderGroups();
+            this.renderPrompts();
+        });
+    }
+
+    async updateStorageStats() {
+        const statsContainer = document.getElementById('importExportStats');
+        if (!statsContainer) return;
+
+        try {
+            const stats = await this.importExportManager.getStorageStats();
+            
+            if (stats.error) {
+                statsContainer.innerHTML = `<div class="stats-error">Error loading stats: ${stats.error}</div>`;
+                return;
+            }
+
+            statsContainer.innerHTML = `
+                <div class="stats-summary">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Size</div>
+                        <div class="stat-value">${stats.totalSizeMB} MB</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Settings</div>
+                        <div class="stat-value">${stats.breakdown.settings ? '✓' : '✗'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Prompts</div>
+                        <div class="stat-value">${stats.breakdown.prompts || '0 items'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Groups</div>
+                        <div class="stat-value">${stats.breakdown.promptGroups || '0 items'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">AI History</div>
+                        <div class="stat-value">${stats.breakdown.llmHistory || '0 items'}</div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to update storage stats:', error);
+            statsContainer.innerHTML = `<div class="stats-error">Failed to load storage stats</div>`;
+        }
+    }
+
+    displayImportResults(results, errorMessage = null) {
+        const statsContainer = document.getElementById('importExportStats');
+        if (!statsContainer) return;
+
+        // Remove any existing results display
+        const existingResults = document.querySelector('.import-results');
+        if (existingResults) {
+            existingResults.remove();
+        }
+
+        let resultElement;
+
+        if (errorMessage) {
+            resultElement = document.createElement('div');
+            resultElement.className = 'import-results error';
+            resultElement.innerHTML = `
+                <div class="results-summary">Import Failed</div>
+                <div class="results-details">${errorMessage}</div>
+            `;
+        } else if (results) {
+            const hasErrors = (results.localStorage?.errors?.length > 0) || (results.indexedDB?.errors?.length > 0);
+            const totalImported = (results.localStorage?.imported || 0) + (results.indexedDB?.imported || 0);
+            
+            resultElement = document.createElement('div');
+            resultElement.className = hasErrors ? 'import-results warning' : 'import-results success';
+            
+            let detailsHTML = `
+                <div class="results-summary">
+                    Import ${hasErrors ? 'Completed with Warnings' : 'Successful'}
+                </div>
+                <div class="results-details">
+                    Imported ${totalImported} items total
+                </div>
+            `;
+
+            if (hasErrors) {
+                const allErrors = [...(results.localStorage?.errors || []), ...(results.indexedDB?.errors || [])];
+                detailsHTML += `
+                    <ul class="error-list">
+                        ${allErrors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                `;
+            }
+
+            resultElement.innerHTML = detailsHTML;
+        }
+
+        if (resultElement) {
+            statsContainer.parentNode.insertBefore(resultElement, statsContainer.nextSibling);
+            
+            // Remove the results after 10 seconds
+            setTimeout(() => {
+                if (resultElement && resultElement.parentNode) {
+                    resultElement.remove();
+                }
+            }, 10000);
+        }
+    }
+
+    showResetConfirmation() {
+        // Create confirmation modal
+        const modal = document.createElement('div');
+        modal.className = 'reset-confirmation-modal';
+        modal.innerHTML = `
+            <div class="reset-confirmation-content">
+                <div class="reset-confirmation-title">
+                    ⚠️ Reset All Data
+                </div>
+                <div class="reset-confirmation-message">
+                    You are about to permanently delete ALL your data including:
+                    <ul style="text-align: left; margin: 1rem 0;">
+                        <li>Settings and preferences</li>
+                        <li>All custom prompts and groups</li>
+                        <li>Complete AI interaction history</li>
+                        <li>Usage statistics and analytics</li>
+                    </ul>
+                </div>
+                <div class="reset-confirmation-warning">
+                    ⚠️ This action cannot be undone!<br>
+                    Consider exporting your data first as a backup.
+                </div>
+                <div class="reset-confirmation-actions">
+                    <button class="btn-danger" id="confirmResetBtn">
+                        🗑️ Delete All Data
+                    </button>
+                    <button class="btn-secondary" id="cancelResetBtn">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Get elements
+        const confirmBtn = modal.querySelector('#confirmResetBtn');
+        const cancelBtn = modal.querySelector('#cancelResetBtn');
+
+        // Handle confirm
+        confirmBtn.addEventListener('click', async () => {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Deleting...';
+            
+            try {
+                const results = await this.importExportManager.resetAllData();
+                this.notificationManager.success('All data has been reset successfully');
+                modal.remove();
+            } catch (error) {
+                this.notificationManager.error(`Reset failed: ${error.message}`);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '🗑️ Delete All Data';
+            }
+        });
+
+        // Handle cancel
+        cancelBtn.addEventListener('click', () => {
+            modal.remove();
+        });
+
+        // Handle escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        // Handle click outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
+        // Focus the cancel button for keyboard navigation
+        setTimeout(() => cancelBtn.focus(), 100);
+    }
+
+    displayResetResults(results) {
+        const statsContainer = document.getElementById('importExportStats');
+        if (!statsContainer) return;
+
+        // Remove any existing results display
+        const existingResults = document.querySelector('.reset-results');
+        if (existingResults) {
+            existingResults.remove();
+        }
+
+        const hasErrors = (results.localStorage?.errors?.length > 0) || (results.indexedDB?.errors?.length > 0);
+        const totalCleared = (results.localStorage?.cleared || 0) + (results.indexedDB?.cleared || 0);
+        
+        const resultElement = document.createElement('div');
+        resultElement.className = hasErrors ? 'import-results warning reset-results' : 'import-results success reset-results';
+        
+        let detailsHTML = `
+            <div class="results-summary">
+                Reset ${hasErrors ? 'Completed with Issues' : 'Successful'}
+            </div>
+            <div class="results-details">
+                Cleared ${results.localStorage?.cleared || 0} localStorage items and ${results.indexedDB?.cleared || 0} AI history records
+            </div>
+        `;
+
+        if (hasErrors) {
+            const allErrors = [...(results.localStorage?.errors || []), ...(results.indexedDB?.errors || [])];
+            detailsHTML += `
+                <ul class="error-list">
+                    ${allErrors.map(error => `<li>${error}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        resultElement.innerHTML = detailsHTML;
+        statsContainer.parentNode.insertBefore(resultElement, statsContainer.nextSibling);
+        
+        // Remove the results after 10 seconds
+        setTimeout(() => {
+            if (resultElement && resultElement.parentNode) {
+                resultElement.remove();
+            }
+        }, 10000);
     }
 
     cleanup() {

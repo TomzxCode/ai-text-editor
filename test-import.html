@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Import</title>
+</head>
+<body>
+    <h1>Import Test</h1>
+    <input type="file" id="fileInput" accept=".json">
+    <button id="testImport">Test Import</button>
+    <pre id="output"></pre>
+
+    <script src="components/LLMCallStorage.js"></script>
+    <script src="components/ImportExportManager.js"></script>
+    
+    <script>
+        async function testImport() {
+            const fileInput = document.getElementById('fileInput');
+            const output = document.getElementById('output');
+            
+            if (!fileInput.files[0]) {
+                output.textContent = 'Please select a file first\n';
+                return;
+            }
+            
+            output.textContent = 'Testing import...\n';
+            
+            // Mock window.app.aiService
+            const llmCallStorage = new LLMCallStorage();
+            await llmCallStorage.waitForInitialization();
+            
+            window.app = {
+                aiService: {
+                    llmCallStorage: llmCallStorage
+                }
+            };
+            
+            const importExportManager = new ImportExportManager();
+            await importExportManager.initialize();
+            
+            try {
+                const results = await importExportManager.uploadBackupFromFile(fileInput.files[0], {
+                    overwrite: true,
+                    selective: null
+                });
+                
+                output.textContent += 'Import completed!\n';
+                output.textContent += 'LocalStorage imported: ' + results.localStorage.imported + '\n';
+                output.textContent += 'IndexedDB imported: ' + results.indexedDB.imported + '\n';
+                output.textContent += 'Errors: ' + JSON.stringify([...results.localStorage.errors, ...results.indexedDB.errors]) + '\n';
+                
+                // Verify the data was imported
+                const exportData = await importExportManager.exportAllData();
+                output.textContent += '\n--- Verification Export ---\n';
+                output.textContent += 'IndexedDB calls after import: ' + (exportData.data.indexedDB.llm_calls?.length || 0) + '\n';
+                output.textContent += 'LocalStorage items: ' + Object.keys(exportData.data.localStorage).length + '\n';
+                
+            } catch (error) {
+                output.textContent += 'Import failed: ' + error.message + '\n';
+                console.error('Import error:', error);
+            }
+        }
+        
+        document.getElementById('testImport').addEventListener('click', testImport);
+    </script>
+</body>
+</html>

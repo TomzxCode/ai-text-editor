@@ -3541,3 +3541,371 @@ body[data-theme="light"] {
         font-size: 0.9rem;
     }
 }
+
+/* Import/Export Styles */
+.import-export-stats {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #444;
+}
+
+.stats-loading {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}
+
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: #2a2a2a;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.import-export-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.import-options {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    border: 1px solid #444;
+}
+
+.option-group {
+    margin-bottom: 1rem;
+}
+
+.option-group:last-child {
+    margin-bottom: 0;
+}
+
+.option-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    margin-bottom: 0;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin: 0;
+}
+
+.import-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-icon {
+    margin-right: 0.5rem;
+    font-size: 1rem;
+}
+
+.cloud-storage-section {
+    opacity: 0.6;
+}
+
+.cloud-providers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.btn-cloud {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #888;
+    cursor: not-allowed;
+    transition: all 0.2s ease;
+}
+
+.btn-cloud:not(:disabled) {
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn-cloud:not(:disabled):hover {
+    background-color: #333;
+    border-color: #555;
+}
+
+.cloud-icon {
+    font-size: 1.5rem;
+}
+
+.btn-cloud small {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Progress and Status Indicators */
+.import-progress {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    border: 1px solid #444;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: #444;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+.import-results {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid;
+}
+
+.import-results.success {
+    background-color: #1b4332;
+    border-color: #4CAF50;
+    color: #d4edda;
+}
+
+.import-results.error {
+    background-color: #4a1e1e;
+    border-color: #f44336;
+    color: #f8d7da;
+}
+
+.import-results.warning {
+    background-color: #4a3b1e;
+    border-color: #ff9800;
+    color: #fff3cd;
+}
+
+.results-summary {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.results-details {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.error-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0 0;
+}
+
+.error-list li {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.error-list li:last-child {
+    border-bottom: none;
+}
+
+/* Reset Button */
+
+.btn-danger {
+    background-color: #f44336;
+    color: white;
+    border: 1px solid #d32f2f;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger.btn-small {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: normal;
+    width: auto;
+    min-width: fit-content;
+    white-space: nowrap;
+}
+
+.btn-danger:hover {
+    background-color: #d32f2f;
+    border-color: #b71c1c;
+    transform: translateY(-1px);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+.btn-danger:disabled {
+    background-color: #666;
+    border-color: #555;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Confirmation Modal */
+.reset-confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.reset-confirmation-content {
+    background-color: #2a2a2a;
+    border: 2px solid #f44336;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+
+.reset-confirmation-title {
+    color: #f44336;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.reset-confirmation-message {
+    color: #fff;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.reset-confirmation-warning {
+    background-color: rgba(244, 67, 54, 0.2);
+    border: 1px solid #f44336;
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+    color: #ffcdd2;
+    font-weight: 500;
+}
+
+.reset-confirmation-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.reset-confirmation-input {
+    background-color: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 0.75rem;
+    color: #fff;
+    font-size: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+    width: 100%;
+}
+
+.reset-confirmation-input:focus {
+    outline: none;
+    border-color: #f44336;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .stats-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .import-export-actions,
+    .import-actions {
+        flex-direction: column;
+    }
+    
+    .cloud-providers {
+        grid-template-columns: 1fr;
+    }
+    
+    .checkbox-group {
+        flex-direction: column;
+    }
+    
+    .reset-confirmation-content {
+        padding: 1.5rem;
+    }
+    
+    .reset-confirmation-actions {
+        flex-direction: column;
+    }
+}

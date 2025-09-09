@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Export</title>
+</head>
+<body>
+    <h1>Export Test</h1>
+    <button id="testExport">Test Export</button>
+    <pre id="output"></pre>
+
+    <script src="components/LLMCallStorage.js"></script>
+    <script src="components/ImportExportManager.js"></script>
+    
+    <script>
+        async function testExport() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing export...\n';
+            
+            // Create some test data
+            const llmCallStorage = new LLMCallStorage();
+            await llmCallStorage.waitForInitialization();
+            
+            // Add a test call
+            await llmCallStorage.storeLLMCall('test-prompt', {total_tokens: 100}, 'test-session', 'test-provider', 'test-model', 1000, '/test/file.txt', 'Test feedback', 'html');
+            
+            // Mock window.app.aiService
+            window.app = {
+                aiService: {
+                    llmCallStorage: llmCallStorage
+                }
+            };
+            
+            const importExportManager = new ImportExportManager();
+            await importExportManager.initialize();
+            
+            const exportData = await importExportManager.exportAllData();
+            
+            output.textContent += 'Export completed!\n';
+            output.textContent += 'IndexedDB calls found: ' + (exportData.data.indexedDB.llm_calls?.length || 0) + '\n';
+            output.textContent += JSON.stringify(exportData, null, 2);
+        }
+        
+        document.getElementById('testExport').addEventListener('click', testExport);
+    </script>
+</body>
+</html>
