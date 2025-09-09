@@ -12,8 +12,9 @@ class EditorManager {
     }
 
     initializeEditor() {
+        const theme = this.settingsManager ? this.settingsManager.getSetting('theme') : 'material';
         this.editor = CodeMirror.fromTextArea(this.textEditorElement, {
-            theme: 'material',
+            theme: theme,
             lineNumbers: true,
             lineWrapping: true,
             autoCloseBrackets: true,
@@ -51,6 +52,8 @@ class EditorManager {
             this.settingsManager.onChange((key, value) => {
                 if (key === 'fontFamily' || key === 'fontSize') {
                     this.applyFontSettings();
+                } else if (key === 'theme') {
+                    this.applyTheme(value);
                 }
             });
         }
@@ -72,6 +75,13 @@ class EditorManager {
         this.textEditorElement.style.fontSize = `${fontSize}px`;
 
         // Refresh the editor to apply changes
+        this.editor.refresh();
+    }
+
+    applyTheme(theme) {
+        if (!this.editor) return;
+        
+        this.editor.setOption('theme', theme);
         this.editor.refresh();
     }
 

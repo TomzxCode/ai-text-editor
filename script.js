@@ -90,6 +90,7 @@ class AITextEditor {
     initializeManagers() {
         this.sessionManager = new SessionManager();
         this.settingsManager = new SettingsManager();
+        this.themeManager = new ThemeManager(this.settingsManager);
         this.textAnalysisManager = new TextAnalysisManager();
 
         this.editorManager = new EditorManager(this.elements.textEditor, (event, data) => {
