@@ -519,7 +519,7 @@ class PromptsManager {
     }
 
     getAllGroups() {
-        return [...this.groups];
+        return [...this.groups].sort((a, b) => a.name.localeCompare(b.name));
     }
 
     getActiveGroup() {
