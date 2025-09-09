@@ -12,10 +12,10 @@ class InspectManager {
         this.elements = {
             tab: document.getElementById('inspectTab'),
             tabContent: document.getElementById('inspectTabContent'),
-            sentenceCount: document.getElementById('sentenceCount'),
-            wordCountInspect: document.getElementById('wordCountInspect'),
-            paragraphCount: document.getElementById('paragraphCount'),
-            textVersion: document.getElementById('textVersion'),
+            sentenceCount: document.getElementById('inspectSentenceCount'),
+            wordCount: document.getElementById('inspectWordCount'),
+            paragraphCount: document.getElementById('inspectParagraphCount'),
+            textVersion: document.getElementById('inspectTextVersion'),
             refreshBtn: document.getElementById('refreshInspectBtn'),
             viewSelect: document.getElementById('inspectView'),
             filterInput: document.getElementById('inspectFilter'),
@@ -67,8 +67,8 @@ class InspectManager {
             this.elements.sentenceCount.textContent = stats.totalSentences || 0;
         }
         
-        if (this.elements.wordCountInspect) {
-            this.elements.wordCountInspect.textContent = stats.totalWords || 0;
+        if (this.elements.wordCount) {
+            this.elements.wordCount.textContent = stats.totalWords || 0;
         }
         
         if (this.elements.paragraphCount) {
