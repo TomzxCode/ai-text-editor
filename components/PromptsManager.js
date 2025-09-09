@@ -276,6 +276,37 @@ class PromptsManager {
         return this.reorderPrompts(fromIndex, toIndex);
     }
 
+    reorderPromptsInGroup(groupId, fromIndex, toIndex) {
+        const group = this.getGroup(groupId);
+        if (!group) {
+            throw new Error('Group not found');
+        }
+
+        if (fromIndex < 0 || fromIndex >= group.promptIds.length || 
+            toIndex < 0 || toIndex >= group.promptIds.length || 
+            fromIndex === toIndex) {
+            return false;
+        }
+
+        // Remove the prompt ID from the old position
+        const [movedPromptId] = group.promptIds.splice(fromIndex, 1);
+        
+        // Insert it at the new position
+        group.promptIds.splice(toIndex, 0, movedPromptId);
+        
+        this.saveGroups();
+        return true;
+    }
+
+    reorderPromptsInActiveGroup(fromIndex, toIndex) {
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            throw new Error('No active group');
+        }
+        
+        return this.reorderPromptsInGroup(activeGroup.id, fromIndex, toIndex);
+    }
+
     // Prompt Groups Management
     loadGroups() {
         try {
@@ -548,7 +579,10 @@ class PromptsManager {
             return [];
         }
 
-        return this.prompts.filter(p => activeGroup.promptIds.includes(p.id));
+        // Return prompts in the order specified by the group's promptIds array
+        return activeGroup.promptIds
+            .map(id => this.prompts.find(p => p.id === id))
+            .filter(p => p !== undefined); // Filter out any missing prompts
     }
 
     getEnabledPromptsInActiveGroup() {
@@ -557,10 +591,10 @@ class PromptsManager {
             return [];
         }
 
-        return this.prompts.filter(p => {
-            return activeGroup.promptIds.includes(p.id) && 
-                   activeGroup.promptStates[p.id]?.enabled === true;
-        });
+        // Return enabled prompts in the order specified by the group's promptIds array
+        return activeGroup.promptIds
+            .map(id => this.prompts.find(p => p.id === id))
+            .filter(p => p !== undefined && activeGroup.promptStates[p.id]?.enabled === true);
     }
 
     getEnabledPromptsByTriggerInActiveGroup(triggerTiming) {

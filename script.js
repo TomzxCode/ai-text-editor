@@ -1391,7 +1391,7 @@ class AITextEditor {
 
     movePrompt(fromIndex, toIndex) {
         try {
-            if (this.promptsManager.reorderPrompts(fromIndex, toIndex)) {
+            if (this.promptsManager.reorderPromptsInActiveGroup(fromIndex, toIndex)) {
                 this.renderPrompts();
 
                 // Update the order of existing feedback immediately

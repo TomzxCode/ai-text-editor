@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Prompt Ordering Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .pass { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 4px; }
+        .test-step { margin: 10px 0; padding: 5px; background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>Prompt Ordering Fix Test</h1>
+    
+    <div id="test-results">
+        <div class="test-section">
+            <h2>Test Setup</h2>
+            <div id="setup-status">Loading components...</div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Group-Specific Ordering Tests</h2>
+            <div id="ordering-tests"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the components we need to test
+        import('./components/PromptsManager.js').then(module => {
+            const PromptsManager = module.default;
+            
+            // Create test instance
+            const promptsManager = new PromptsManager();
+            
+            // Clear any existing data for clean test
+            localStorage.removeItem('ai_editor_prompts');
+            localStorage.removeItem('ai_editor_prompt_groups');
+            
+            // Reload with clean state
+            promptsManager.prompts = promptsManager.loadPrompts();
+            promptsManager.groups = promptsManager.loadGroups();
+            promptsManager.ensureDefaultGroup();
+            
+            runTests(promptsManager);
+        }).catch(error => {
+            document.getElementById('setup-status').innerHTML = 
+                `<div class="test-result fail">Failed to load components: ${error.message}</div>`;
+        });
+        
+        function runTests(promptsManager) {
+            document.getElementById('setup-status').innerHTML = 
+                '<div class="test-result pass">Components loaded successfully</div>';
+            
+            const resultsDiv = document.getElementById('ordering-tests');
+            let testResults = [];
+            
+            try {
+                // Test 1: Create test prompts
+                testResults.push(testCreatePrompts(promptsManager));
+                
+                // Test 2: Create test groups
+                testResults.push(testCreateGroups(promptsManager));
+                
+                // Test 3: Test group-specific ordering
+                testResults.push(testGroupSpecificOrdering(promptsManager));
+                
+                // Test 4: Verify order persistence
+                testResults.push(testOrderPersistence(promptsManager));
+                
+            } catch (error) {
+                testResults.push({
+                    name: 'Overall Test Suite',
+                    passed: false,
+                    message: `Test suite failed: ${error.message}`
+                });
+            }
+            
+            // Display results
+            resultsDiv.innerHTML = testResults.map(result => 
+                `<div class="test-result ${result.passed ? 'pass' : 'fail'}">
+                    <strong>${result.name}:</strong> ${result.message}
+                </div>`
+            ).join('');
+            
+            const passedTests = testResults.filter(r => r.passed).length;
+            const totalTests = testResults.length;
+            
+            resultsDiv.innerHTML += `
+                <div class="test-result ${passedTests === totalTests ? 'pass' : 'fail'}">
+                    <strong>Summary:</strong> ${passedTests}/${totalTests} tests passed
+                </div>
+            `;
+        }
+        
+        function testCreatePrompts(promptsManager) {
+            try {
+                // Create 4 test prompts
+                const prompt1 = promptsManager.addPrompt('Test Prompt 1', 'This is test prompt 1');
+                const prompt2 = promptsManager.addPrompt('Test Prompt 2', 'This is test prompt 2');
+                const prompt3 = promptsManager.addPrompt('Test Prompt 3', 'This is test prompt 3');
+                const prompt4 = promptsManager.addPrompt('Test Prompt 4', 'This is test prompt 4');
+                
+                const allPrompts = promptsManager.getAllPrompts();
+                if (allPrompts.length === 4) {
+                    return { name: 'Create Test Prompts', passed: true, message: '4 test prompts created successfully' };
+                } else {
+                    return { name: 'Create Test Prompts', passed: false, message: `Expected 4 prompts, got ${allPrompts.length}` };
+                }
+            } catch (error) {
+                return { name: 'Create Test Prompts', passed: false, message: error.message };
+            }
+        }
+        
+        function testCreateGroups(promptsManager) {
+            try {
+                const allPrompts = promptsManager.getAllPrompts();
+                const promptIds = allPrompts.map(p => p.id);
+                
+                // Create two groups with different prompt arrangements
+                const group1 = promptsManager.createGroup('Group 1', [promptIds[0], promptIds[2]], false); // Prompts 1, 3
+                const group2 = promptsManager.createGroup('Group 2', [promptIds[1], promptIds[3]], false); // Prompts 2, 4
+                
+                // Set Group 1 as active
+                promptsManager.setActiveGroup(group1.id);
+                
+                return { name: 'Create Test Groups', passed: true, message: 'Created 2 test groups with different prompt arrangements' };
+            } catch (error) {
+                return { name: 'Create Test Groups', passed: false, message: error.message };
+            }
+        }
+        
+        function testGroupSpecificOrdering(promptsManager) {
+            try {
+                const activeGroup = promptsManager.getActiveGroup();
+                const initialOrder = [...activeGroup.promptIds];
+                
+                // Test reordering within the active group (Group 1)
+                // Initial order should be [prompt1.id, prompt3.id]
+                // Let's move index 0 to index 1 (swap them)
+                const success = promptsManager.reorderPromptsInActiveGroup(0, 1);
+                
+                if (!success) {
+                    return { name: 'Group-Specific Reordering', passed: false, message: 'Reordering operation returned false' };
+                }
+                
+                const updatedGroup = promptsManager.getActiveGroup();
+                const newOrder = updatedGroup.promptIds;
+                
+                // Check that the order has changed
+                if (newOrder[0] === initialOrder[1] && newOrder[1] === initialOrder[0]) {
+                    return { name: 'Group-Specific Reordering', passed: true, message: 'Prompts reordered correctly within group' };
+                } else {
+                    return { name: 'Group-Specific Reordering', passed: false, message: `Order not updated correctly. Expected [${initialOrder[1]}, ${initialOrder[0]}], got [${newOrder[0]}, ${newOrder[1]}]` };
+                }
+            } catch (error) {
+                return { name: 'Group-Specific Reordering', passed: false, message: error.message };
+            }
+        }
+        
+        function testOrderPersistence(promptsManager) {
+            try {
+                // Get current active group order
+                const activeGroup = promptsManager.getActiveGroup();
+                const orderBeforeSave = [...activeGroup.promptIds];
+                
+                // Get prompts in the order they should appear
+                const promptsInOrder = promptsManager.getPromptsInActiveGroup();
+                const promptNamesInOrder = promptsInOrder.map(p => p.name);
+                
+                // Verify that getPromptsInActiveGroup returns them in the correct order
+                const expectedFirstPrompt = orderBeforeSave[0];
+                const actualFirstPrompt = promptsInOrder[0].id;
+                
+                if (expectedFirstPrompt === actualFirstPrompt) {
+                    return { 
+                        name: 'Order Persistence and Retrieval', 
+                        passed: true, 
+                        message: `Prompts retrieved in correct order: ${promptNamesInOrder.join(', ')}` 
+                    };
+                } else {
+                    return { 
+                        name: 'Order Persistence and Retrieval', 
+                        passed: false, 
+                        message: `Expected first prompt ID ${expectedFirstPrompt}, got ${actualFirstPrompt}` 
+                    };
+                }
+            } catch (error) {
+                return { name: 'Order Persistence and Retrieval', passed: false, message: error.message };
+            }
+        }
+    </script>
+</body>
+</html>
