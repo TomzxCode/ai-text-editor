@@ -7,9 +7,16 @@ class UIManager {
         this.snapThreshold = 50; // pixels from edge to snap to hidden
         this.minWidth = 200; // minimum width before snapping
         
+        // Feedback filtering state
+        this.isFilteringFeedback = false;
+        this.currentHoveredContentId = null;
+        this.showAllItemsEnabled = true;
+        this.allFeedbackItems = [];
+        
         this.setupEventListeners();
         this.setupMobileNavigation();
         this.setupResizeHandles();
+        this.createFeedbackFooter();
     }
 
     setupEventListeners() {
@@ -642,6 +649,9 @@ class UIManager {
      * Updates the hover highlighting system for content-feedback associations
      */
     updateHoverHighlighting() {
+        // Store current feedback items for filtering
+        this.storeFeedbackItems();
+        
         // Set up hover event listeners for all feedback items
         // This will be called after feedback items are added to the DOM
         setTimeout(() => {
@@ -787,16 +797,25 @@ class UIManager {
         const associations = feedbackAssociationManager.getAllContentAssociations();
         const hoveredAssociation = this.findAssociationAtPosition(pos, associations, editor);
         
-        if (hoveredAssociation && hoveredAssociation !== this.currentHoveredAssociation) {
+        if (hoveredAssociation && hoveredAssociation.contentId !== this.currentHoveredContentId) {
             // Clear previous highlighting
-            if (this.currentHoveredAssociation) {
+            if (this.currentHoveredContentId) {
                 this.removeAllHighlighting();
             }
             
+            this.currentHoveredContentId = hoveredAssociation.contentId;
             this.currentHoveredAssociation = hoveredAssociation;
             
             // Highlight associated feedback items
             this.highlightAssociatedFeedbackItems(hoveredAssociation.contentId);
+            
+            // Filter feedback items if not showing all
+            if (!this.showAllItemsEnabled) {
+                this.filterFeedbackItems(hoveredAssociation.contentId);
+            }
+        } else if (!hoveredAssociation && this.currentHoveredContentId) {
+            // Mouse moved to area without content associations
+            this.clearHoverState();
         }
     }
 
@@ -804,8 +823,7 @@ class UIManager {
      * Handles leaving hover on editor
      */
     handleEditorLeave(event, editor) {
-        this.removeAllHighlighting();
-        this.currentHoveredAssociation = null;
+        this.clearHoverState();
     }
 
     /**
@@ -1044,5 +1062,167 @@ class UIManager {
                 console.log('Feedback item removed from DOM');
             }
         }, 300);
+    }
+
+    /**
+     * Creates the feedback footer with show all items checkbox
+     */
+    createFeedbackFooter() {
+        // Only create footer if it doesn't already exist
+        if (document.getElementById('feedbackFooter')) return;
+        
+        const feedbackTabContent = document.getElementById('feedbackTabContent');
+        if (!feedbackTabContent) return;
+        
+        const footer = document.createElement('div');
+        footer.id = 'feedbackFooter';
+        footer.className = 'feedback-footer';
+        footer.innerHTML = `
+            <div class="feedback-footer-content">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showAllItemsCheckbox" checked>
+                    <span class="checkbox-text">Show all items</span>
+                </label>
+            </div>
+        `;
+        
+        feedbackTabContent.appendChild(footer);
+        
+        // Add event listener to checkbox
+        const checkbox = footer.querySelector('#showAllItemsCheckbox');
+        checkbox.addEventListener('change', (e) => {
+            this.handleShowAllItemsToggle(e.target.checked);
+        });
+    }
+
+    /**
+     * Handles the show all items checkbox toggle
+     * @param {boolean} showAll - Whether to show all items or filter
+     */
+    handleShowAllItemsToggle(showAll) {
+        this.showAllItemsEnabled = showAll;
+        
+        if (showAll) {
+            // Show all feedback items
+            this.restoreAllFeedbackItems();
+        } else {
+            // If currently hovering over content, filter to that content
+            if (this.currentHoveredContentId) {
+                this.filterFeedbackItems(this.currentHoveredContentId);
+            } else {
+                // No content currently hovered, show all but mark as filtered mode
+                this.restoreAllFeedbackItems();
+            }
+        }
+    }
+
+    /**
+     * Stores current feedback items for later restoration
+     */
+    storeFeedbackItems() {
+        const container = this.elements.feedbackContainer;
+        if (!container) return;
+        
+        this.allFeedbackItems = Array.from(container.querySelectorAll('.feedback-item:not(.placeholder-message)'));
+    }
+
+    /**
+     * Filters feedback items to show only those associated with the given content ID
+     * @param {string} contentId - The content ID to filter by
+     */
+    filterFeedbackItems(contentId) {
+        const container = this.elements.feedbackContainer;
+        if (!container) return;
+        
+        const allItems = container.querySelectorAll('.feedback-item:not(.placeholder-message)');
+        let visibleCount = 0;
+        
+        allItems.forEach(item => {
+            const itemContentId = item.dataset.contentId;
+            if (itemContentId === contentId) {
+                // Show items associated with this content
+                item.style.display = '';
+                item.classList.add('feedback-item-filtered');
+                visibleCount++;
+            } else {
+                // Hide other items
+                item.style.display = 'none';
+                item.classList.remove('feedback-item-filtered');
+            }
+        });
+        
+        // Show placeholder if no items are visible
+        this.togglePlaceholder(visibleCount === 0);
+    }
+
+    /**
+     * Restores all feedback items to visible state
+     */
+    restoreAllFeedbackItems() {
+        const container = this.elements.feedbackContainer;
+        if (!container) return;
+        
+        const allItems = container.querySelectorAll('.feedback-item:not(.placeholder-message)');
+        
+        allItems.forEach(item => {
+            item.style.display = '';
+            item.classList.remove('feedback-item-filtered');
+        });
+        
+        // Hide placeholder when showing all items
+        this.togglePlaceholder(allItems.length === 0);
+    }
+
+    /**
+     * Clears hover state and restores normal display
+     */
+    clearHoverState() {
+        this.removeAllHighlighting();
+        this.currentHoveredAssociation = null;
+        this.currentHoveredContentId = null;
+        
+        // If in show all mode, restore all items
+        if (this.showAllItemsEnabled) {
+            this.restoreAllFeedbackItems();
+        }
+    }
+
+    /**
+     * Toggles the visibility of the placeholder message
+     * @param {boolean} show - Whether to show the placeholder
+     */
+    togglePlaceholder(show) {
+        const container = this.elements.feedbackContainer;
+        if (!container) return;
+        
+        let placeholder = container.querySelector('.placeholder-message');
+        
+        if (show) {
+            // Show placeholder if it doesn't exist or is hidden
+            if (!placeholder) {
+                // Create placeholder if it doesn't exist
+                placeholder = document.createElement('div');
+                placeholder.className = 'feedback-item placeholder-message';
+                placeholder.id = 'dynamicPlaceholder';
+                placeholder.innerHTML = `
+                    <h4>🤖 AI Assistant</h4>
+                    <p>Open a file or start typing to get AI-powered writing suggestions.</p>
+                    <p><small>The AI will analyze your text and provide feedback for style, grammar, structure, and more.</small></p>
+                `;
+                // Insert at the beginning of the container, before the footer
+                const footer = container.querySelector('.feedback-footer');
+                if (footer) {
+                    container.insertBefore(placeholder, footer);
+                } else {
+                    container.appendChild(placeholder);
+                }
+            }
+            placeholder.style.display = '';
+        } else {
+            // Hide placeholder
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+        }
     }
 }
