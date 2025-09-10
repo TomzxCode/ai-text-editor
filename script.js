@@ -1635,6 +1635,7 @@ class AITextEditor {
     async setupImportExportUI() {
         const exportBtn = document.getElementById('exportDataBtn');
         const importBtn = document.getElementById('importDataBtn');
+        const importDefaultPromptsBtn = document.getElementById('importDefaultPromptsBtn');
         const importFileInput = document.getElementById('importFileInput');
         const importOptions = document.getElementById('importOptions');
         const confirmImportBtn = document.getElementById('confirmImportBtn');
@@ -1668,6 +1669,36 @@ class AITextEditor {
             exportBtn.disabled = false;
             exportBtn.innerHTML = '<span class="btn-icon">⬇️</span>Export All Data';
         });
+
+        // Import default prompts functionality
+        if (importDefaultPromptsBtn) {
+            importDefaultPromptsBtn.addEventListener('click', async () => {
+                importDefaultPromptsBtn.disabled = true;
+                importDefaultPromptsBtn.innerHTML = '<span class="btn-icon">⏳</span>Importing...';
+
+                try {
+                    const result = this.promptsManager.importDefaultPrompts(true);
+                    
+                    if (result.imported > 0) {
+                        this.notificationManager.success(
+                            `Successfully imported ${result.imported} default prompts!` +
+                            (result.skipped > 0 ? ` (${result.skipped} skipped as they already exist)` : '')
+                        );
+                        // Refresh the prompts UI
+                        this.renderPrompts();
+                    } else if (result.skipped > 0) {
+                        this.notificationManager.info('All default prompts already exist in your collection.');
+                    } else {
+                        this.notificationManager.info('No prompts were imported.');
+                    }
+                } catch (error) {
+                    this.notificationManager.error(`Failed to import default prompts: ${error.message}`);
+                }
+
+                importDefaultPromptsBtn.disabled = false;
+                importDefaultPromptsBtn.innerHTML = '<span class="btn-icon">✨</span>Import Default Prompts';
+            });
+        }
 
         // Import functionality
         importBtn.addEventListener('click', () => {

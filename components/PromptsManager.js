@@ -7,6 +7,25 @@ class PromptsManager {
         this.ensureDefaultGroup();
     }
 
+    generateUniqueId() {
+        const timestamp = Date.now().toString(36);
+        const randomPart = Math.random().toString(36).substr(2, 9);
+        const id = `${timestamp}-${randomPart}`;
+        
+        // Ensure uniqueness by checking against existing IDs
+        const existingIds = new Set([
+            ...this.prompts.map(p => p.id),
+            ...this.groups.map(g => g.id)
+        ]);
+        
+        if (existingIds.has(id)) {
+            // Very unlikely, but if collision occurs, try again
+            return this.generateUniqueId();
+        }
+        
+        return id;
+    }
+
     loadPrompts() {
         try {
             const stored = localStorage.getItem(this.storageKey);
@@ -60,7 +79,7 @@ class PromptsManager {
         }
 
         const newPrompt = {
-            id: Date.now().toString(),
+            id: this.generateUniqueId(),
             name: name.trim(),
             prompt: prompt.trim(),
             // Note: 'enabled' is now managed per-group, not globally
@@ -160,7 +179,7 @@ class PromptsManager {
         }
 
         const duplicatedPrompt = {
-            id: Date.now().toString(),
+            id: this.generateUniqueId(),
             name: duplicateName,
             prompt: prompt.prompt,
             enabled: prompt.enabled,
@@ -222,7 +241,7 @@ class PromptsManager {
             if (replace) {
                 this.prompts = validPrompts.map(p => ({
                     ...p,
-                    id: p.id || Date.now().toString() + Math.random(),
+                    id: p.id || this.generateUniqueId(),
                     createdAt: p.createdAt || new Date().toISOString(),
                     enabled: p.enabled !== false,
                     triggerTiming: this.validateTriggerTiming(p.triggerTiming),
@@ -238,7 +257,7 @@ class PromptsManager {
                     .filter(p => !existingNames.has(p.name))
                     .map(p => ({
                         ...p,
-                        id: Date.now().toString() + Math.random(),
+                        id: this.generateUniqueId(),
                         createdAt: new Date().toISOString(),
                         enabled: p.enabled !== false,
                         triggerTiming: this.validateTriggerTiming(p.triggerTiming),
@@ -324,7 +343,7 @@ class PromptsManager {
             
             // Ensure all groups have required properties
             groups = groups.map(group => ({
-                id: group.id || Date.now().toString() + Math.random(),
+                id: group.id || this.generateUniqueId(),
                 name: group.name || 'Unnamed Group',
                 promptIds: Array.isArray(group.promptIds) ? group.promptIds : [],
                 isActive: !!group.isActive,
@@ -352,6 +371,11 @@ class PromptsManager {
     ensureDefaultGroup() {
         // Check if we have any groups
         if (this.groups.length === 0) {
+            // Create default prompts if none exist
+            if (this.prompts.length === 0) {
+                this.createDefaultPrompts();
+            }
+            
             // Create default group with all existing prompts
             const allPromptIds = this.prompts.map(p => p.id);
             this.createGroup('Default', allPromptIds, true);
@@ -375,6 +399,199 @@ class PromptsManager {
 
         // Migrate existing prompt states to groups
         this.migratePromptStatesToGroups();
+    }
+
+    createDefaultPrompts() {
+        const defaultPrompts = [
+            {
+                name: "Grammar Check",
+                prompt: "Check the grammar and suggest improvements for this text: {text}",
+                triggerTiming: "sentence",
+                actionType: "feedback"
+            },
+            {
+                name: "Spell Check",
+                prompt: "Check the spelling and highlight any errors in this text: {text}",
+                triggerTiming: "sentence", 
+                actionType: "feedback"
+            },
+            {
+                name: "Improve Clarity",
+                prompt: "Rewrite this text to be clearer and more concise: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Tone Analysis",
+                prompt: "Analyze the tone of this text and provide feedback: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Word Suggestion",
+                prompt: "Suggest alternative words or phrases for: {word}",
+                triggerTiming: "word",
+                actionType: "feedback"
+            },
+            {
+                name: "Expand Ideas",
+                prompt: "Expand on this idea with more details and examples: {sentence}",
+                triggerTiming: "custom",
+                customDelay: "2s",
+                actionType: "feedback"
+            },
+            {
+                name: "Summarize",
+                prompt: "Provide a concise summary of this text: {text}",
+                triggerTiming: "custom",
+                customDelay: "3s",
+                actionType: "feedback"
+            },
+            {
+                name: "Style Guide",
+                prompt: "Check this text against common style guidelines and suggest improvements: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Format as List",
+                prompt: "Convert this text into a well-formatted list: {text}",
+                triggerTiming: "custom",
+                actionType: "insert"
+            },
+            {
+                name: "Professional Tone",
+                prompt: "Rewrite this text with a more professional tone: {text}",
+                triggerTiming: "custom",
+                actionType: "insert"
+            }
+        ];
+
+        // Add each default prompt
+        defaultPrompts.forEach(promptData => {
+            try {
+                this.addPrompt(
+                    promptData.name,
+                    promptData.prompt,
+                    true, // enabled by default
+                    promptData.triggerTiming,
+                    promptData.customDelay || '1s',
+                    '', // no keyboard shortcut
+                    '', // no specific LLM service
+                    '', // no specific LLM model
+                    promptData.actionType
+                );
+            } catch (error) {
+                console.warn(`Failed to create default prompt "${promptData.name}":`, error);
+            }
+        });
+    }
+
+    importDefaultPrompts(skipExisting = true) {
+        const defaultPrompts = [
+            {
+                name: "Grammar Check",
+                prompt: "Check the grammar and suggest improvements for this text: {text}",
+                triggerTiming: "sentence",
+                actionType: "feedback"
+            },
+            {
+                name: "Spell Check",
+                prompt: "Check the spelling and highlight any errors in this text: {text}",
+                triggerTiming: "sentence", 
+                actionType: "feedback"
+            },
+            {
+                name: "Improve Clarity",
+                prompt: "Rewrite this text to be clearer and more concise: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Tone Analysis",
+                prompt: "Analyze the tone of this text and provide feedback: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Word Suggestion",
+                prompt: "Suggest alternative words or phrases for: {word}",
+                triggerTiming: "word",
+                actionType: "feedback"
+            },
+            {
+                name: "Expand Ideas",
+                prompt: "Expand on this idea with more details and examples: {sentence}",
+                triggerTiming: "custom",
+                customDelay: "2s",
+                actionType: "feedback"
+            },
+            {
+                name: "Summarize",
+                prompt: "Provide a concise summary of this text: {text}",
+                triggerTiming: "custom",
+                customDelay: "3s",
+                actionType: "feedback"
+            },
+            {
+                name: "Style Guide",
+                prompt: "Check this text against common style guidelines and suggest improvements: {text}",
+                triggerTiming: "paragraph",
+                actionType: "feedback"
+            },
+            {
+                name: "Format as List",
+                prompt: "Convert this text into a well-formatted list: {text}",
+                triggerTiming: "custom",
+                actionType: "insert"
+            },
+            {
+                name: "Professional Tone",
+                prompt: "Rewrite this text with a more professional tone: {text}",
+                triggerTiming: "custom",
+                actionType: "insert"
+            }
+        ];
+
+        let imported = 0;
+        let skipped = 0;
+        const existingNames = new Set(this.prompts.map(p => p.name.toLowerCase()));
+
+        // Add each default prompt
+        defaultPrompts.forEach(promptData => {
+            try {
+                // Check if prompt already exists (case-insensitive)
+                if (skipExisting && existingNames.has(promptData.name.toLowerCase())) {
+                    skipped++;
+                    return;
+                }
+
+                const newPrompt = this.addPrompt(
+                    promptData.name,
+                    promptData.prompt,
+                    true, // enabled by default
+                    promptData.triggerTiming,
+                    promptData.customDelay || '1s',
+                    '', // no keyboard shortcut
+                    '', // no specific LLM service
+                    '', // no specific LLM model
+                    promptData.actionType
+                );
+
+                // Add to active group if it exists
+                const activeGroup = this.getActiveGroup();
+                if (activeGroup) {
+                    this.addPromptToGroup(activeGroup.id, newPrompt.id);
+                }
+
+                imported++;
+            } catch (error) {
+                console.warn(`Failed to import default prompt "${promptData.name}":`, error);
+                skipped++;
+            }
+        });
+
+        return { imported, skipped, total: defaultPrompts.length };
     }
 
     migratePromptStatesToGroups() {
@@ -455,7 +672,7 @@ class PromptsManager {
         });
 
         const newGroup = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: this.generateUniqueId(),
             name: trimmedName,
             promptIds: validPromptIds,
             promptStates: promptStates,
