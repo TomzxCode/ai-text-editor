@@ -54,6 +54,9 @@ class UIManager {
         
         // Initialize sidebar state
         this.restoreSidebarStates();
+
+        // Set up feedback association listeners
+        this.setupFeedbackAssociationListeners();
     }
 
     setupTabNavigation() {
@@ -511,6 +514,9 @@ class UIManager {
                 }
             }, 1000);
         }
+
+        // Update hover highlighting system
+        this.updateHoverHighlighting();
     }
 
     showFeedbackError(message) {
@@ -630,5 +636,413 @@ class UIManager {
         } else {
             this.showSidebar('right');
         }
+    }
+
+    /**
+     * Updates the hover highlighting system for content-feedback associations
+     */
+    updateHoverHighlighting() {
+        // Set up hover event listeners for all feedback items
+        // This will be called after feedback items are added to the DOM
+        setTimeout(() => {
+            this.setupHoverEventListeners();
+        }, 100);
+    }
+
+    /**
+     * Sets up hover event listeners for bidirectional highlighting
+     */
+    setupHoverEventListeners() {
+        // Clear any existing listeners to avoid duplicates
+        this.clearHoverEventListeners();
+
+        // Set up feedback item hover listeners - check for items with association data
+        const feedbackItems = document.querySelectorAll('.feedback-item[data-content-id]');
+        console.log('Found feedback items with data-content-id:', feedbackItems.length);
+        
+        feedbackItems.forEach(item => {
+            console.log('Setting up hover for item:', {
+                contentId: item.dataset.contentId,
+                contentType: item.dataset.contentType,
+                associatedContent: item.dataset.associatedContent
+            });
+            
+            const hoverHandler = (e) => this.handleFeedbackItemHover(e, item);
+            const leaveHandler = (e) => this.handleFeedbackItemLeave(e, item);
+            
+            item.addEventListener('mouseenter', hoverHandler);
+            item.addEventListener('mouseleave', leaveHandler);
+            
+            // Store handlers for cleanup
+            item._hoverHandler = hoverHandler;
+            item._leaveHandler = leaveHandler;
+        });
+
+        // Set up editor content hover listeners
+        this.setupEditorHoverListeners();
+    }
+
+    /**
+     * Clears existing hover event listeners
+     */
+    clearHoverEventListeners() {
+        const feedbackItems = document.querySelectorAll('.feedback-item');
+        feedbackItems.forEach(item => {
+            if (item._hoverHandler) {
+                item.removeEventListener('mouseenter', item._hoverHandler);
+                item.removeEventListener('mouseleave', item._leaveHandler);
+                delete item._hoverHandler;
+                delete item._leaveHandler;
+            }
+        });
+    }
+
+    /**
+     * Handles hovering over a feedback item
+     */
+    handleFeedbackItemHover(event, feedbackItem) {
+        const contentId = feedbackItem.dataset.contentId;
+        const contentType = feedbackItem.dataset.contentType;
+        const associatedContent = feedbackItem.dataset.associatedContent;
+        
+        console.log('Feedback item hover:', {
+            contentId,
+            contentType, 
+            associatedContent
+        });
+        
+        if (!contentId || !associatedContent) {
+            console.log('Missing content data for hover');
+            return;
+        }
+
+        // Add visual indicator to feedback item
+        feedbackItem.classList.add('feedback-item-highlighted');
+        
+        // Highlight the associated content in the editor
+        this.highlightContentInEditor(associatedContent, contentType, contentId);
+    }
+
+    /**
+     * Handles leaving hover on a feedback item
+     */
+    handleFeedbackItemLeave(event, feedbackItem) {
+        const contentId = feedbackItem.dataset.contentId;
+        
+        // Remove visual indicator from feedback item
+        feedbackItem.classList.remove('feedback-item-highlighted');
+        
+        // Remove content highlighting in editor
+        this.removeContentHighlightInEditor(contentId);
+    }
+
+    /**
+     * Sets up editor hover listeners to highlight feedback when hovering over content
+     */
+    setupEditorHoverListeners() {
+        const editorManager = window.app?.editorManager;
+        if (!editorManager || !editorManager.editor) {
+            console.log('EditorManager or editor not available');
+            return;
+        }
+
+        // Get CodeMirror instance
+        const editor = editorManager.editor;
+        
+        // Set up mouseover event on editor
+        const editorElement = editor.getWrapperElement();
+        
+        // Clear existing editor listeners first
+        if (editorElement._editorHoverHandler) {
+            editorElement.removeEventListener('mousemove', editorElement._editorHoverHandler);
+            editorElement.removeEventListener('mouseleave', editorElement._editorLeaveHandler);
+        }
+        
+        const hoverHandler = (e) => this.handleEditorHover(e, editor);
+        const leaveHandler = (e) => this.handleEditorLeave(e, editor);
+        
+        editorElement.addEventListener('mousemove', hoverHandler);
+        editorElement.addEventListener('mouseleave', leaveHandler);
+        
+        // Store handlers for cleanup
+        editorElement._editorHoverHandler = hoverHandler;
+        editorElement._editorLeaveHandler = leaveHandler;
+        
+        console.log('Editor hover listeners set up');
+    }
+
+    /**
+     * Handles hovering over content in the editor
+     */
+    handleEditorHover(event, editor) {
+        const pos = editor.coordsChar({ left: event.clientX, top: event.clientY });
+        const textAnalysisManager = window.app?.textAnalysisManager;
+        
+        if (!textAnalysisManager) return;
+        
+        const feedbackAssociationManager = textAnalysisManager.getFeedbackAssociationManager();
+        if (!feedbackAssociationManager) return;
+
+        // Find content association at this position
+        const associations = feedbackAssociationManager.getAllContentAssociations();
+        const hoveredAssociation = this.findAssociationAtPosition(pos, associations, editor);
+        
+        if (hoveredAssociation && hoveredAssociation !== this.currentHoveredAssociation) {
+            // Clear previous highlighting
+            if (this.currentHoveredAssociation) {
+                this.removeAllHighlighting();
+            }
+            
+            this.currentHoveredAssociation = hoveredAssociation;
+            
+            // Highlight associated feedback items
+            this.highlightAssociatedFeedbackItems(hoveredAssociation.contentId);
+        }
+    }
+
+    /**
+     * Handles leaving hover on editor
+     */
+    handleEditorLeave(event, editor) {
+        this.removeAllHighlighting();
+        this.currentHoveredAssociation = null;
+    }
+
+    /**
+     * Finds content association at a specific editor position
+     */
+    findAssociationAtPosition(pos, associations, editor) {
+        const line = pos.line;
+        const ch = pos.ch;
+        const currentText = editor.getValue();
+        
+        // Calculate absolute position in text
+        const lines = currentText.split('\n');
+        let absolutePos = 0;
+        for (let i = 0; i < line; i++) {
+            absolutePos += lines[i].length + 1; // +1 for newline
+        }
+        absolutePos += ch;
+        
+        // Find association that contains this position
+        return associations.find(association => {
+            const pos = association.position;
+            return pos && absolutePos >= pos.start && absolutePos <= pos.end;
+        });
+    }
+
+    /**
+     * Highlights content in the editor
+     */
+    highlightContentInEditor(content, contentType, contentId) {
+        console.log('Highlighting content in editor:', {
+            content,
+            contentType,
+            contentId
+        });
+        
+        const editorManager = window.app?.editorManager;
+        if (!editorManager || !editorManager.editor) {
+            console.log('Editor not available for highlighting');
+            return;
+        }
+
+        const editor = editorManager.editor;
+        const currentText = editor.getValue();
+        
+        console.log('Current text length:', currentText.length);
+        console.log('Looking for content:', content);
+        
+        // Find the content in the current text
+        const startIndex = currentText.lastIndexOf(content);
+        console.log('Found content at index:', startIndex);
+        
+        if (startIndex === -1) {
+            console.log('Content not found in editor text');
+            return;
+        }
+        
+        const endIndex = startIndex + content.length;
+        
+        // Convert to CodeMirror position
+        const startPos = editor.posFromIndex(startIndex);
+        const endPos = editor.posFromIndex(endIndex);
+        
+        console.log('CodeMirror positions:', { startPos, endPos });
+        
+        // Create text marker for highlighting
+        const marker = editor.markText(startPos, endPos, {
+            className: `content-highlight content-highlight-${contentType}`,
+            title: `Associated with feedback (${contentType})`
+        });
+        
+        console.log('Created marker:', marker);
+        
+        // Store marker for cleanup
+        this.contentHighlightMarkers = this.contentHighlightMarkers || new Map();
+        this.contentHighlightMarkers.set(contentId, marker);
+    }
+
+    /**
+     * Removes content highlighting in editor
+     */
+    removeContentHighlightInEditor(contentId) {
+        if (!this.contentHighlightMarkers) return;
+        
+        const marker = this.contentHighlightMarkers.get(contentId);
+        if (marker) {
+            marker.clear();
+            this.contentHighlightMarkers.delete(contentId);
+        }
+    }
+
+    /**
+     * Highlights feedback items associated with content
+     */
+    highlightAssociatedFeedbackItems(contentId) {
+        const feedbackItems = document.querySelectorAll(`.feedback-item[data-content-id="${contentId}"]`);
+        feedbackItems.forEach(item => {
+            item.classList.add('feedback-item-highlighted');
+        });
+    }
+
+    /**
+     * Removes all highlighting
+     */
+    removeAllHighlighting() {
+        // Remove feedback item highlighting
+        const highlightedItems = document.querySelectorAll('.feedback-item-highlighted');
+        highlightedItems.forEach(item => {
+            item.classList.remove('feedback-item-highlighted');
+        });
+        
+        // Remove editor content highlighting
+        if (this.contentHighlightMarkers) {
+            this.contentHighlightMarkers.forEach(marker => marker.clear());
+            this.contentHighlightMarkers.clear();
+        }
+    }
+
+
+    /**
+     * Escapes HTML content for safe display
+     */
+    escapeHTML(text) {
+        if (typeof text !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Sets up listeners for feedback association changes
+     */
+    setupFeedbackAssociationListeners() {
+        // Wait for the app to be initialized
+        const checkForApp = () => {
+            if (window.app && window.app.textAnalysisManager) {
+                const feedbackAssociationManager = window.app.textAnalysisManager.getFeedbackAssociationManager();
+                if (feedbackAssociationManager) {
+                    // Listen for content changes
+                    feedbackAssociationManager.onContentChange((changeType, data) => {
+                        this.handleFeedbackAssociationChange(changeType, data);
+                    });
+                } else {
+                    // Try again in 100ms
+                    setTimeout(checkForApp, 100);
+                }
+            } else {
+                // Try again in 100ms
+                setTimeout(checkForApp, 100);
+            }
+        };
+
+        // Start checking
+        setTimeout(checkForApp, 100);
+    }
+
+    /**
+     * Handles feedback association changes
+     */
+    handleFeedbackAssociationChange(changeType, data) {
+        switch (changeType) {
+            case 'feedbackAdded':
+            case 'feedbackRemoved':
+            case 'contentRemoved':
+                // Update hover highlighting system when associations change
+                this.updateHoverHighlighting();
+                break;
+            case 'cleanup':
+                // Remove feedback items from DOM when content is deleted
+                if (data.feedbackItemsToRemove) {
+                    this.removeFeedbackItemsFromDOM(data.feedbackItemsToRemove);
+                }
+                // Update hover highlighting system when associations change
+                this.updateHoverHighlighting();
+                break;
+            case 'reset':
+                // Clear all highlighting when associations are reset
+                this.removeAllHighlighting();
+                this.clearHoverEventListeners();
+                break;
+            case 'imported':
+                // Update highlighting after import
+                this.updateHoverHighlighting();
+                break;
+        }
+    }
+
+    /**
+     * Removes feedback items from the DOM when their associated content is deleted
+     * @param {Array} feedbackItemsToRemove - Array of feedback items to remove
+     */
+    removeFeedbackItemsFromDOM(feedbackItemsToRemove) {
+        feedbackItemsToRemove.forEach(item => {
+            console.log('Removing feedback item from DOM:', item);
+            
+            // Find feedback items by data attribute
+            const feedbackElements = document.querySelectorAll(`[data-feedback-id="${item.feedbackId}"]`);
+            
+            if (feedbackElements.length === 0) {
+                // Try to find by content ID and prompt name combination
+                const alternativeFeedbackElements = document.querySelectorAll(`[data-content-id="${item.contentId}"]`);
+                alternativeFeedbackElements.forEach(element => {
+                    const heading = element.querySelector('h4');
+                    if (heading && heading.textContent.includes(item.promptName)) {
+                        this.removeFeedbackElement(element, item);
+                    }
+                });
+            } else {
+                // Remove all matching elements
+                feedbackElements.forEach(element => {
+                    this.removeFeedbackElement(element, item);
+                });
+            }
+        });
+    }
+
+    /**
+     * Removes a single feedback element from the DOM with animation
+     * @param {Element} element - The feedback element to remove
+     * @param {Object} itemInfo - Information about the item being removed
+     */
+    removeFeedbackElement(element, itemInfo) {
+        console.log(`Removing feedback for deleted content: "${itemInfo.content}" (${itemInfo.promptName})`);
+        
+        // Add removal animation
+        element.style.transition = 'all 0.3s ease';
+        element.style.opacity = '0';
+        element.style.transform = 'translateX(-20px)';
+        element.style.maxHeight = '0';
+        element.style.marginBottom = '0';
+        element.style.padding = '0';
+        
+        // Remove from DOM after animation
+        setTimeout(() => {
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+                console.log('Feedback item removed from DOM');
+            }
+        }, 300);
     }
 }

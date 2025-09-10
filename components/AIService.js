@@ -82,7 +82,7 @@ class AIService {
         return processedPrompt;
     }
 
-    async getPromptFeedback(content, promptName, promptText, textAnalysisManager = null, promptConfig = null) {
+    async getPromptFeedback(content, promptName, promptText, textAnalysisManager = null, promptConfig = null, associationData = null) {
         try {
             // Process the prompt to handle placeholders
             const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
@@ -170,9 +170,15 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const promptId = prompt ? prompt.id : '';
             const autoRefreshEnabled = promptId ? window.app.isAutoRefreshEnabled(promptId) : true;
 
+            // Check if this feedback has association data
+            let associationAttributes = '';
+            if (associationData) {
+                associationAttributes = ` data-content-id="${associationData.contentId || ''}" data-content-type="${associationData.triggerType || ''}" data-associated-content="${this.escapeHTML(associationData.triggeredContent || '')}" data-feedback-id="${associationData.feedbackId || ''}"`;
+            }
+
             // Format response as HTML directly
             const htmlContent = `
-                <div class="feedback-item">
+                <div class="feedback-item"${associationAttributes}>
                     <h4>
                         ✨ ${this.escapeHTML(promptName)}
                         ${promptId ? `<button class="btn-icon auto-refresh-toggle ${autoRefreshEnabled ? 'enabled' : 'disabled'}" onclick="window.app?.toggleAutoRefresh('${promptId}')" title="${autoRefreshEnabled ? 'Auto-refresh enabled - Click to disable' : 'Auto-refresh disabled - Click to enable'}">
@@ -1007,8 +1013,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             </p>
         `;
 
-        // Append at the end of the container to maintain order
-        container.appendChild(placeholder);
+        // Insert at the beginning of the container so newer items appear at top
+        container.insertBefore(placeholder, container.firstChild);
 
         // Start timer for this request
         const startTime = Date.now();
@@ -1325,9 +1331,14 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         }
     }
 
-    createOrUpdateRequestContainer(requestId, promptName, isLoading = false) {
+    createOrUpdateRequestContainer(requestId, promptName, isLoading = false, isCompletionTrigger = false) {
         const container = document.getElementById('feedbackContainer');
         if (!container) return null;
+
+        // For completion triggers, always create new containers
+        if (isCompletionTrigger) {
+            return this.createRequestPlaceholder(requestId, promptName);
+        }
 
         // Check if there's already a container for this prompt
         const existingContainer = this.findExistingFeedbackContainer(promptName);
@@ -1438,7 +1449,7 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         });
     }
 
-    async generateIndividualPromptFeedback(content, promptId, prompt, onLoading, onProgressiveComplete, onError, settings = {}) {
+    async generateIndividualPromptFeedback(content, promptId, prompt, onLoading, onProgressiveComplete, onError, settings = {}, triggerData = null) {
         // For word/sentence/paragraph triggers, allow shorter content. For custom triggers, keep minimum length
         const minLength = (prompt.triggerTiming === 'word' || prompt.triggerTiming === 'sentence' || prompt.triggerTiming === 'paragraph') ? 1 : 10;
         if (content.length < minLength || !settings.enableAIFeedback) return;
@@ -1453,9 +1464,49 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             }
 
             const requestId = `individual-${promptId}`;
-            this.createOrUpdateRequestContainer(requestId, prompt.name, true);
+            const isCompletionTrigger = prompt.triggerTiming === 'word' || prompt.triggerTiming === 'sentence' || prompt.triggerTiming === 'paragraph';
+            this.createOrUpdateRequestContainer(requestId, prompt.name, true, isCompletionTrigger);
 
-            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager, prompt);
+            // Prepare association data if trigger data is available
+            let associationDataForGeneration = null;
+            if (triggerData && triggerData.contentId && window.app?.textAnalysisManager) {
+                const feedbackAssociationManager = window.app.textAnalysisManager.getFeedbackAssociationManager();
+                if (feedbackAssociationManager) {
+                    // Pre-generate a feedback ID for consistency
+                    const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    associationDataForGeneration = {
+                        contentId: triggerData.contentId,
+                        feedbackId: feedbackId,
+                        triggerType: triggerData.type,
+                        triggeredContent: triggerData.content
+                    };
+                }
+            }
+
+            const result = await this.getPromptFeedback(content, prompt.name, prompt.prompt, window.app?.textAnalysisManager, prompt, associationDataForGeneration);
+
+            // Actually store the feedback association after generation
+            if (associationDataForGeneration && window.app?.textAnalysisManager) {
+                const feedbackAssociationManager = window.app.textAnalysisManager.getFeedbackAssociationManager();
+                if (feedbackAssociationManager) {
+                    feedbackAssociationManager.associateFeedback(
+                        associationDataForGeneration.contentId,
+                        {
+                            htmlContent: result.htmlContent,
+                            promptName: result.promptName,
+                            responseType: result.responseType,
+                            triggerType: associationDataForGeneration.triggerType,
+                            triggeredContent: associationDataForGeneration.triggeredContent
+                        },
+                        promptId,
+                        prompt.name
+                    );
+                    
+                    // Add association metadata to the result
+                    result.associationData = associationDataForGeneration;
+                }
+            }
 
             if (result.requestId || requestId) {
                 this.replaceRequestPlaceholderWithHTML(requestId, result.htmlContent, prompt.name);
@@ -1465,7 +1516,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             onProgressiveComplete({
                 groupedFeedback: [{
                     promptName: prompt.name,
-                    htmlContent: result.htmlContent
+                    htmlContent: result.htmlContent,
+                    associationData: result.associationData
                 }],
                 isComplete: true,
                 completedCount: 1,

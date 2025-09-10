@@ -21,6 +21,14 @@ class TextAnalysisManager {
         // Sentence data model integration
         this.sentenceDataModel = new SentenceDataModel();
         this.structureChangeCallbacks = [];
+        
+        // Content association tracking
+        this.feedbackAssociationManager = new FeedbackAssociationManager();
+        
+        // Track content positions for association
+        this.lastCompletedWordPosition = null;
+        this.lastCompletedSentencePosition = null;
+        this.lastCompletedParagraphPosition = null;
     }
 
     startTracking() {
@@ -44,6 +52,11 @@ class TextAnalysisManager {
 
         // Analyze text structure with sentence data model
         const structure = this.sentenceDataModel.analyzeText(currentText);
+        
+        // Validate and cleanup content associations if text has changed significantly
+        if (this.previousText && currentText !== this.previousText) {
+            this.feedbackAssociationManager.validateAndCleanupAssociations(currentText);
+        }
         
         // Notify structure change listeners
         this.notifyStructureChange(structure);
@@ -255,12 +268,26 @@ class TextAnalysisManager {
     }
 
     notifyWordCompletion(word, totalWordCount, structure = null) {
+        // Calculate position information for the completed word
+        const position = this.calculateWordPosition(word, this.previousText);
+        this.lastCompletedWordPosition = position;
+        
+        // Create content association for this word
+        const contentId = this.feedbackAssociationManager.associateContent(
+            word, 
+            'word', 
+            position, 
+            this.previousText
+        );
+
         const data = {
             completedWord: word,
             totalWords: totalWordCount,
             timestamp: Date.now(),
             type: 'word',
-            structure: structure
+            structure: structure,
+            contentId: contentId,
+            position: position
         };
 
         this.wordCompletionCallbacks.forEach(callback => {
@@ -273,13 +300,27 @@ class TextAnalysisManager {
     }
 
     notifySentenceCompletion(sentence, totalSentenceCount, sentenceData = null, structure = null) {
+        // Calculate position information for the completed sentence
+        const position = this.calculateSentencePosition(sentence, this.previousText);
+        this.lastCompletedSentencePosition = position;
+        
+        // Create content association for this sentence
+        const contentId = this.feedbackAssociationManager.associateContent(
+            sentence, 
+            'sentence', 
+            position, 
+            this.previousText
+        );
+
         const data = {
             completedSentence: sentence,
             totalSentences: totalSentenceCount,
             timestamp: Date.now(),
             type: 'sentence',
             sentenceData: sentenceData,
-            structure: structure
+            structure: structure,
+            contentId: contentId,
+            position: position
         };
 
         this.sentenceCompletionCallbacks.forEach(callback => {
@@ -292,12 +333,26 @@ class TextAnalysisManager {
     }
 
     notifyParagraphCompletion(paragraph, totalParagraphCount, structure = null) {
+        // Calculate position information for the completed paragraph
+        const position = this.calculateParagraphPosition(paragraph, this.previousText);
+        this.lastCompletedParagraphPosition = position;
+        
+        // Create content association for this paragraph
+        const contentId = this.feedbackAssociationManager.associateContent(
+            paragraph, 
+            'paragraph', 
+            position, 
+            this.previousText
+        );
+
         const data = {
             completedParagraph: paragraph,
             totalParagraphs: totalParagraphCount,
             timestamp: Date.now(),
             type: 'paragraph',
-            structure: structure
+            structure: structure,
+            contentId: contentId,
+            position: position
         };
 
         this.paragraphCompletionCallbacks.forEach(callback => {
@@ -475,6 +530,117 @@ class TextAnalysisManager {
         this.paragraphCompletionCallbacks = [];
         this.structureChangeCallbacks = [];
         this.sentenceDataModel.cleanup();
+        this.feedbackAssociationManager.cleanup();
         this.reset();
+    }
+
+    /**
+     * Calculate position information for a completed word
+     * @param {string} word - The completed word
+     * @param {string} text - The full text
+     * @returns {Object} Position information
+     */
+    calculateWordPosition(word, text) {
+        try {
+            // Find the last occurrence of the word in the text
+            const wordRegex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+            let match;
+            let lastMatch = null;
+            
+            while ((match = wordRegex.exec(text)) !== null) {
+                lastMatch = match;
+            }
+            
+            if (lastMatch) {
+                const start = lastMatch.index;
+                const end = start + word.length;
+                const line = text.substring(0, start).split('\n').length;
+                const column = start - text.lastIndexOf('\n', start - 1) - 1;
+                
+                return {
+                    start,
+                    end,
+                    line,
+                    column,
+                    length: word.length
+                };
+            }
+        } catch (error) {
+            console.warn('Error calculating word position:', error);
+        }
+        
+        return { start: 0, end: word.length, line: 1, column: 0, length: word.length };
+    }
+
+    /**
+     * Calculate position information for a completed sentence
+     * @param {string} sentence - The completed sentence
+     * @param {string} text - The full text
+     * @returns {Object} Position information
+     */
+    calculateSentencePosition(sentence, text) {
+        try {
+            // Find the sentence in the text
+            const sentenceIndex = text.lastIndexOf(sentence);
+            
+            if (sentenceIndex !== -1) {
+                const start = sentenceIndex;
+                const end = start + sentence.length;
+                const line = text.substring(0, start).split('\n').length;
+                const column = start - text.lastIndexOf('\n', start - 1) - 1;
+                
+                return {
+                    start,
+                    end,
+                    line,
+                    column,
+                    length: sentence.length
+                };
+            }
+        } catch (error) {
+            console.warn('Error calculating sentence position:', error);
+        }
+        
+        return { start: 0, end: sentence.length, line: 1, column: 0, length: sentence.length };
+    }
+
+    /**
+     * Calculate position information for a completed paragraph
+     * @param {string} paragraph - The completed paragraph
+     * @param {string} text - The full text
+     * @returns {Object} Position information
+     */
+    calculateParagraphPosition(paragraph, text) {
+        try {
+            // Find the paragraph in the text
+            const paragraphIndex = text.lastIndexOf(paragraph);
+            
+            if (paragraphIndex !== -1) {
+                const start = paragraphIndex;
+                const end = start + paragraph.length;
+                const line = text.substring(0, start).split('\n').length;
+                const column = start - text.lastIndexOf('\n', start - 1) - 1;
+                
+                return {
+                    start,
+                    end,
+                    line,
+                    column,
+                    length: paragraph.length
+                };
+            }
+        } catch (error) {
+            console.warn('Error calculating paragraph position:', error);
+        }
+        
+        return { start: 0, end: paragraph.length, line: 1, column: 0, length: paragraph.length };
+    }
+
+    /**
+     * Get feedback association manager for external access
+     * @returns {FeedbackAssociationManager} The feedback association manager
+     */
+    getFeedbackAssociationManager() {
+        return this.feedbackAssociationManager;
     }
 }

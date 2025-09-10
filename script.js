@@ -271,17 +271,17 @@ class AITextEditor {
     setupTextAnalysisCallbacks() {
         // Setup word completion callback
         this.textAnalysisManager.onWordCompletion((data) => {
-            this.handleTriggerTimingEvent('word');
+            this.handleTriggerTimingEvent('word', data);
         });
 
         // Setup sentence completion callback
         this.textAnalysisManager.onSentenceCompletion((data) => {
-            this.handleTriggerTimingEvent('sentence');
+            this.handleTriggerTimingEvent('sentence', data);
         });
 
         // Setup paragraph completion callback
         this.textAnalysisManager.onParagraphCompletion((data) => {
-            this.handleTriggerTimingEvent('paragraph');
+            this.handleTriggerTimingEvent('paragraph', data);
         });
 
         // Setup structure change callback for inspect manager
@@ -295,7 +295,7 @@ class AITextEditor {
         this.textAnalysisManager.startTracking();
     }
 
-    handleTriggerTimingEvent(triggerType) {
+    handleTriggerTimingEvent(triggerType, triggerData = null) {
         const currentText = this.editorManager.getValue();
         const enabledPrompts = this.promptsManager.getEnabledPromptsByTrigger(triggerType);
 
@@ -304,11 +304,20 @@ class AITextEditor {
         const settings = this.settingsManager.getAllSettings();
         if (!settings.enableAIFeedback) return;
 
+        // Prepare trigger data for association
+        const triggerInfo = triggerData ? {
+            type: triggerType,
+            contentId: triggerData.contentId,
+            content: triggerData.completedWord || triggerData.completedSentence || triggerData.completedParagraph,
+            position: triggerData.position,
+            timestamp: triggerData.timestamp
+        } : null;
+
         // Schedule individual feedback for each prompt that matches this trigger type and has auto-refresh enabled for this session
         enabledPrompts.filter(prompt => this.isAutoRefreshEnabled(prompt.id)).forEach(prompt => {
             this.aiService.schedulePromptFeedback(
                 prompt.id,
-                (promptId) => this.generateIndividualPromptFeedback(promptId, currentText),
+                (promptId) => this.generateIndividualPromptFeedback(promptId, currentText, triggerInfo),
                 triggerType,
                 currentText,
                 prompt.customDelay
@@ -316,7 +325,7 @@ class AITextEditor {
         });
     }
 
-    generateIndividualPromptFeedback(promptId, content) {
+    generateIndividualPromptFeedback(promptId, content, triggerInfo = null) {
         const prompt = this.promptsManager.getPrompt(promptId);
         if (!prompt || !this.promptsManager.isPromptEnabledInActiveGroup(promptId)) return;
 
@@ -341,7 +350,8 @@ class AITextEditor {
             (error) => {
                 console.error('Error generating individual prompt feedback:', error);
             },
-            settings
+            settings,
+            triggerInfo
         );
     }
 

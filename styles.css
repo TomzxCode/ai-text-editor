@@ -3542,6 +3542,98 @@ body[data-theme="light"] {
     }
 }
 
+/* Content-Feedback Association Hover Styles */
+
+/* Feedback item highlighting when hovered or when associated content is hovered */
+.feedback-item-highlighted {
+    background: #2a3a4a !important;
+    border-left: 4px solid #4db8ff !important;
+    box-shadow: 0 2px 8px rgba(77, 184, 255, 0.2) !important;
+    transform: translateX(2px);
+    transition: all 0.2s ease;
+}
+
+.feedback-item-highlighted h4 {
+    color: #4db8ff !important;
+}
+
+/* Content highlighting in editor */
+.content-highlight {
+    background-color: rgba(77, 184, 255, 0.2) !important;
+    border-radius: 3px !important;
+    padding: 1px 2px !important;
+    box-shadow: 0 0 3px rgba(77, 184, 255, 0.4) !important;
+    animation: contentHighlightPulse 0.3s ease;
+}
+
+.content-highlight-word {
+    background-color: rgba(46, 204, 113, 0.2) !important;
+    box-shadow: 0 0 3px rgba(46, 204, 113, 0.4) !important;
+}
+
+.content-highlight-sentence {
+    background-color: rgba(241, 196, 15, 0.2) !important;
+    box-shadow: 0 0 3px rgba(241, 196, 15, 0.4) !important;
+}
+
+.content-highlight-paragraph {
+    background-color: rgba(231, 76, 60, 0.2) !important;
+    box-shadow: 0 0 3px rgba(231, 76, 60, 0.4) !important;
+}
+
+@keyframes contentHighlightPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.02);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+}
+
+
+/* Enhanced feedback item styles for better hover detection */
+.feedback-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.feedback-item:hover {
+    background: #323232;
+}
+
+.feedback-item[data-content-id] {
+    border-left: 3px solid transparent;
+}
+
+.feedback-item[data-content-id]:hover {
+    border-left-color: rgba(77, 184, 255, 0.5);
+}
+
+/* Mobile adjustments for hover effects */
+@media (max-width: 768px) {
+    .content-highlight {
+        padding: 2px 3px !important;
+        border-radius: 4px !important;
+    }
+
+    /* Disable hover effects on mobile to prevent sticky states */
+    .feedback-item:hover {
+        background: inherit;
+        border-left-color: transparent;
+    }
+    
+    .feedback-item-highlighted {
+        transform: none;
+     }
+}
+
 /* Import/Export Styles */
 .import-export-stats {
     background-color: #333;
