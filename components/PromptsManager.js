@@ -12,14 +12,15 @@ class PromptsManager {
             const stored = localStorage.getItem(this.storageKey);
             let prompts = stored ? JSON.parse(stored) : [];
             
-            // Migrate existing prompts to have triggerTiming, customDelay, keyboard shortcut, and LLM overrides if they don't have them
+            // Migrate existing prompts to have triggerTiming, customDelay, keyboard shortcut, LLM overrides, and action type if they don't have them
             prompts = prompts.map(prompt => ({
                 ...prompt,
                 triggerTiming: prompt.triggerTiming || 'custom',
                 customDelay: prompt.customDelay || (prompt.triggerTiming === 'delay' || !prompt.triggerTiming ? '1s' : ''),
                 keyboardShortcut: prompt.keyboardShortcut || '',
                 llmService: prompt.llmService || '',
-                llmModel: prompt.llmModel || ''
+                llmModel: prompt.llmModel || '',
+                actionType: prompt.actionType || 'feedback'
             }));
             
             return prompts;
@@ -34,6 +35,11 @@ class PromptsManager {
         return validTimings.includes(timing) ? timing : 'custom';
     }
 
+    validateActionType(actionType) {
+        const validActionTypes = ['feedback', 'insert'];
+        return validActionTypes.includes(actionType) ? actionType : 'feedback';
+    }
+
     savePrompts() {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.prompts));
@@ -44,7 +50,7 @@ class PromptsManager {
         }
     }
 
-    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '') {
+    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '', actionType = 'feedback') {
         if (!name || !prompt) {
             throw new Error('Name and prompt are required');
         }
@@ -52,7 +58,6 @@ class PromptsManager {
         if (this.prompts.find(p => p.name === name)) {
             throw new Error('A prompt with this name already exists');
         }
-
 
         const newPrompt = {
             id: Date.now().toString(),
@@ -64,6 +69,7 @@ class PromptsManager {
             keyboardShortcut: triggerTiming === 'keyboard' ? keyboardShortcut.trim() : '',
             llmService: llmService.trim(),
             llmModel: llmModel.trim(),
+            actionType: this.validateActionType(actionType),
             createdAt: new Date().toISOString()
         };
 
@@ -163,6 +169,7 @@ class PromptsManager {
             keyboardShortcut: '', // Clear keyboard shortcut to avoid conflicts
             llmService: prompt.llmService,
             llmModel: prompt.llmModel,
+            actionType: prompt.actionType || 'feedback',
             createdAt: new Date().toISOString()
         };
 
@@ -222,7 +229,8 @@ class PromptsManager {
                     customDelay: p.customDelay || '',
                     keyboardShortcut: p.keyboardShortcut || '',
                     llmService: p.llmService || '',
-                    llmModel: p.llmModel || ''
+                    llmModel: p.llmModel || '',
+                    actionType: this.validateActionType(p.actionType)
                 }));
             } else {
                 const existingNames = new Set(this.prompts.map(p => p.name));
@@ -237,7 +245,8 @@ class PromptsManager {
                         customDelay: p.customDelay || '',
                         keyboardShortcut: p.keyboardShortcut || '',
                         llmService: p.llmService || '',
-                        llmModel: p.llmModel || ''
+                        llmModel: p.llmModel || '',
+                        actionType: this.validateActionType(p.actionType)
                     }));
                 
                 this.prompts.push(...newPrompts);

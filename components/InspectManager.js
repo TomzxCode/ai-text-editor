@@ -142,14 +142,19 @@ class InspectManager {
         let html = '';
         sentences.forEach((sentence, index) => {
             const isNew = sentence.isNew ? 'highlight-new' : '';
+            const isAI = sentence.isAIGenerated ? 'ai-generated' : 'human-generated';
             
             html += `
-                <div class="structure-item sentence-item" data-id="${sentence.id}">
-                    <div class="structure-title">Sentence ${index + 1}</div>
+                <div class="structure-item sentence-item ${isAI}" data-id="${sentence.id}">
+                    <div class="structure-title">
+                        Sentence ${index + 1}
+                        ${sentence.isAIGenerated ? '<span class="ai-badge">🤖 AI</span>' : '<span class="human-badge">👤 Human</span>'}
+                    </div>
                     <div class="structure-meta">
                         <span class="structure-id">ID: ${sentence.id}</span> • 
                         <span class="structure-position">Pos: ${sentence.position.start}-${sentence.position.end}</span> • 
-                        <span class="structure-stats">${sentence.wordCount} words</span>
+                        <span class="structure-stats">${sentence.wordCount} words</span> • 
+                        <span class="ai-status">AI: ${sentence.isAIGenerated || false}</span>
                         ${sentence.isNew ? ' • <span style="color: #28a745;">NEW</span>' : ''}
                     </div>
                     <div class="structure-content ${isNew}">
@@ -231,11 +236,13 @@ class InspectManager {
         let html = '<div class="words-grid">';
         words.forEach((word, index) => {
             const isNew = word.isNew ? 'highlight-new' : '';
+            const isAI = word.isAIGenerated ? 'ai-generated' : 'human-generated';
+            const aiIndicator = word.isAIGenerated ? '🤖' : '👤';
             
             html += `
-                <div class="word-chip ${isNew}" data-id="${word.id}" title="ID: ${word.id} | Position: ${word.position.start}-${word.position.end}">
+                <div class="word-chip ${isNew} ${isAI}" data-id="${word.id}" title="ID: ${word.id} | Position: ${word.position.start}-${word.position.end} | isAIGenerated: ${word.isAIGenerated || false} | ${word.isAIGenerated ? 'AI Generated' : 'Human Written'}">
                     ${word.content}
-                    <span class="word-id">#${index + 1}</span>
+                    <span class="word-id">#${index + 1} ${aiIndicator}</span>
                 </div>
             `;
         });
@@ -287,10 +294,12 @@ class InspectManager {
                     const sentence = this.currentStructure.sentences.find(s => s.id === sentenceId);
                     if (sentence) {
                         const isNew = sentence.isNew ? 'highlight-new' : '';
+                        const isAI = sentence.isAIGenerated ? 'ai-generated' : 'human-generated';
+                        const aiIndicator = sentence.isAIGenerated ? '🤖' : '👤';
                         html += `
-                            <div class="sentence-item-nested" data-id="${sentence.id}" style="margin: 0.5rem 0; padding: 0.5rem; background: #1a1a1a; border-radius: 4px; cursor: pointer; transition: background 0.2s ease;">
+                            <div class="sentence-item-nested ${isAI}" data-id="${sentence.id}" style="margin: 0.5rem 0; padding: 0.5rem; background: #1a1a1a; border-radius: 4px; cursor: pointer; transition: background 0.2s ease;">
                                 <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;">
-                                    Sentence ID: ${sentence.id} • ${sentence.wordCount} words
+                                    Sentence ID: ${sentence.id} • ${sentence.wordCount} words • AI: ${sentence.isAIGenerated || false} ${aiIndicator}
                                 </div>
                                 <div class="${isNew}">"${sentence.content}"</div>
                             </div>

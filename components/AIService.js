@@ -86,6 +86,9 @@ class AIService {
         try {
             // Process the prompt to handle placeholders
             const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
+            
+            // Check if this is an interactive prompt (insert action type)
+            const isInteractivePrompt = promptConfig && promptConfig.actionType === 'insert';
 
             // Get settings for API configuration
             const settings = window.app?.settingsManager?.getSettings() || {};
@@ -95,10 +98,18 @@ class AIService {
             const llmModel = (promptConfig?.llmModel && promptConfig.llmModel.trim()) ? promptConfig.llmModel : settings.llmModel;
 
 
-            // Give the LLM freedom to respond in any format
-            const fullPrompt = `${processedPrompt}
+            // Adjust prompt based on action type
+            let fullPrompt;
+            if (isInteractivePrompt) {
+                fullPrompt = `${processedPrompt}
+
+Provide only the text content that should be inserted into the editor. Do not include explanations, HTML formatting, or additional commentary - just the raw text to insert.`;
+            } else {
+                // Give the LLM freedom to respond in any format for feedback prompts
+                fullPrompt = `${processedPrompt}
 
 Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container.`;
+            }
 
             // Check if LLM.js is loaded
             if (!this.LLM) {
@@ -139,11 +150,16 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
             const response = llmResponse.content;
             const usage = llmResponse.usage;
 
-            // Extract content from HTML code blocks if present
-            const extractedResponse = this.extractHTMLFromCodeBlocks(response);
-
-            // Strip any <style> tags from the response
-            const cleanedResponse = this.stripStyleTags(extractedResponse);
+            let cleanedResponse;
+            if (isInteractivePrompt) {
+                // For interactive prompts, use raw text content
+                cleanedResponse = response.trim();
+            } else {
+                // Extract content from HTML code blocks if present
+                const extractedResponse = this.extractHTMLFromCodeBlocks(response);
+                // Strip any <style> tags from the response
+                cleanedResponse = this.stripStyleTags(extractedResponse);
+            }
 
             // Store the LLM call with complete feedback content
             const sessionId = window.app?.sessionManager?.getCurrentSessionId();
@@ -195,6 +211,34 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                     </div>
                 </div>
             `;
+
+            // Handle interactive prompts differently
+            if (isInteractivePrompt) {
+                // For interactive prompts, trigger immediate text insertion
+                this.handleInteractivePromptResponse(cleanedResponse, textAnalysisManager);
+                
+                // Return a different response type for interactive prompts
+                return {
+                    htmlContent: `<div class="feedback-item interactive-prompt">
+                        <h4>✨ ${this.escapeHTML(promptName)} - Text Inserted</h4>
+                        <div class="category-section">
+                            <div class="analysis-content">
+                                <p>✅ Generated text has been inserted into the editor after the current ${this.getInsertionContext(textAnalysisManager)}.</p>
+                                <details>
+                                    <summary>Generated text:</summary>
+                                    <pre>${this.escapeHTML(cleanedResponse)}</pre>
+                                </details>
+                            </div>
+                            <div class="provider-info" style="color: #888; font-size: 0.8em; margin-top: 0.5em; text-align: right;">
+                                ${actualService} • ${llmModel || 'llama3-8b-8192'}
+                            </div>
+                        </div>
+                    </div>`,
+                    promptName: promptName,
+                    responseType: 'interactive',
+                    insertedText: cleanedResponse
+                };
+            }
 
             return {
                 htmlContent: htmlContent,
@@ -441,6 +485,49 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    handleInteractivePromptResponse(generatedText, textAnalysisManager) {
+        // Signal that AI insertion is starting to prevent prompt loops
+        if (textAnalysisManager) {
+            textAnalysisManager.startAIInsertion();
+        }
+
+        // Insert the generated text into the editor after the current sentence/word
+        if (window.app?.editorManager) {
+            const insertionPosition = this.getInsertionPosition(textAnalysisManager);
+            window.app.editorManager.insertTextAtPosition(generatedText, insertionPosition);
+        }
+
+        // End AI insertion state after a short delay to allow content processing
+        if (textAnalysisManager) {
+            setTimeout(() => {
+                textAnalysisManager.endAIInsertion();
+            }, 500);
+        }
+    }
+
+    getInsertionContext(textAnalysisManager) {
+        if (!textAnalysisManager) return 'text';
+        
+        const lastWord = textAnalysisManager.getPlaceholderContent('word', '');
+        const lastSentence = textAnalysisManager.getPlaceholderContent('sentence', '');
+        
+        if (lastSentence && lastSentence.trim()) {
+            return 'sentence';
+        } else if (lastWord && lastWord.trim()) {
+            return 'word';
+        } else {
+            return 'current position';
+        }
+    }
+
+    getInsertionPosition(textAnalysisManager) {
+        if (!textAnalysisManager) return null;
+        
+        // For now, let EditorManager determine the best position
+        // based on sentence completion logic
+        return null; // Let EditorManager handle cursor position
     }
 
     stripStyleTags(htmlText) {

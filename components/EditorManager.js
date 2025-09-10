@@ -282,4 +282,117 @@ class EditorManager {
             });
         }
     }
+
+    insertTextAtPosition(text, position = null) {
+        if (!this.editor) return;
+
+        const doc = this.editor.getDoc();
+        let insertionStartPos;
+        
+        if (position !== null && typeof position === 'number') {
+            // Convert character position to line/column position
+            const editorContent = doc.getValue();
+            const insertPos = this.charPosToLineCol(editorContent, position);
+            insertionStartPos = position;
+            
+            // Insert text at the specified position
+            doc.replaceRange(text, insertPos, insertPos);
+        } else {
+            // Use smart insertion after current sentence
+            this.insertTextAfterSentence(text);
+            return;
+        }
+        
+        // Mark the inserted content as AI-generated
+        this.markInsertedContentAsAI(insertionStartPos, insertionStartPos + text.length);
+        
+        // Mark file as modified and trigger change callbacks
+        this.handleEditorChange();
+        
+        // Trigger input event to update text analysis (but mark as AI-generated first)
+        this.onChangeCallback('input');
+        
+        // Focus the editor
+        this.editor.focus();
+    }
+
+    insertTextAfterSentence(text) {
+        if (!this.editor) return;
+
+        const doc = this.editor.getDoc();
+        const cursor = doc.getCursor();
+        const currentLine = doc.getLine(cursor.line);
+        
+        // Find the end of the current sentence (look for . ! ? followed by space or end of line)
+        let insertPos = cursor;
+        const sentenceEndPattern = /[.!?](\s|$)/g;
+        let match;
+        let lastSentenceEnd = -1;
+        
+        while ((match = sentenceEndPattern.exec(currentLine)) !== null) {
+            const endPos = match.index + match[0].length - (match[1] === '' ? 0 : 1);
+            if (endPos >= cursor.ch) {
+                insertPos = { line: cursor.line, ch: endPos };
+                break;
+            }
+            lastSentenceEnd = endPos;
+        }
+        
+        // If no sentence end found after cursor, use the last one found or cursor position
+        if (insertPos === cursor && lastSentenceEnd >= 0) {
+            insertPos = { line: cursor.line, ch: lastSentenceEnd };
+        }
+        
+        // Add appropriate spacing
+        const textToInsert = insertPos.ch < currentLine.length ? ` ${text}` : ` ${text}`;
+        
+        // Calculate character position for AI content marking
+        const currentContent = doc.getValue();
+        const insertCharPos = this.lineColToCharPos(currentContent, insertPos);
+        
+        // Insert the text
+        doc.replaceRange(textToInsert, insertPos, insertPos);
+        
+        // Mark the inserted content as AI-generated (skip the leading space)
+        const actualTextStart = insertCharPos + (textToInsert.startsWith(' ') ? 1 : 0);
+        this.markInsertedContentAsAI(actualTextStart, actualTextStart + text.length);
+        
+        // Mark file as modified and trigger change callbacks
+        this.handleEditorChange();
+        
+        // Trigger input event to update text analysis
+        this.onChangeCallback('input');
+        
+        // Focus the editor
+        this.editor.focus();
+    }
+
+    getCursorPosition() {
+        if (!this.editor) return null;
+        const cursor = this.editor.getDoc().getCursor();
+        const content = this.editor.getValue();
+        return this.lineColToCharPos(content, cursor);
+    }
+
+    lineColToCharPos(text, lineCol) {
+        const lines = text.split('\n');
+        let charPos = 0;
+        
+        for (let i = 0; i < lineCol.line && i < lines.length; i++) {
+            charPos += lines[i].length + 1; // +1 for newline character
+        }
+        
+        charPos += Math.min(lineCol.ch, lines[lineCol.line]?.length || 0);
+        return charPos;
+    }
+
+    markInsertedContentAsAI(startPos, endPos) {
+        // Mark the inserted content as AI-generated in the text analysis system
+        if (window.app?.textAnalysisManager?.sentenceDataModel) {
+            // Delay the marking to ensure the text analysis has processed the new content
+            setTimeout(() => {
+                window.app.textAnalysisManager.sentenceDataModel.markContentAsAIGenerated(startPos, endPos);
+            }, 200);
+        }
+    }
 }

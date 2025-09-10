@@ -521,6 +521,14 @@
                     <p class="form-hint">💡 <strong>Available placeholders:</strong> {text} (full text), {sentence} (current sentence being edited), {word} (last completed word), {paragraph} (current paragraph). Place placeholders at the beginning for better prompt caching and faster responses.</p>
                 </div>
                 <div class="form-group">
+                    <label for="promptActionType">Action type:</label>
+                    <select id="promptActionType">
+                        <option value="feedback">Show as feedback</option>
+                        <option value="insert">Insert into editor</option>
+                    </select>
+                    <p class="form-hint">Choose whether to display AI response as feedback or insert it directly into the editor.</p>
+                </div>
+                <div class="form-group">
                     <label for="promptTriggerTiming">Trigger refresh:</label>
                     <select id="promptTriggerTiming">
                         <option value="custom">Custom delay</option>

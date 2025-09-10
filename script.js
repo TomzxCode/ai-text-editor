@@ -57,6 +57,7 @@ class AITextEditor {
             promptModalTitle: document.getElementById('promptModalTitle'),
             promptName: document.getElementById('promptName'),
             promptText: document.getElementById('promptText'),
+            promptActionType: document.getElementById('promptActionType'),
             promptTriggerTiming: document.getElementById('promptTriggerTiming'),
             promptCustomDelay: document.getElementById('promptCustomDelay'),
             customDelayGroup: document.getElementById('customDelayGroup'),
@@ -703,7 +704,10 @@ class AITextEditor {
                         <button class="btn-icon danger" onclick="app.deletePrompt('${prompt.id}')" title="Delete">🗑️</button>
                     </div>
                 </div>
-                <div class="prompt-trigger">${this.formatTriggerType(prompt)}</div>
+                <div class="prompt-metadata">
+                    <div class="prompt-action-type ${prompt.actionType === 'insert' ? 'action-insert' : 'action-feedback'}">${this.formatActionType(prompt)}</div>
+                    <div class="prompt-trigger">${this.formatTriggerType(prompt)}</div>
+                </div>
                 <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
             </div>
             `;
@@ -745,6 +749,7 @@ class AITextEditor {
                 this.elements.promptModalTitle.textContent = 'Edit Prompt';
                 this.elements.promptName.value = prompt.name;
                 this.elements.promptText.value = prompt.prompt;
+                this.elements.promptActionType.value = prompt.actionType || 'feedback';
                 this.elements.promptTriggerTiming.value = prompt.triggerTiming || 'custom';
                 this.elements.promptCustomDelay.value = prompt.customDelay || '1s';
                 this.elements.promptKeyboardShortcut.value = prompt.keyboardShortcut || '';
@@ -755,6 +760,7 @@ class AITextEditor {
             this.elements.promptModalTitle.textContent = 'Add Prompt';
             this.elements.promptName.value = '';
             this.elements.promptText.value = '';
+            this.elements.promptActionType.value = 'feedback';
             this.elements.promptTriggerTiming.value = 'custom';
             this.elements.promptCustomDelay.value = '1s';
             this.elements.promptKeyboardShortcut.value = '';
@@ -945,6 +951,7 @@ class AITextEditor {
     savePrompt() {
         const name = this.elements.promptName.value.trim();
         const prompt = this.elements.promptText.value.trim();
+        const actionType = this.elements.promptActionType.value;
         const triggerTiming = this.elements.promptTriggerTiming.value;
         const customDelay = this.elements.promptCustomDelay.value.trim();
         const keyboardShortcut = this.elements.promptKeyboardShortcut.value.trim();
@@ -996,6 +1003,7 @@ class AITextEditor {
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
                     name,
                     prompt,
+                    actionType,
                     triggerTiming,
                     customDelay: triggerTiming === 'custom' ? customDelay : '',
                     keyboardShortcut: triggerTiming === 'keyboard' ? keyboardShortcut : '',
@@ -1019,7 +1027,8 @@ class AITextEditor {
                     customDelayValue, 
                     keyboardShortcutValue, 
                     llmService, 
-                    llmModel
+                    llmModel,
+                    actionType
                 );
                 promptId = newPrompt.id;
 
@@ -1308,6 +1317,16 @@ class AITextEditor {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    formatActionType(prompt) {
+        switch (prompt.actionType) {
+            case 'insert':
+                return '✏️ Insert text';
+            case 'feedback':
+            default:
+                return '💬 Show feedback';
+        }
     }
 
     formatTriggerType(prompt) {

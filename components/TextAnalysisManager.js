@@ -18,6 +18,10 @@ class TextAnalysisManager {
         this.lastCompletedParagraph = '';
         this.isTrackingActive = false;
         
+        // AI content insertion state
+        this.isAIInsertionInProgress = false;
+        this.aiInsertionTimeout = null;
+        
         // Sentence data model integration
         this.sentenceDataModel = new SentenceDataModel();
         this.structureChangeCallbacks = [];
@@ -39,8 +43,40 @@ class TextAnalysisManager {
         this.isTrackingActive = false;
     }
 
+    startAIInsertion() {
+        this.isAIInsertionInProgress = true;
+        // Clear any existing timeout
+        if (this.aiInsertionTimeout) {
+            clearTimeout(this.aiInsertionTimeout);
+        }
+        // Set a timeout to automatically end AI insertion state after 2 seconds as safety
+        this.aiInsertionTimeout = setTimeout(() => {
+            this.endAIInsertion();
+        }, 2000);
+    }
+
+    endAIInsertion() {
+        this.isAIInsertionInProgress = false;
+        if (this.aiInsertionTimeout) {
+            clearTimeout(this.aiInsertionTimeout);
+            this.aiInsertionTimeout = null;
+        }
+    }
+
     analyzeText(currentText) {
         if (!this.isTrackingActive) return;
+
+        // If AI insertion is in progress, delay analysis
+        if (this.isAIInsertionInProgress) {
+            // Still update the text structure but don't trigger callbacks
+            const structure = this.sentenceDataModel.analyzeText(currentText);
+            this.notifyStructureChange(structure);
+            // Update state for next analysis
+            this.previousText = currentText;
+            this.previousWordCount = this.extractWords(currentText).length;
+            this.previousSentenceCount = this.extractSentences(currentText).length;
+            return;
+        }
 
         const currentWords = this.extractWords(currentText);
         const currentSentences = this.extractSentences(currentText);
@@ -279,6 +315,18 @@ class TextAnalysisManager {
             position, 
             this.previousText
         );
+        
+        // Don't trigger prompts if AI insertion is in progress
+        if (this.isAIInsertionInProgress) {
+            return;
+        }
+
+        // Check if the completed word was AI-generated
+        const lastWord = this.sentenceDataModel.getLastCompletedWord();
+        if (lastWord && lastWord.isAIGenerated) {
+            // Don't trigger prompts for AI-generated content
+            return;
+        }
 
         const data = {
             completedWord: word,
@@ -312,6 +360,18 @@ class TextAnalysisManager {
             this.previousText
         );
 
+        // Don't trigger prompts if AI insertion is in progress
+        if (this.isAIInsertionInProgress) {
+            return;
+        }
+
+        // Check if the completed sentence was AI-generated
+        const lastSentence = this.sentenceDataModel.getLastCompletedSentence();
+        if (lastSentence && lastSentence.isAIGenerated) {
+            // Don't trigger prompts for AI-generated content
+            return;
+        }
+
         const data = {
             completedSentence: sentence,
             totalSentences: totalSentenceCount,
@@ -344,6 +404,18 @@ class TextAnalysisManager {
             position, 
             this.previousText
         );
+
+        // Don't trigger prompts if AI insertion is in progress
+        if (this.isAIInsertionInProgress) {
+            return;
+        }
+
+        // Check if the completed sentence was AI-generated
+        const lastParagraph = this.sentenceDataModel.getLastCompletedParagraph();
+        if (lastParagraph && lastParagraph.isAIGenerated) {
+            // Don't trigger prompts for AI-generated content
+            return;
+        }
 
         const data = {
             completedParagraph: paragraph,
