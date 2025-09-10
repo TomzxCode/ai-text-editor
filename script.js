@@ -705,7 +705,7 @@ class AITextEditor {
                     </div>
                 </div>
                 <div class="prompt-metadata">
-                    <div class="prompt-action-type ${prompt.actionType === 'insert' ? 'action-insert' : 'action-feedback'}">${this.formatActionType(prompt)}</div>
+                    <div class="prompt-action-type ${prompt.actionType === 'insert' ? 'action-insert' : prompt.actionType === 'replace' ? 'action-replace' : 'action-feedback'}">${this.formatActionType(prompt)}</div>
                     <div class="prompt-trigger">${this.formatTriggerType(prompt)}</div>
                 </div>
                 <div class="prompt-preview">${this.escapeHtml(prompt.prompt)}</div>
@@ -1323,6 +1323,8 @@ class AITextEditor {
         switch (prompt.actionType) {
             case 'insert':
                 return '✏️ Insert text';
+            case 'replace':
+                return '🔄 Replace text';
             case 'feedback':
             default:
                 return '💬 Show feedback';

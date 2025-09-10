@@ -1633,6 +1633,12 @@ body[data-theme="light"] {
     border: 1px solid rgba(253, 126, 20, 0.2);
 }
 
+.prompt-action-type.action-replace {
+    color: #6f42c1;
+    background-color: rgba(111, 66, 193, 0.1);
+    border: 1px solid rgba(111, 66, 193, 0.2);
+}
+
 .prompt-trigger {
     color: #007acc;
     font-size: 0.75rem;

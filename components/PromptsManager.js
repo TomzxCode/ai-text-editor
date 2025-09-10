@@ -55,7 +55,7 @@ class PromptsManager {
     }
 
     validateActionType(actionType) {
-        const validActionTypes = ['feedback', 'insert'];
+        const validActionTypes = ['feedback', 'insert', 'replace'];
         return validActionTypes.includes(actionType) ? actionType : 'feedback';
     }
 
@@ -464,6 +464,13 @@ class PromptsManager {
                 prompt: "Rewrite this text with a more professional tone: {text}",
                 triggerTiming: "custom",
                 actionType: "insert"
+            },
+            {
+                name: "Replace with Summary",
+                prompt: "Replace this text with a concise summary: {text}",
+                triggerTiming: "custom",
+                customDelay: "2s",
+                actionType: "replace"
             }
         ];
 
@@ -550,6 +557,13 @@ class PromptsManager {
                 prompt: "Rewrite this text with a more professional tone: {text}",
                 triggerTiming: "custom",
                 actionType: "insert"
+            },
+            {
+                name: "Replace with Summary",
+                prompt: "Replace this text with a concise summary: {text}",
+                triggerTiming: "custom",
+                customDelay: "2s",
+                actionType: "replace"
             }
         ];
 

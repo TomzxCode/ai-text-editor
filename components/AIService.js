@@ -87,8 +87,8 @@ class AIService {
             // Process the prompt to handle placeholders
             const processedPrompt = this.processPromptWithPlaceholders(promptText, content, textAnalysisManager);
             
-            // Check if this is an interactive prompt (insert action type)
-            const isInteractivePrompt = promptConfig && promptConfig.actionType === 'insert';
+            // Check if this is an interactive prompt (insert or replace action type)
+            const isInteractivePrompt = promptConfig && (promptConfig.actionType === 'insert' || promptConfig.actionType === 'replace');
 
             // Get settings for API configuration
             const settings = window.app?.settingsManager?.getSettings() || {};
@@ -101,9 +101,15 @@ class AIService {
             // Adjust prompt based on action type
             let fullPrompt;
             if (isInteractivePrompt) {
-                fullPrompt = `${processedPrompt}
+                if (promptConfig.actionType === 'replace') {
+                    fullPrompt = `${processedPrompt}
+
+Provide only the replacement text content. Do not include explanations, HTML formatting, or additional commentary - just the raw text that should replace the original content.`;
+                } else {
+                    fullPrompt = `${processedPrompt}
 
 Provide only the text content that should be inserted into the editor. Do not include explanations, HTML formatting, or additional commentary - just the raw text to insert.`;
+                }
             } else {
                 // Give the LLM freedom to respond in any format for feedback prompts
                 fullPrompt = `${processedPrompt}
@@ -214,16 +220,21 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
 
             // Handle interactive prompts differently
             if (isInteractivePrompt) {
-                // For interactive prompts, trigger immediate text insertion
-                this.handleInteractivePromptResponse(cleanedResponse, textAnalysisManager);
+                // For interactive prompts, trigger immediate text action (insert or replace)
+                this.handleInteractivePromptResponse(cleanedResponse, textAnalysisManager, promptConfig.actionType);
+                
+                const actionLabel = promptConfig.actionType === 'replace' ? 'Replaced' : 'Inserted';
+                const actionDescription = promptConfig.actionType === 'replace' 
+                    ? 'Original text has been replaced with generated content.'
+                    : `Generated text has been inserted into the editor after the current ${this.getInsertionContext(textAnalysisManager)}.`;
                 
                 // Return a different response type for interactive prompts
                 return {
                     htmlContent: `<div class="feedback-item interactive-prompt">
-                        <h4>✨ ${this.escapeHTML(promptName)} - Text Inserted</h4>
+                        <h4>✨ ${this.escapeHTML(promptName)} - Text ${actionLabel}</h4>
                         <div class="category-section">
                             <div class="analysis-content">
-                                <p>✅ Generated text has been inserted into the editor after the current ${this.getInsertionContext(textAnalysisManager)}.</p>
+                                <p>✅ ${actionDescription}</p>
                                 <details>
                                     <summary>Generated text:</summary>
                                     <pre>${this.escapeHTML(cleanedResponse)}</pre>
@@ -236,7 +247,8 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                     </div>`,
                     promptName: promptName,
                     responseType: 'interactive',
-                    insertedText: cleanedResponse
+                    insertedText: cleanedResponse,
+                    actionType: promptConfig.actionType
                 };
             }
 
@@ -487,16 +499,21 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
         return div.innerHTML;
     }
 
-    handleInteractivePromptResponse(generatedText, textAnalysisManager) {
+    handleInteractivePromptResponse(generatedText, textAnalysisManager, actionType = 'insert') {
         // Signal that AI insertion is starting to prevent prompt loops
         if (textAnalysisManager) {
             textAnalysisManager.startAIInsertion();
         }
 
-        // Insert the generated text into the editor after the current sentence/word
         if (window.app?.editorManager) {
-            const insertionPosition = this.getInsertionPosition(textAnalysisManager);
-            window.app.editorManager.insertTextAtPosition(generatedText, insertionPosition);
+            if (actionType === 'replace') {
+                // Replace the selected text or current content with the generated text
+                this.replaceTextContent(generatedText, textAnalysisManager);
+            } else {
+                // Insert the generated text into the editor after the current sentence/word
+                const insertionPosition = this.getInsertionPosition(textAnalysisManager);
+                window.app.editorManager.insertTextAtPosition(generatedText, insertionPosition);
+            }
         }
 
         // End AI insertion state after a short delay to allow content processing
@@ -505,6 +522,13 @@ Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdo
                 textAnalysisManager.endAIInsertion();
             }, 500);
         }
+    }
+
+    replaceTextContent(generatedText, textAnalysisManager) {
+        if (!window.app?.editorManager) return;
+
+        // Use the EditorManager's replaceTextAtPosition method for consistency
+        window.app.editorManager.replaceTextAtPosition(generatedText);
     }
 
     getInsertionContext(textAnalysisManager) {

@@ -386,6 +386,44 @@ class EditorManager {
         return charPos;
     }
 
+    replaceTextAtPosition(newText, startPos, endPos) {
+        if (!this.editor) return;
+
+        const doc = this.editor.getDoc();
+        
+        if (typeof startPos === 'number' && typeof endPos === 'number') {
+            // Convert character positions to line/column positions
+            const editorContent = doc.getValue();
+            const startLineCol = this.charPosToLineCol(editorContent, startPos);
+            const endLineCol = this.charPosToLineCol(editorContent, endPos);
+            
+            // Replace the range with new text
+            doc.replaceRange(newText, startLineCol, endLineCol);
+        } else if (startPos && endPos) {
+            // Assume startPos and endPos are already line/column objects
+            doc.replaceRange(newText, startPos, endPos);
+        } else {
+            // Fallback: replace selected text or current line
+            const selection = doc.getSelection();
+            if (selection && selection.trim()) {
+                doc.replaceSelection(newText);
+            } else {
+                const cursor = doc.getCursor();
+                const line = doc.getLine(cursor.line);
+                doc.replaceRange(newText, {line: cursor.line, ch: 0}, {line: cursor.line, ch: line.length});
+            }
+        }
+        
+        // Mark file as modified and trigger change callbacks
+        this.handleEditorChange();
+        
+        // Trigger input event to update text analysis
+        this.onChangeCallback('input');
+        
+        // Focus the editor
+        this.editor.focus();
+    }
+
     markInsertedContentAsAI(startPos, endPos) {
         // Mark the inserted content as AI-generated in the text analysis system
         if (window.app?.textAnalysisManager?.sentenceDataModel) {
