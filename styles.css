@@ -307,9 +307,6 @@ body[data-theme="light"] {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
-.stat-separator {
-    color: #666;
-}
 
 .editor-actions {
     display: flex;
