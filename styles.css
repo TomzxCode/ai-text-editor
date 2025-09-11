@@ -511,12 +511,26 @@ body[data-theme="light"] {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1.25rem;
+    border: 1px solid var(--border-color-light);
+    margin-bottom: 0.75rem;
 }
 
 .setting-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding: 1rem;
+    background-color: var(--bg-tertiary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: border-color 0.2s ease;
+}
+
+.setting-group:hover {
+    border-color: var(--accent-color);
 }
 
 .setting-group label {
@@ -723,11 +737,83 @@ body[data-theme="light"] {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--bg-quaternary), var(--bg-tertiary));
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.settings-section .section-header:first-child {
+    margin-top: 0;
 }
 
 .section-header h4 {
     margin: 0;
-    color: #fff;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-header h4::before {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.section-header h4[data-section="editor"]::before {
+    content: "⚙️";
+}
+
+.section-header h4[data-section="ai"]::before {
+    content: "🤖";
+}
+
+.section-header h4[data-section="services"]::before {
+    content: "🔧";
+}
+
+.section-header h4[data-section="import-export"]::before {
+    content: "💾";
+}
+
+.section-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    padding: 0 1rem;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+/* Collapsible sections */
+.collapsible-section {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    max-height: 2000px;
+    opacity: 1;
+}
+
+.collapsible-section.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.section-toggle {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+}
+
+.section-toggle.collapsed {
+    transform: rotate(-90deg);
 }
 
 .header-actions {

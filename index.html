@@ -269,10 +269,13 @@
                 <!-- Settings Tab Content -->
                 <div class="tab-content" id="settingsTabContent">
                     <div class="settings-section">
-                        <div class="section-header">
-                            <h4>Editor Settings</h4>
+                        <div class="section-header" data-section="editor-settings">
+                            <h4 data-section="editor">Editor Settings</h4>
+                            <button class="section-toggle btn-small" data-target="editor-settings" title="Toggle section">▼</button>
                         </div>
-                        <div class="settings-content">
+                        <div class="collapsible-section" id="editor-settings-content">
+                            <div class="section-description">Configure your text editor appearance, themes, and writing assistance preferences</div>
+                            <div class="settings-content">
                             <div class="setting-group">
                                 <label for="fontFamily">Font Family:</label>
                                 <select id="fontFamily" class="setting-select">
@@ -312,11 +315,15 @@
                                 </label>
                                 <p class="setting-description">When enabled, the editor will automatically analyze your text and provide AI-powered writing suggestions.</p>
                             </div>
+                            </div>
                         </div>
-                        <div class="section-header">
-                            <h4>AI Configuration</h4>
+                        <div class="section-header" data-section="ai-config">
+                            <h4 data-section="ai">AI Configuration</h4>
+                            <button class="section-toggle btn-small" data-target="ai-config" title="Toggle section">▼</button>
                         </div>
-                        <div class="settings-content">
+                        <div class="collapsible-section" id="ai-config-content">
+                            <div class="section-description">Set up your AI service provider, API credentials, and model preferences</div>
+                            <div class="settings-content">
                             <div class="setting-group">
                                 <label for="apiKey">API Key:</label>
                                 <input type="text" id="apiKey" class="setting-input" placeholder="Enter your API key">
@@ -345,13 +352,19 @@
                                 <input type="url" id="customBaseUrl" class="setting-input" placeholder="e.g., https://api.example.com/v1">
                                 <p class="setting-description">Override the default API endpoint for your LLM service. Useful for custom deployments or proxies.</p>
                             </div>
+                            </div>
                         </div>
 
-                        <div class="section-header">
-                            <h4>Custom LLM Services</h4>
-                            <button class="btn-small" id="addCustomServiceBtn" title="Add Custom Service">+</button>
+                        <div class="section-header" data-section="custom-services">
+                            <h4 data-section="services">Custom LLM Services</h4>
+                            <div class="header-actions">
+                                <button class="btn-small" id="addCustomServiceBtn" title="Add Custom Service">+</button>
+                                <button class="section-toggle btn-small" data-target="custom-services" title="Toggle section">▼</button>
+                            </div>
                         </div>
-                        <div class="settings-content">
+                        <div class="collapsible-section" id="custom-services-content">
+                            <div class="section-description">Add and manage custom AI service providers with their own endpoints and configurations</div>
+                            <div class="settings-content">
                             <div class="custom-services-list" id="customServicesList">
                                 <!-- Custom services will be populated here -->
                             </div>
@@ -377,12 +390,16 @@
                                     <button class="btn-secondary" id="cancelCustomServiceBtn">Cancel</button>
                                 </div>
                             </div>
+                            </div>
                         </div>
 
-                        <div class="section-header">
-                            <h4>Import / Export</h4>
+                        <div class="section-header" data-section="import-export-section">
+                            <h4 data-section="import-export">Import / Export</h4>
+                            <button class="section-toggle btn-small" data-target="import-export-section" title="Toggle section">▼</button>
                         </div>
-                        <div class="settings-content">
+                        <div class="collapsible-section" id="import-export-section-content">
+                            <div class="section-description">Backup your settings, prompts, and AI history, or restore from previous exports</div>
+                            <div class="settings-content">
                             <div class="import-export-stats" id="importExportStats">
                                 <div class="stats-loading">Loading storage stats...</div>
                             </div>
@@ -480,6 +497,7 @@
                                         <small>Coming Soon</small>
                                     </button>
                                 </div>
+                            </div>
                             </div>
                         </div>
                     </div>

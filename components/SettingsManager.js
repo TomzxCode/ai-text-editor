@@ -296,6 +296,9 @@ class SettingsManager {
 
         // Initial population of model options
         this.populateModelOptions(this.settings.llmService);
+        
+        // Setup collapsible sections
+        this.setupCollapsibleSections();
     }
 
     async populateModelOptions(service) {
@@ -647,5 +650,49 @@ class SettingsManager {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    setupCollapsibleSections() {
+        // Get all section toggle buttons
+        const toggleButtons = document.querySelectorAll('.section-toggle');
+        
+        // Load collapsed state from localStorage
+        const collapsedSections = JSON.parse(localStorage.getItem('collapsedSections') || '{}');
+        
+        toggleButtons.forEach(button => {
+            const targetSection = button.dataset.target;
+            const contentElement = document.getElementById(`${targetSection}-content`);
+            
+            if (!contentElement) return;
+            
+            // Apply saved state
+            if (collapsedSections[targetSection]) {
+                contentElement.classList.add('collapsed');
+                button.classList.add('collapsed');
+            }
+            
+            // Add click event listener
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isCollapsed = contentElement.classList.contains('collapsed');
+                
+                if (isCollapsed) {
+                    // Expand
+                    contentElement.classList.remove('collapsed');
+                    button.classList.remove('collapsed');
+                    collapsedSections[targetSection] = false;
+                } else {
+                    // Collapse
+                    contentElement.classList.add('collapsed');
+                    button.classList.add('collapsed');
+                    collapsedSections[targetSection] = true;
+                }
+                
+                // Save state to localStorage
+                localStorage.setItem('collapsedSections', JSON.stringify(collapsedSections));
+            });
+        });
     }
 }
