@@ -156,7 +156,8 @@ class AITextEditor {
             this.saveCurrentFile();
         });
 
-        this.elements.promptPaletteBtn.addEventListener('click', () => {
+        this.elements.promptPaletteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             this.promptPaletteManager.showPalette();
         });
 
@@ -408,7 +409,7 @@ class AITextEditor {
     updateTextStatisticsDisplay() {
         // Update text stats immediately to prevent flickering
         this.updateTextStats();
-        
+
         // Update LLM stats asynchronously without blocking
         this.updateLLMStats().catch(console.error);
     }
@@ -659,14 +660,6 @@ class AITextEditor {
         );
     }
 
-
-
-
-
-
-
-
-
     renderPrompts() {
         const prompts = this.promptsManager.getPromptsInActiveGroup();
         const activeGroup = this.promptsManager.getActiveGroup();
@@ -723,7 +716,7 @@ class AITextEditor {
     updateToggleAllButton() {
         const toggleButton = this.elements.toggleAllPromptsBtn;
         const activeGroup = this.promptsManager.getActiveGroup();
-        
+
         if (!toggleButton || !activeGroup || activeGroup.promptIds.length === 0) {
             // Hide button if no group or no prompts
             if (toggleButton) {
@@ -734,7 +727,7 @@ class AITextEditor {
 
         toggleButton.style.display = 'flex';
         const allEnabled = this.promptsManager.areAllPromptsEnabledInActiveGroup();
-        
+
         // Update button icon and title
         toggleButton.textContent = allEnabled ? '●' : '○';
         toggleButton.title = allEnabled ? 'Disable all prompts' : 'Enable all prompts';
@@ -997,7 +990,7 @@ class AITextEditor {
 
         try {
             let promptId;
-            
+
             if (this.currentEditingPromptId) {
                 // Update existing prompt
                 this.promptsManager.updatePrompt(this.currentEditingPromptId, {
@@ -1018,15 +1011,15 @@ class AITextEditor {
                 const llmModel = providers.length > 0 ? providers[0].model || '' : '';
                 const customDelayValue = triggerTiming === 'custom' ? customDelay : '1s';
                 const keyboardShortcutValue = triggerTiming === 'keyboard' ? keyboardShortcut : '';
-                
+
                 const newPrompt = this.promptsManager.addPrompt(
-                    name, 
-                    prompt, 
-                    enabled, 
-                    triggerTiming, 
-                    customDelayValue, 
-                    keyboardShortcutValue, 
-                    llmService, 
+                    name,
+                    prompt,
+                    enabled,
+                    triggerTiming,
+                    customDelayValue,
+                    keyboardShortcutValue,
+                    llmService,
                     llmModel,
                     actionType
                 );
@@ -1040,7 +1033,7 @@ class AITextEditor {
 
      			this.notificationManager.success('Prompt added successfully');
             }
-            
+
             // Set the enabled state for this prompt in the active group
             const activeGroup = this.promptsManager.getActiveGroup();
             if (activeGroup) {
@@ -1524,8 +1517,8 @@ class AITextEditor {
         }
 
         // Filter prompts based on search term (name only)
-        const filteredPrompts = filterTerm ? 
-            allPrompts.filter(prompt => 
+        const filteredPrompts = filterTerm ?
+            allPrompts.filter(prompt =>
                 prompt.name.toLowerCase().includes(filterTerm.toLowerCase())
             ) : allPrompts;
 
@@ -1554,7 +1547,7 @@ class AITextEditor {
         // Get currently selected prompt IDs to preserve selection
         const checkboxes = this.elements.groupPromptsList.querySelectorAll('input[type="checkbox"]:checked');
         const selectedIds = Array.from(checkboxes).map(cb => cb.value);
-        
+
         // Re-render with filter applied
         this.renderGroupPromptsList(selectedIds, filterTerm);
     }
@@ -1563,10 +1556,10 @@ class AITextEditor {
         if (!searchTerm || !searchTerm.trim()) {
             return this.escapeHtml(text);
         }
-        
+
         const escaped = this.escapeHtml(text);
         const escapedSearchTerm = this.escapeHtml(searchTerm.trim());
-        
+
         // Case-insensitive replacement with highlighting
         const regex = new RegExp(`(${escapedSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
         return escaped.replace(regex, '<mark>$1</mark>');
@@ -1680,7 +1673,7 @@ class AITextEditor {
 
                 try {
                     const result = this.promptsManager.importDefaultPrompts(true);
-                    
+
                     if (result.imported > 0) {
                         this.notificationManager.success(
                             `Successfully imported ${result.imported} default prompts!` +
@@ -1788,7 +1781,7 @@ class AITextEditor {
 
         try {
             const stats = await this.importExportManager.getStorageStats();
-            
+
             if (stats.error) {
                 statsContainer.innerHTML = `<div class="stats-error">Error loading stats: ${stats.error}</div>`;
                 return;
@@ -1846,10 +1839,10 @@ class AITextEditor {
         } else if (results) {
             const hasErrors = (results.localStorage?.errors?.length > 0) || (results.indexedDB?.errors?.length > 0);
             const totalImported = (results.localStorage?.imported || 0) + (results.indexedDB?.imported || 0);
-            
+
             resultElement = document.createElement('div');
             resultElement.className = hasErrors ? 'import-results warning' : 'import-results success';
-            
+
             let detailsHTML = `
                 <div class="results-summary">
                     Import ${hasErrors ? 'Completed with Warnings' : 'Successful'}
@@ -1873,7 +1866,7 @@ class AITextEditor {
 
         if (resultElement) {
             statsContainer.parentNode.insertBefore(resultElement, statsContainer.nextSibling);
-            
+
             // Remove the results after 10 seconds
             setTimeout(() => {
                 if (resultElement && resultElement.parentNode) {
@@ -1926,7 +1919,7 @@ class AITextEditor {
         confirmBtn.addEventListener('click', async () => {
             confirmBtn.disabled = true;
             confirmBtn.textContent = 'Deleting...';
-            
+
             try {
                 const results = await this.importExportManager.resetAllData();
                 this.notificationManager.success('All data has been reset successfully');
@@ -1975,10 +1968,10 @@ class AITextEditor {
 
         const hasErrors = (results.localStorage?.errors?.length > 0) || (results.indexedDB?.errors?.length > 0);
         const totalCleared = (results.localStorage?.cleared || 0) + (results.indexedDB?.cleared || 0);
-        
+
         const resultElement = document.createElement('div');
         resultElement.className = hasErrors ? 'import-results warning reset-results' : 'import-results success reset-results';
-        
+
         let detailsHTML = `
             <div class="results-summary">
                 Reset ${hasErrors ? 'Completed with Issues' : 'Successful'}
@@ -1999,7 +1992,7 @@ class AITextEditor {
 
         resultElement.innerHTML = detailsHTML;
         statsContainer.parentNode.insertBefore(resultElement, statsContainer.nextSibling);
-        
+
         // Remove the results after 10 seconds
         setTimeout(() => {
             if (resultElement && resultElement.parentNode) {
