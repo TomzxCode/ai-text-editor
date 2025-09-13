@@ -1,0 +1,74 @@
+site_name: AI Text Editor Documentation
+site_description: Modern web-based text editor with integrated AI assistance
+site_url: https://tomzxcode.github.io/ai-text-editor/
+repo_name: tomzxcode/ai-text-editor
+repo_url: https://github.com/tomzxcode/ai-text-editor
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  font:
+    text: Open Sans
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Getting Started: user-guide/getting-started.md
+    - Features: user-guide/features.md
+    - AI Integration: user-guide/ai-integration.md
+  - Developer Guide:
+    - Architecture: developer-guide/architecture.md
+    - Components: developer-guide/components.md
+    - API Reference: developer-guide/api-reference.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - social
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tomzxcode/ai-text-editor
