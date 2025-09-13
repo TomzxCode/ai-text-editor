@@ -44,6 +44,13 @@ nav:
     - Getting Started: user-guide/getting-started.md
     - Features: user-guide/features.md
     - AI Integration: user-guide/ai-integration.md
+    - Tabs:
+      - Feedback: user-guide/tabs/feedback.md
+      - Prompts: user-guide/tabs/prompts.md
+      - Inspect: user-guide/tabs/inspect.md
+      - History: user-guide/tabs/history.md
+      - Usage: user-guide/tabs/usage.md
+      - Settings: user-guide/tabs/settings.md
   - Developer Guide:
     - Architecture: developer-guide/architecture.md
     - Components: developer-guide/components.md
