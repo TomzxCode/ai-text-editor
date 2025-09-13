@@ -394,6 +394,45 @@
                             </div>
                         </div>
 
+                        <div class="section-header" data-section="custom-variables">
+                            <h4 data-section="variables">Custom Variables</h4>
+                            <div class="header-actions">
+                                <button class="btn-small" id="addCustomVariableBtn" title="Add Custom Variable">+</button>
+                                <button class="section-toggle btn-small" data-target="custom-variables" title="Toggle section">▼</button>
+                            </div>
+                        </div>
+                        <div class="collapsible-section" id="custom-variables-content">
+                            <div class="section-description">Create custom variables that can be used in prompts using {variable_name} syntax</div>
+                            <div class="settings-content">
+                            <div class="custom-variables-list" id="customVariablesList">
+                                <!-- Custom variables will be populated here -->
+                            </div>
+                            <div class="setting-group" id="customVariableForm" style="display: none;">
+                                <div class="custom-variable-inputs">
+                                    <div class="input-group">
+                                        <label for="customVariableName">Variable Name:</label>
+                                        <input type="text" id="customVariableName" class="setting-input" placeholder="my_variable_name" title="Must start with letter or underscore, contain only letters, numbers, underscores, and hyphens">
+                                        <small>Used in prompts as {my_variable_name} - supports letters, numbers, underscores, and hyphens</small>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="customVariableValue">Value:</label>
+                                        <textarea id="customVariableValue" class="setting-textarea" placeholder="Enter the variable value..." rows="4"></textarea>
+                                        <small>Can be a word, sentence, or paragraph</small>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="customVariableDescription">Description (Optional):</label>
+                                        <input type="text" id="customVariableDescription" class="setting-input" placeholder="Brief description of what this variable is for">
+                                        <small>Helps you remember what this variable is used for</small>
+                                    </div>
+                                </div>
+                                <div class="custom-variable-actions">
+                                    <button class="btn-primary" id="saveCustomVariableBtn">Add Variable</button>
+                                    <button class="btn-secondary" id="cancelCustomVariableBtn">Cancel</button>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
                         <div class="section-header" data-section="import-export-section">
                             <h4 data-section="import-export">Import / Export</h4>
                             <button class="section-toggle btn-small" data-target="import-export-section" title="Toggle section">▼</button>
@@ -683,6 +722,7 @@
     <script src="components/AIService.js"></script>
     <script src="components/UIManager.js"></script>
     <script src="components/PromptsManager.js"></script>
+    <script src="components/CustomVariablesManager.js"></script>
     <script src="components/SettingsManager.js"></script>
     <script src="components/ThemeManager.js"></script>
     <script src="components/SentenceDataModel.js"></script>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Variables Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-section {
+            background-color: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .variable {
+            background-color: #1e1e1e;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #4fc3f7;
+        }
+        .prompt {
+            background-color: #1e1e1e;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #81c784;
+            white-space: pre-wrap;
+        }
+        .result {
+            background-color: #1e1e1e;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #ff9800;
+            white-space: pre-wrap;
+        }
+        code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Custom Variables Test</h1>
+    
+    <div class="test-section">
+        <h2>Available Variables</h2>
+        <p>The following variables should be created by default:</p>
+        
+        <div class="variable">
+            <strong>project_name:</strong> "My Project"<br>
+            <em>Usage:</em> <code>{project_name}</code>
+        </div>
+        
+        <div class="variable">
+            <strong>author_name:</strong> "Author Name"<br>
+            <em>Usage:</em> <code>{author_name}</code>
+        </div>
+        
+        <div class="variable">
+            <strong>company_name:</strong> "Company Name"<br>
+            <em>Usage:</em> <code>{company_name}</code>
+        </div>
+        
+        <div class="variable">
+            <strong>writing_style:</strong> "professional and clear"<br>
+            <em>Usage:</em> <code>{writing_style}</code>
+        </div>
+        
+        <div class="variable">
+            <strong>target_audience:</strong> "general audience"<br>
+            <em>Usage:</em> <code>{target_audience}</code>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Prompts with Variables</h2>
+        <p>Create these prompts in the app to test variable substitution:</p>
+        
+        <h3>Test Prompt 1: Project Documentation</h3>
+        <div class="prompt">Prompt: Write documentation for {project_name} by {author_name} at {company_name}. The writing style should be {writing_style} and target {target_audience}. Document this text: {text}</div>
+        <div class="result">Expected Result: Write documentation for My Project by Author Name at Company Name. The writing style should be professional and clear and target general audience. Document this text: [user's text]</div>
+        
+        <h3>Test Prompt 2: Code Review</h3>
+        <div class="prompt">Prompt: Review this code for {project_name}. Ensure it follows {writing_style} coding standards: {text}</div>
+        <div class="result">Expected Result: Review this code for My Project. Ensure it follows professional and clear coding standards: [user's text]</div>
+        
+        <h3>Test Prompt 3: Email Template</h3>
+        <div class="prompt">Prompt: Create an email from {author_name} at {company_name} regarding {project_name}. Use a {writing_style} tone for {target_audience}: {sentence}</div>
+        <div class="result">Expected Result: Create an email from Author Name at Company Name regarding My Project. Use a professional and clear tone for general audience: [user's sentence]</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Testing Instructions</h2>
+        <ol>
+            <li>Open the main application</li>
+            <li>Go to Settings tab</li>
+            <li>Find the "Custom Variables" section</li>
+            <li>Verify the default variables are listed</li>
+            <li>Try creating a new variable:
+                <ul>
+                    <li>Name: <code>test_variable</code></li>
+                    <li>Value: <code>This is a test value</code></li>
+                    <li>Description: <code>Testing custom variables with underscores</code></li>
+                </ul>
+            </li>
+            <li>Go to the Prompts tab</li>
+            <li>Create a new prompt using one of the test prompts above</li>
+            <li>Use the prompt and verify variables are substituted correctly</li>
+            <li>Try editing variables and see if prompts update accordingly</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Variable Validation Tests</h2>
+        <p>Test these scenarios to ensure proper validation:</p>
+        <ul>
+            <li><strong>Invalid variable names:</strong> Try names with spaces, special characters, or starting with numbers</li>
+            <li><strong>Empty values:</strong> Try creating a variable with no value</li>
+            <li><strong>Duplicate names:</strong> Try creating two variables with the same name</li>
+            <li><strong>Reserved names:</strong> Try creating variables with names like <code>text</code>, <code>word</code>, <code>sentence</code>, or <code>paragraph</code></li>
+            <li><strong>Underscore support:</strong> Try creating variables like <code>my_variable</code>, <code>_private_var</code>, or <code>multi_word_variable_name</code></li>
+            <li><strong>Unknown variables in prompts:</strong> Use <code>{nonexistent}</code> in a prompt</li>
+        </ul>
+    </div>
+
+    <script>
+        // Simple test of CustomVariablesManager functionality
+        console.log('Testing CustomVariablesManager...');
+        
+        // This would normally be loaded via script tag in the main app
+        if (typeof CustomVariablesManager !== 'undefined') {
+            const manager = new CustomVariablesManager();
+            
+            // Test adding a variable
+            try {
+                const testVar = manager.addVariable('test', 'Hello World', 'Test variable');
+                console.log('✓ Successfully added variable:', testVar);
+            } catch (error) {
+                console.log('✗ Error adding variable:', error.message);
+            }
+            
+            // Test substitution
+            const testText = 'This is a {test} message';
+            const result = manager.substituteVariables(testText);
+            console.log('Original:', testText);
+            console.log('Substituted:', result);
+            
+            // Test finding variables
+            const found = manager.findVariablesInText(testText);
+            console.log('Variables found:', found);
+        } else {
+            console.log('CustomVariablesManager not loaded');
+        }
+    </script>
+</body>
+</html>

@@ -14,6 +14,8 @@ class SettingsManager {
             uiTheme: 'dark'
         };
 
+        this.customVariablesManager = null; // Will be set by main app
+
         // Built-in services that are always available
         this.builtInServices = [
             { value: 'anthropic', label: 'Anthropic' },
@@ -536,6 +538,9 @@ class SettingsManager {
 
         // Initial render of custom services list
         this.renderCustomServicesList();
+
+        // Initialize custom variables UI
+        this.setupCustomVariablesUI();
     }
 
     showCustomServiceForm() {
@@ -694,5 +699,267 @@ class SettingsManager {
                 localStorage.setItem('collapsedSections', JSON.stringify(collapsedSections));
             });
         });
+    }
+
+    // Custom Variables Management
+    setCustomVariablesManager(customVariablesManager) {
+        this.customVariablesManager = customVariablesManager;
+        // Re-render the variables list if UI is already set up
+        if (document.getElementById('customVariablesList')) {
+            this.renderCustomVariablesList();
+        }
+    }
+
+    setupCustomVariablesUI() {
+        const addBtn = document.getElementById('addCustomVariableBtn');
+        const variableForm = document.getElementById('customVariableForm');
+        const saveBtn = document.getElementById('saveCustomVariableBtn');
+        const cancelBtn = document.getElementById('cancelCustomVariableBtn');
+
+        if (!addBtn || !variableForm || !saveBtn || !cancelBtn) return;
+
+        // Show/hide form handlers
+        addBtn.addEventListener('click', () => {
+            this.showCustomVariableForm();
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            this.hideCustomVariableForm();
+        });
+
+        // Save custom variable
+        saveBtn.addEventListener('click', () => {
+            this.saveCustomVariable();
+        });
+
+        // Auto-generate variable name format from display name
+        const nameInput = document.getElementById('customVariableName');
+        
+        if (nameInput) {
+            // Provide gentle validation feedback without auto-correcting
+            nameInput.addEventListener('input', (e) => {
+                const name = e.target.value;
+                const isValid = /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(name) || name === '';
+
+                // Visual feedback for validation
+                if (isValid || name === '') {
+                    e.target.style.borderColor = '';
+                    e.target.style.backgroundColor = '';
+                } else {
+                    e.target.style.borderColor = '#f44336';
+                    e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+                }
+            });
+        }
+
+        // Keyboard shortcuts for form
+        document.getElementById('customVariableForm').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                this.saveCustomVariable();
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                this.hideCustomVariableForm();
+                e.preventDefault();
+            }
+        });
+
+        // Initial render of custom variables list
+        this.renderCustomVariablesList();
+    }
+
+    showCustomVariableForm() {
+        const form = document.getElementById('customVariableForm');
+        if (form) {
+            form.style.display = 'block';
+            document.getElementById('customVariableName').focus();
+        }
+    }
+
+    hideCustomVariableForm() {
+        const form = document.getElementById('customVariableForm');
+        if (form) {
+            form.style.display = 'none';
+            // Clear form fields
+            document.getElementById('customVariableName').value = '';
+            document.getElementById('customVariableValue').value = '';
+            document.getElementById('customVariableDescription').value = '';
+        }
+    }
+
+
+    renderCustomVariablesList() {
+        const container = document.getElementById('customVariablesList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!this.customVariablesManager) {
+            container.innerHTML = '<p class="no-data">Custom variables manager not available.</p>';
+            return;
+        }
+
+        const variables = this.customVariablesManager.getAllVariables();
+
+        if (variables.length === 0) {
+            container.innerHTML = '<p class="no-data">No custom variables configured.</p>';
+            return;
+        }
+
+        variables.forEach(variable => {
+            const variableItem = document.createElement('div');
+            variableItem.className = 'custom-variable-item';
+            
+            const truncatedValue = variable.value.length > 100 ? 
+                variable.value.substring(0, 100) + '...' : 
+                variable.value;
+            
+            variableItem.innerHTML = `
+                <div class="custom-variable-info">
+                    <div class="custom-variable-header">
+                        <div class="custom-variable-name">{${this.escapeHTML(variable.name)}}</div>
+                        <div class="custom-variable-actions">
+                            <button class="btn-small edit-variable-btn" data-variable-id="${this.escapeHTML(variable.id)}" title="Edit Variable">✏️</button>
+                            <button class="btn-small duplicate-variable-btn" data-variable-id="${this.escapeHTML(variable.id)}" title="Duplicate Variable">📋</button>
+                            <button class="btn-danger delete-variable-btn" data-variable-id="${this.escapeHTML(variable.id)}" title="Delete Variable">×</button>
+                        </div>
+                    </div>
+                    <div class="custom-variable-value">${this.escapeHTML(truncatedValue)}</div>
+                    ${variable.description ? `<div class="custom-variable-description">${this.escapeHTML(variable.description)}</div>` : ''}
+                </div>
+            `;
+
+            // Add event handlers
+            const editBtn = variableItem.querySelector('.edit-variable-btn');
+            const duplicateBtn = variableItem.querySelector('.duplicate-variable-btn');
+            const deleteBtn = variableItem.querySelector('.delete-variable-btn');
+
+            editBtn.addEventListener('click', () => {
+                this.editCustomVariable(variable.id);
+            });
+
+            duplicateBtn.addEventListener('click', () => {
+                this.duplicateCustomVariable(variable.id);
+            });
+
+            deleteBtn.addEventListener('click', () => {
+                this.deleteCustomVariable(variable.id, variable.name);
+            });
+
+            container.appendChild(variableItem);
+        });
+    }
+
+    editCustomVariable(variableId) {
+        if (!this.customVariablesManager) return;
+
+        const variable = this.customVariablesManager.getVariable(variableId);
+        if (!variable) {
+            alert('Variable not found');
+            return;
+        }
+
+        // Populate form with existing values
+        document.getElementById('customVariableName').value = variable.name;
+        document.getElementById('customVariableValue').value = variable.value;
+        document.getElementById('customVariableDescription').value = variable.description;
+
+        // Change button text and functionality
+        const saveBtn = document.getElementById('saveCustomVariableBtn');
+        saveBtn.textContent = 'Update Variable';
+        saveBtn.dataset.editingId = variableId;
+
+        this.showCustomVariableForm();
+    }
+
+    duplicateCustomVariable(variableId) {
+        if (!this.customVariablesManager) return;
+
+        try {
+            const duplicated = this.customVariablesManager.duplicateVariable(variableId);
+            this.renderCustomVariablesList();
+            
+            // Show success message
+            if (window.app?.notificationManager) {
+                window.app.notificationManager.success(`Variable duplicated as "${duplicated.name}"`);
+            }
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    deleteCustomVariable(variableId, variableName) {
+        if (!this.customVariablesManager) return;
+
+        if (confirm(`Are you sure you want to delete the variable "${variableName}"?`)) {
+            try {
+                this.customVariablesManager.deleteVariable(variableId);
+                this.renderCustomVariablesList();
+                
+                // Show success message
+                if (window.app?.notificationManager) {
+                    window.app.notificationManager.success(`Variable "${variableName}" deleted`);
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    }
+
+    // Override saveCustomVariable to handle editing
+    saveCustomVariable() {
+        if (!this.customVariablesManager) {
+            alert('Custom variables manager not available');
+            return;
+        }
+
+        const saveBtn = document.getElementById('saveCustomVariableBtn');
+        const isEditing = saveBtn.dataset.editingId;
+
+        const name = document.getElementById('customVariableName').value.trim();
+        const value = document.getElementById('customVariableValue').value.trim();
+        const description = document.getElementById('customVariableDescription').value.trim();
+
+        // Validation
+        if (!name) {
+            alert('Please enter a variable name');
+            return;
+        }
+
+        if (!value) {
+            alert('Please enter a variable value');
+            return;
+        }
+
+        try {
+            if (isEditing) {
+                // Update existing variable
+                this.customVariablesManager.updateVariable(isEditing, {
+                    name: name,
+                    value: value,
+                    description: description
+                });
+                
+                // Reset button state
+                saveBtn.textContent = 'Add Variable';
+                delete saveBtn.dataset.editingId;
+                
+                if (window.app?.notificationManager) {
+                    window.app.notificationManager.success(`Variable "${name}" updated successfully`);
+                }
+            } else {
+                // Add new variable
+                this.customVariablesManager.addVariable(name, value, description);
+                
+                if (window.app?.notificationManager) {
+                    window.app.notificationManager.success(`Variable "${name}" added successfully`);
+                }
+            }
+
+            this.hideCustomVariableForm();
+            this.renderCustomVariablesList();
+            
+        } catch (error) {
+            alert(error.message);
+        }
     }
 }

@@ -4,6 +4,7 @@ class PromptsManager {
         this.groupsStorageKey = 'ai_editor_prompt_groups';
         this.prompts = this.loadPrompts();
         this.groups = this.loadGroups();
+        this.customVariablesManager = null; // Will be set by main app
         this.ensureDefaultGroup();
     }
 
@@ -1008,5 +1009,124 @@ class PromptsManager {
         return activeGroup.promptIds.every(promptId => 
             activeGroup.promptStates?.[promptId]?.enabled === true
         );
+    }
+
+    // Custom Variables Integration
+    setCustomVariablesManager(customVariablesManager) {
+        this.customVariablesManager = customVariablesManager;
+    }
+
+    // Method to substitute custom variables in a prompt
+    substituteCustomVariables(promptText) {
+        if (!this.customVariablesManager || !promptText) {
+            return promptText;
+        }
+
+        return this.customVariablesManager.substituteVariables(promptText);
+    }
+
+    // Method to validate custom variables in a prompt
+    validateCustomVariables(promptText) {
+        if (!this.customVariablesManager || !promptText) {
+            return true;
+        }
+
+        try {
+            return this.customVariablesManager.validateVariablesInText(promptText);
+        } catch (error) {
+            throw new Error(`Invalid custom variables in prompt: ${error.message}`);
+        }
+    }
+
+    // Method to find custom variables used in a prompt
+    findCustomVariablesInPrompt(promptText) {
+        if (!this.customVariablesManager || !promptText) {
+            return [];
+        }
+
+        return this.customVariablesManager.findVariablesInText(promptText);
+    }
+
+    // Override addPrompt to validate custom variables
+    addPromptWithVariableValidation(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '', actionType = 'feedback') {
+        // Validate custom variables before adding
+        this.validateCustomVariables(prompt);
+        
+        return this.addPrompt(name, prompt, enabled, triggerTiming, customDelay, keyboardShortcut, llmService, llmModel, actionType);
+    }
+
+    // Override updatePrompt to validate custom variables
+    updatePromptWithVariableValidation(id, updates) {
+        // Validate custom variables if prompt text is being updated
+        if (updates.prompt) {
+            this.validateCustomVariables(updates.prompt);
+        }
+        
+        return this.updatePrompt(id, updates);
+    }
+
+    // Method to get a processed prompt with variables substituted
+    getProcessedPrompt(promptId, additionalVariables = {}) {
+        const prompt = this.getPrompt(promptId);
+        if (!prompt) {
+            throw new Error('Prompt not found');
+        }
+
+        let processedText = prompt.prompt;
+
+        // First substitute custom variables
+        if (this.customVariablesManager) {
+            processedText = this.customVariablesManager.substituteVariables(processedText);
+        }
+
+        // Then substitute any additional variables passed in (like {text}, {word}, etc.)
+        Object.keys(additionalVariables).forEach(key => {
+            const placeholder = `{${key}}`;
+            const regex = new RegExp(this.escapeRegExp(placeholder), 'gi');
+            processedText = processedText.replace(regex, additionalVariables[key]);
+        });
+
+        return {
+            ...prompt,
+            prompt: processedText,
+            originalPrompt: prompt.prompt
+        };
+    }
+
+    // Helper method to escape special regex characters
+    escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Method to get all unique custom variables used across all prompts
+    getAllUsedCustomVariables() {
+        if (!this.customVariablesManager) {
+            return [];
+        }
+
+        const usedVariables = new Set();
+        
+        this.prompts.forEach(prompt => {
+            const variables = this.customVariablesManager.findVariablesInText(prompt.prompt);
+            variables.forEach(v => {
+                if (v.isValid) {
+                    usedVariables.add(v.name);
+                }
+            });
+        });
+
+        return Array.from(usedVariables).sort();
+    }
+
+    // Method to get prompts that use a specific custom variable
+    getPromptsUsingVariable(variableName) {
+        if (!this.customVariablesManager) {
+            return [];
+        }
+
+        return this.prompts.filter(prompt => {
+            const variables = this.customVariablesManager.findVariablesInText(prompt.prompt);
+            return variables.some(v => v.name === variableName && v.isValid);
+        });
     }
 }

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syntax Change Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .result {
+            background-color: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #4fc3f7;
+        }
+        .success {
+            border-left-color: #81c784;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Custom Variables Syntax Change Test</h1>
+    <p>Testing the new <code>{variable_name}</code> syntax instead of <code>{var:variable_name}</code></p>
+    <div id="results"></div>
+
+    <script src="components/CustomVariablesManager.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function runTests() {
+            console.log('Testing CustomVariablesManager with new {variable_name} syntax...');
+
+            try {
+                // Create manager instance
+                const manager = new CustomVariablesManager();
+                addResult('✓ CustomVariablesManager created successfully');
+
+                // Test adding variables
+                const var1 = manager.addVariable('project_name', 'My Awesome Project');
+                const var2 = manager.addVariable('author_name', 'John Doe');
+                addResult('✓ Added test variables successfully');
+
+                // Test reserved name validation
+                try {
+                    manager.addVariable('text', 'This should fail');
+                    addResult('✗ Reserved name validation failed - should have thrown error', false);
+                } catch (error) {
+                    addResult(`✓ Reserved name validation works: <em>${error.message}</em>`);
+                }
+
+                // Test variable substitution
+                const testText = 'Welcome to {project_name} created by {author_name}!';
+                const result = manager.substituteVariables(testText);
+                const expectedResult = 'Welcome to My Awesome Project created by John Doe!';
+                
+                addResult(`<strong>Substitution Test:</strong><br>
+                          Original: <code>${testText}</code><br>
+                          Result: <code>${result}</code><br>
+                          Expected: <code>${expectedResult}</code>`);
+                
+                if (result === expectedResult) {
+                    addResult('✓ Variable substitution works correctly');
+                } else {
+                    addResult('✗ Variable substitution failed', false);
+                }
+
+                // Test mixed text with built-in placeholders
+                const mixedText = 'Project: {project_name}, Text: {text}, Author: {author_name}';
+                const mixedResult = manager.substituteVariables(mixedText);
+                const expectedMixed = 'Project: My Awesome Project, Text: {text}, Author: John Doe';
+                
+                addResult(`<strong>Mixed Placeholders Test:</strong><br>
+                          Original: <code>${mixedText}</code><br>
+                          Result: <code>${mixedResult}</code><br>
+                          Expected: <code>${expectedMixed}</code>`);
+                
+                if (mixedResult === expectedMixed) {
+                    addResult('✓ Mixed placeholders work correctly (custom vars substituted, built-in preserved)');
+                } else {
+                    addResult('✗ Mixed placeholders failed', false);
+                }
+
+                // Test findVariablesInText
+                const variables = manager.findVariablesInText(testText);
+                const variableNames = variables.map(v => v.name);
+                
+                addResult(`<strong>Variable Detection Test:</strong><br>
+                          Text: <code>${testText}</code><br>
+                          Found variables: <code>${variableNames.join(', ')}</code>`);
+                
+                if (variables.length === 2 && variableNames.includes('project_name') && variableNames.includes('author_name')) {
+                    addResult('✓ Variable detection works correctly');
+                } else {
+                    addResult('✗ Variable detection failed', false);
+                }
+
+                // Test variable placeholders method
+                const placeholders = manager.getVariablePlaceholders();
+                const placeholderStrings = placeholders.map(p => p.placeholder);
+                
+                addResult(`<strong>Placeholder Generation Test:</strong><br>
+                          Generated placeholders: <code>${placeholderStrings.join(', ')}</code>`);
+                
+                if (placeholderStrings.includes('{project_name}') && placeholderStrings.includes('{author_name}')) {
+                    addResult('✓ Placeholder generation works correctly');
+                } else {
+                    addResult('✗ Placeholder generation failed', false);
+                }
+
+                addResult('<strong>🎉 All tests completed! Check results above.</strong>');
+
+            } catch (error) {
+                addResult(`Test failed: ${error.message}`, false);
+                console.error('Test failed:', error);
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

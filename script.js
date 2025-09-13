@@ -93,6 +93,7 @@ class AITextEditor {
         this.settingsManager = new SettingsManager();
         this.themeManager = new ThemeManager(this.settingsManager);
         this.textAnalysisManager = new TextAnalysisManager();
+        this.customVariablesManager = new CustomVariablesManager();
 
         this.editorManager = new EditorManager(this.elements.textEditor, (event, data) => {
             this.handleEditorEvent(event, data);
@@ -107,6 +108,13 @@ class AITextEditor {
         this.historyManager = new HistoryManager();
         this.inspectManager = new InspectManager();
         this.importExportManager = new ImportExportManager();
+
+        // Connect custom variables manager to other managers
+        this.promptsManager.setCustomVariablesManager(this.customVariablesManager);
+        this.settingsManager.setCustomVariablesManager(this.customVariablesManager);
+
+        // Create default variables if none exist
+        this.customVariablesManager.createDefaultVariables();
 
         // Initialize provider management
         this.initializeProviderManagement();

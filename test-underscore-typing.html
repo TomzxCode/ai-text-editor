@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underscore Typing Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-input {
+            background-color: #2a2a2a;
+            color: #ffffff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .test-input:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+        .invalid {
+            border-color: #f44336 !important;
+            background-color: rgba(244, 67, 54, 0.1) !important;
+        }
+        .result {
+            background-color: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #4fc3f7;
+        }
+        .validation-status {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .valid {
+            color: #81c784;
+        }
+        .invalid-text {
+            color: #f44336;
+        }
+        code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Underscore Typing Test</h1>
+    <p>This test verifies that you can type underscores naturally in variable names.</p>
+
+    <div class="result">
+        <h3>Test Input Field</h3>
+        <p>Try typing these variable names to test underscore support:</p>
+        <ul>
+            <li><code>my_variable</code></li>
+            <li><code>_private_var</code></li>
+            <li><code>project_name_v2</code></li>
+            <li><code>user_profile_settings</code></li>
+        </ul>
+
+        <label for="variableNameInput">Variable Name:</label>
+        <input type="text" id="variableNameInput" class="test-input" placeholder="Type variable names with underscores here...">
+
+        <div class="validation-status" id="validationStatus">Ready to test...</div>
+
+        <h4>Expected Behavior:</h4>
+        <ul>
+            <li>✅ You should be able to type underscores anywhere in the name</li>
+            <li>✅ Valid names show normal border color</li>
+            <li>✅ Invalid names show red border and background</li>
+            <li>✅ No auto-correction while typing</li>
+        </ul>
+    </div>
+
+    <div class="result">
+        <h3>Validation Rules</h3>
+        <p>Variable names must:</p>
+        <ul>
+            <li>Start with a letter (a-z, A-Z) or underscore (_)</li>
+            <li>Contain only letters, numbers, underscores, and hyphens</li>
+            <li>Not be empty</li>
+            <li>Not be reserved words: text, word, sentence, paragraph</li>
+        </ul>
+    </div>
+
+    <script>
+        const input = document.getElementById('variableNameInput');
+        const status = document.getElementById('validationStatus');
+
+        function validateVariableName(name) {
+            if (!name) {
+                return { valid: true, message: "Ready to test..." };
+            }
+
+            // Check format
+            if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(name)) {
+                return { valid: false, message: `Invalid format: "${name}" - must start with letter or underscore, contain only letters, numbers, underscores, and hyphens` };
+            }
+
+            // Check reserved names
+            const reservedNames = ['text', 'sentence', 'word', 'paragraph'];
+            if (reservedNames.includes(name.toLowerCase())) {
+                return { valid: false, message: `Reserved name: "${name}" - please choose a different name` };
+            }
+
+            return { valid: true, message: `Valid variable name: {${name}}` };
+        }
+
+        input.addEventListener('input', (e) => {
+            const name = e.target.value;
+            const validation = validateVariableName(name);
+
+            // Update visual feedback
+            if (validation.valid) {
+                input.classList.remove('invalid');
+                status.className = 'validation-status valid';
+            } else {
+                input.classList.add('invalid');
+                status.className = 'validation-status invalid-text';
+            }
+
+            status.textContent = validation.message;
+        });
+
+        // Log keystrokes for debugging
+        input.addEventListener('keydown', (e) => {
+            if (e.key === '_') {
+                console.log('Underscore key pressed - should work normally');
+            }
+        });
+    </script>
+</body>
+</html>

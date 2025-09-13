@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underscore Support Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .result {
+            background-color: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #4fc3f7;
+        }
+        .success {
+            border-left-color: #81c784;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Underscore Support Test</h1>
+    <p>Testing that underscores are properly supported in variable names</p>
+    <div id="results"></div>
+
+    <script src="components/CustomVariablesManager.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function runTests() {
+            try {
+                const manager = new CustomVariablesManager();
+                addResult('✓ CustomVariablesManager created successfully');
+
+                // Test various underscore patterns
+                const testCases = [
+                    { name: 'project_name', value: 'My Project', description: 'Standard underscore usage' },
+                    { name: '_private_var', value: 'Private Variable', description: 'Starting with underscore' },
+                    { name: 'multi_word_variable_name', value: 'Multi Word Variable', description: 'Multiple underscores' },
+                    { name: 'var_123', value: 'Variable with numbers', description: 'Underscore with numbers' },
+                    { name: 'MixedCase_Variable', value: 'Mixed Case', description: 'Mixed case with underscore' }
+                ];
+
+                // Test adding variables with underscores
+                addResult('<strong>Testing Variable Creation with Underscores:</strong>');
+                testCases.forEach((testCase, index) => {
+                    try {
+                        const variable = manager.addVariable(testCase.name, testCase.value, testCase.description);
+                        addResult(`✓ Created variable: <code>{${testCase.name}}</code> - ${testCase.description}`);
+                    } catch (error) {
+                        addResult(`✗ Failed to create variable <code>{${testCase.name}}</code>: ${error.message}`, false);
+                    }
+                });
+
+                // Test substitution with underscores
+                addResult('<br><strong>Testing Variable Substitution with Underscores:</strong>');
+                const testText = 'Welcome to {project_name}! This is {_private_var} and {multi_word_variable_name} with {var_123}. Also {MixedCase_Variable}.';
+                const result = manager.substituteVariables(testText);
+                
+                addResult(`Original: <code>${testText}</code>`);
+                addResult(`Result: <code>${result}</code>`);
+                
+                const expectedResult = 'Welcome to My Project! This is Private Variable and Multi Word Variable with Variable with numbers. Also Mixed Case.';
+                if (result === expectedResult) {
+                    addResult('✓ All underscore variables substituted correctly');
+                } else {
+                    addResult('✗ Underscore variable substitution failed', false);
+                }
+
+                // Test variable detection with underscores
+                addResult('<br><strong>Testing Variable Detection with Underscores:</strong>');
+                const detectedVars = manager.findVariablesInText(testText);
+                const detectedNames = detectedVars.map(v => v.name);
+                
+                addResult(`Detected variables: <code>${detectedNames.join(', ')}</code>`);
+                
+                const expectedVars = ['project_name', '_private_var', 'multi_word_variable_name', 'var_123', 'MixedCase_Variable'];
+                const allDetected = expectedVars.every(name => detectedNames.includes(name));
+                
+                if (allDetected && detectedNames.length === expectedVars.length) {
+                    addResult('✓ All underscore variables detected correctly');
+                } else {
+                    addResult('✗ Underscore variable detection failed', false);
+                }
+
+                // Test edge cases
+                addResult('<br><strong>Testing Edge Cases:</strong>');
+                
+                // Test that numbers at start are not allowed
+                try {
+                    manager.addVariable('123_invalid', 'Should fail');
+                    addResult('✗ Should not allow variables starting with numbers', false);
+                } catch (error) {
+                    addResult(`✓ Correctly rejected variable starting with number: ${error.message}`);
+                }
+
+                // Test that special characters are not allowed
+                try {
+                    manager.addVariable('invalid@var', 'Should fail');
+                    addResult('✗ Should not allow special characters', false);
+                } catch (error) {
+                    addResult(`✓ Correctly rejected special characters: ${error.message}`);
+                }
+
+                addResult('<br><strong>🎉 Underscore support test completed!</strong>');
+
+            } catch (error) {
+                addResult(`Test failed: ${error.message}`, false);
+                console.error('Test failed:', error);
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

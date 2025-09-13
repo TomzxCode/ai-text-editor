@@ -66,11 +66,26 @@ class AIService {
 
 
     processPromptWithPlaceholders(promptText, fullText, textAnalysisManager) {
-        // Find all placeholders in the format {placeholder}
-        const placeholderPattern = /\{(text|sentence|word|paragraph)\}/g;
         let processedPrompt = promptText;
 
-        // Replace each placeholder with appropriate content
+        // First, substitute custom variables, but exclude built-in placeholder names
+        if (window.app?.promptsManager?.customVariablesManager) {
+            const customVarsManager = window.app.promptsManager.customVariablesManager;
+            const variables = customVarsManager.getAllVariables();
+            const builtInNames = ['text', 'sentence', 'word', 'paragraph'];
+            
+            // Only substitute custom variables that don't conflict with built-in names
+            variables.forEach(variable => {
+                if (!builtInNames.includes(variable.name.toLowerCase())) {
+                    const placeholder = `{${variable.name}}`;
+                    const regex = new RegExp(customVarsManager.escapeRegExp(placeholder), 'gi');
+                    processedPrompt = processedPrompt.replace(regex, variable.value);
+                }
+            });
+        }
+
+        // Then replace built-in placeholders {text}, {sentence}, {word}, {paragraph}
+        const placeholderPattern = /\{(text|sentence|word|paragraph)\}/g;
         processedPrompt = processedPrompt.replace(placeholderPattern, (match, placeholderType) => {
             const content = textAnalysisManager ?
                 textAnalysisManager.getPlaceholderContent(placeholderType, fullText) :
