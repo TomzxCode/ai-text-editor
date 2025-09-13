@@ -69,7 +69,7 @@ class PromptsManager {
         }
     }
 
-    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '', actionType = 'feedback') {
+    addPrompt(name, prompt, enabled = true, triggerTiming = 'custom', customDelay = '1s', keyboardShortcut = '', llmService = '', llmModel = '', actionType = 'feedback', providers = []) {
         if (!name || !prompt) {
             throw new Error('Name and prompt are required');
         }
@@ -86,8 +86,10 @@ class PromptsManager {
             triggerTiming: this.validateTriggerTiming(triggerTiming),
             customDelay: triggerTiming === 'custom' ? customDelay.trim() : '',
             keyboardShortcut: triggerTiming === 'keyboard' ? keyboardShortcut.trim() : '',
+            // Support both legacy format and new providers array
             llmService: llmService.trim(),
             llmModel: llmModel.trim(),
+            providers: providers || [],
             actionType: this.validateActionType(actionType),
             createdAt: new Date().toISOString()
         };

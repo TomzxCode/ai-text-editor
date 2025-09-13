@@ -94,8 +94,29 @@ class AIService {
             const settings = window.app?.settingsManager?.getSettings() || {};
 
             // Use prompt-specific LLM settings if available, otherwise fall back to global settings
-            const llmService = (promptConfig?.llmService && promptConfig.llmService.trim()) ? promptConfig.llmService : settings.llmService;
-            const llmModel = (promptConfig?.llmModel && promptConfig.llmModel.trim()) ? promptConfig.llmModel : settings.llmModel;
+            let llmService = settings.llmService;
+            let llmModel = settings.llmModel;
+
+            // Check for provider overrides in multiple formats for compatibility
+            if (promptConfig) {
+                // New format: providers array (use first provider)
+                if (promptConfig.providers && promptConfig.providers.length > 0) {
+                    const firstProvider = promptConfig.providers[0];
+                    if (firstProvider.service && firstProvider.service.trim()) {
+                        llmService = firstProvider.service;
+                    }
+                    if (firstProvider.model && firstProvider.model.trim()) {
+                        llmModel = firstProvider.model;
+                    }
+                }
+                // Legacy format: direct llmService/llmModel properties
+                else if (promptConfig.llmService && promptConfig.llmService.trim()) {
+                    llmService = promptConfig.llmService;
+                    if (promptConfig.llmModel && promptConfig.llmModel.trim()) {
+                        llmModel = promptConfig.llmModel;
+                    }
+                }
+            }
 
 
             // Adjust prompt based on action type

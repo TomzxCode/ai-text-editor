@@ -879,10 +879,7 @@ class AITextEditor {
                         `⌨️ ${prompt.name}`, // Add keyboard icon to indicate it was triggered by shortcut
                         prompt.prompt,
                         this.textAnalysisManager,
-                        {
-                            llmService: prompt.llmService,
-                            llmModel: prompt.llmModel
-                        }
+                        prompt // Pass the entire prompt config so AIService can use providers or fallback to llmService/llmModel
                     );
                     // Display the result in the AI sidebar using the existing system
                     this.insertFeedbackResult(result);
@@ -1021,7 +1018,8 @@ class AITextEditor {
                     keyboardShortcutValue,
                     llmService,
                     llmModel,
-                    actionType
+                    actionType,
+                    providers
                 );
                 promptId = newPrompt.id;
 
