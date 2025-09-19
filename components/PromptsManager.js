@@ -154,7 +154,16 @@ class PromptsManager {
     }
 
     getPromptsByKeyboardShortcut(shortcut) {
-        return this.prompts.filter(p => p.enabled && p.keyboardShortcut === shortcut && p.triggerTiming === 'keyboard');
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            return [];
+        }
+
+        return this.prompts.filter(p =>
+            p.keyboardShortcut === shortcut &&
+            p.triggerTiming === 'keyboard' &&
+            activeGroup.promptStates[p.id]?.enabled === true
+        );
     }
 
     // Legacy method for backward compatibility
@@ -164,7 +173,16 @@ class PromptsManager {
     }
 
     getKeyboardShortcutPrompts() {
-        return this.prompts.filter(p => p.enabled && p.triggerTiming === 'keyboard' && p.keyboardShortcut);
+        const activeGroup = this.getActiveGroup();
+        if (!activeGroup) {
+            return [];
+        }
+
+        return this.prompts.filter(p =>
+            p.triggerTiming === 'keyboard' &&
+            p.keyboardShortcut &&
+            activeGroup.promptStates[p.id]?.enabled === true
+        );
     }
 
     duplicatePrompt(id) {
