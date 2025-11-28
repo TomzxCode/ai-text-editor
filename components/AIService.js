@@ -13,29 +13,15 @@ class AIService {
         this.countdownCallbacks = new Map(); // Track countdown update callbacks
         this.lastFeedbackTime = new Map(); // Track when feedback was last generated for each prompt
 
-        // Initialize LLM.js - will be available globally once the module loads
-        this.LLM = null;
-        this.initializeLLM();
+        // LLM.js is loaded globally as an IIFE via script tag in index.html
+        // Access it via window.LLM
+        this.LLM = window.LLM;
 
         // Initialize LLM call storage
         this.llmCallStorage = new LLMCallStorage();
     }
 
-    async initializeLLM() {
-        try {
-            // Import LLM.js dynamically
-            const llmModule = await import('https://cdn.jsdelivr.net/npm/@themaximalist/llm.js@1.0.1/dist/index.mjs');
-            this.LLM = llmModule.default;
-        } catch (error) {
-            console.error('Failed to load LLM.js:', error);
-        }
-    }
-
     async fetchModels(service) {
-        if (!this.LLM) {
-            throw new Error('LLM service not initialized');
-        }
-
         // Get settings for API configuration
         const settings = window.app?.settingsManager?.getSettings() || {};
         const settingsManager = window.app?.settingsManager;
@@ -151,11 +137,6 @@ Provide only the text content that should be inserted into the editor. Do not in
                 fullPrompt = `${processedPrompt}
 
 Your response should be in HTML with no <style> tags, no \`\`\`html\`\`\` markdown container.`;
-            }
-
-            // Check if LLM.js is loaded
-            if (!this.LLM) {
-                throw new Error('LLM service not initialized');
             }
 
             // Track call duration
