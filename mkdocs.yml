@@ -55,6 +55,13 @@ nav:
     - Architecture: developer-guide/architecture.md
     - Components: developer-guide/components.md
     - API Reference: developer-guide/api-reference.md
+  - Specifications:
+    - AI Integration & Feedback System: specs/ai-integration.md
+    - File System Operations: specs/file-system.md
+    - User Interface Management: specs/user-interface.md
+    - History & Session Management: specs/history-session.md
+    - Settings & Configuration: specs/settings-configuration.md
+    - Data Models & Utilities: specs/data-models-utilities.md
 
 markdown_extensions:
   - pymdownx.highlight:
