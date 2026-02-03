@@ -1,0 +1,16 @@
+name: Claude Plan Generation
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  call-plan-workflow:
+    uses: TomzxCode/llm-augmented-workflows/.github/workflows/claude-plan.yml@main
+    secrets: inherit
