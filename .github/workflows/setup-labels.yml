@@ -1,0 +1,13 @@
+name: Setup Labels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  call-implement-workflow:
+    uses: TomzxCode/llm-augmented-workflows/.github/workflows/setup-labels.yml@main
+    secrets: inherit

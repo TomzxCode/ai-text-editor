@@ -1,0 +1,109 @@
+name: Claude Plan Generation
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_call:
+    secrets:
+      ANTHROPIC_AUTH_TOKEN:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+env:
+  # Set to empty string to trigger on issue creation, or a label name to trigger on that label
+  TRIGGER_LABEL: 'plan-needed'
+
+jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      issue_number: ${{ steps.check.outputs.issue_number }}
+    steps:
+      - name: Check if workflow should run
+        id: check
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const triggerLabel = '${{ env.TRIGGER_LABEL }}';
+            const eventType = context.eventName;
+            const issueNumber = context.payload.issue.number;
+            const action = context.payload.action;
+
+            core.info(`Trigger label: "${triggerLabel}"`);
+            core.info(`Event type: ${eventType}`);
+            core.info(`Action: ${action}`);
+            core.info(`Issue number: ${issueNumber}`);
+
+            core.setOutput('issue_number', issueNumber);
+
+            // If trigger label is not set, run on issue creation
+            if (!triggerLabel || triggerLabel === '') {
+              core.info(`Trigger label is empty - checking for issue creation event`);
+              if (eventType === 'issues' && action === 'opened') {
+                core.info(`✅ Running: Issue opened and no trigger label configured`);
+                core.setOutput('should_run', 'true');
+              } else {
+                core.info(`❌ Skipping: Issue not opened (action: ${action})`);
+                core.setOutput('should_run', 'false');
+              }
+              return;
+            }
+
+            // If trigger label is set, only run when that label is added
+            if (eventType === 'issues' && action === 'labeled') {
+              const addedLabel = context.payload.label.name;
+              core.info(`Label added: "${addedLabel}"`);
+              if (addedLabel === triggerLabel) {
+                core.info(`✅ Running: Trigger label "${triggerLabel}" was added`);
+                core.setOutput('should_run', 'true');
+              } else {
+                core.info(`❌ Skipping: Label "${addedLabel}" does not match trigger label "${triggerLabel}"`);
+                core.setOutput('should_run', 'false');
+              }
+            } else {
+              core.info(`❌ Skipping: Event type ${eventType}/${action} does not match expected conditions`);
+              core.setOutput('should_run', 'false');
+            }
+
+  generate-plan:
+    needs: check-labels
+    if: needs.check-labels.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Ensure plans directory exists
+        run: mkdir -p plans
+
+      - name: Generate Plan with Claude
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+        with:
+          claude_code_oauth_token: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          show_full_output: true
+
+          prompt: |
+            REPO=${{ github.repository }}
+            ISSUE_NUMBER=${{ needs.check-labels.outputs.issue_number }}
+            /generate-plan
+
+          claude_args: |
+            --allowedTools Skill,Glob,Grep,Read,Write,Edit,Bash(gh:*),Bash(git:*),Bash(date:*)
+            --max-turns 100

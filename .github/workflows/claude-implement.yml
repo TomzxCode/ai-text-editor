@@ -1,0 +1,16 @@
+name: Claude Implementation
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  call-implement-workflow:
+    uses: TomzxCode/llm-augmented-workflows/.github/workflows/claude-implement.yml@main
+    secrets: inherit
