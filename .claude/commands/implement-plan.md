@@ -43,7 +43,7 @@ Environment variables provided by the workflow:
    - Follow the implementation steps in the plan
    - Use `Edit` or `Write` for file changes
    - Follow existing code patterns and conventions
-   - Reference `CLAUDE.md` for project-specific guidelines (if it exists)
+   - Reference `AGENTS.md` for project-specific guidelines (if it exists)
    - Consider edge cases and error handling
    - Think about testing requirements
 

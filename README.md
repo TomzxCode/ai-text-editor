@@ -120,7 +120,7 @@ ai-text-editor/
 │   └── LLMCallStorage.js   # LLM API call logging and storage
 ├── icons/             # PWA icons for app installation
 ├── test-*.html        # Testing and debugging utilities
-├── CLAUDE.md          # Comprehensive development guidelines
+├── AGENTS.md          # Comprehensive development guidelines
 └── README.md          # This file
 ```
 

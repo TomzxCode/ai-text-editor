@@ -115,7 +115,7 @@ Create a file at `plans/$ISSUE_NUMBER.md` with the following structure:
 - Consider edge cases and error handling
 - Think about testing and validation
 - Follow existing code patterns found in the codebase
-- Reference `CLAUDE.md` for project-specific guidelines (if it exists)
+- Reference `AGENTS.md` for project-specific guidelines (if it exists)
 - When exploring the codebase, be strategic - look for:
   - Similar functionality already implemented
   - Common patterns used in the codebase
